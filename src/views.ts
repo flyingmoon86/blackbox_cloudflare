@@ -7,7 +7,7 @@ export function escapeHtml(value: unknown): string {
 
 export function layout(title: string, content: string, signedIn = false): string {
   const nav = signedIn
-    ? '<a href="/">首页</a><a href="/members">队员名录</a><a href="/profile">个人中心</a>'
+    ? '<a href="/">首页</a><a href="/productions">作品与资料</a><a href="/members">队员名录</a><a href="/profile">个人中心</a>'
     : '<a href="/">首页</a><a href="/login">登录</a><a href="/register">注册</a>';
   return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>${escapeHtml(title)} · 黑匣子</title><link rel="stylesheet" href="/app.css"></head>
