@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}{{ '编辑' if member else '新增' }}队员 · 黑匣子{% endblock %}
+{% block content %}
+<h1 class="mb-4">{{ '编辑队员' if member else '新增队员' }}</h1>
+
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% endif %}
+
+<form method="post" enctype="multipart/form-data" class="bg-white p-4 rounded shadow-sm" style="max-width: 600px;">
+    <h2 class="h5 border-bottom pb-2 mb-3">基本信息</h2>
+    <div class="mb-3">
+        <label class="form-label">姓名 <span class="text-danger">*</span></label>
+        <input class="form-control" type="text" name="name" required
+               value="{{ member.name if member else '' }}">
+    </div>
+    <div class="row">
+        <div class="col-6 mb-3">
+            <label class="form-label">入队年份</label>
+            <input class="form-control" type="number" name="join_year"
+                   value="{{ member.join_year if member and member.join_year else '' }}">
+        </div>
+        <div class="col-6 mb-3">
+            <label class="form-label">届别</label>
+            <input class="form-control" type="text" name="cohort" placeholder="如 2015 届"
+                   value="{{ member.cohort if member else '' }}">
+        </div>
+    </div>
+
+    <h2 class="h5 border-bottom pb-2 mb-3 mt-4">作品信息</h2>
+    <div class="mb-3">
+        <label class="form-label">简介</label>
+        <textarea class="form-control" name="bio" rows="3">{{ member.bio if member else '' }}</textarea>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">代表作</label>
+        <textarea class="form-control" name="works" rows="2" placeholder="演过 / 导演过的作品，可用逗号分隔">{{ member.works if member else '' }}</textarea>
+    </div>
+
+    {% set editing_member = member %}{% include '_resource_choices.html' %}
+    <h2 class="h5 border-bottom pb-2 mb-3 mt-4">头像</h2>
+    <div class="mb-3">
+        {% if member and member.photo %}
+        <div class="mb-2">
+            <img src="{{ url_for('static', filename='uploads/' ~ member.photo) }}"
+                 alt="当前头像" class="img-thumbnail" style="width: 100px; height: 100px; object-fit: cover;">
+        </div>
+        {% endif %}
+        <input class="form-control" type="file" name="photo" accept="image/*">
+        <div class="form-text">支持 png / jpg / gif / webp，可选</div>
+    </div>
+    <button class="btn btn-primary" type="submit">保存</button>
+    <a class="btn btn-outline-secondary" href="{{ url_for('member_list') }}">返回</a>
+</form>
+{% endblock %}

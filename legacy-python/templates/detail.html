@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}{{ member.name }} · 黑匣子{% endblock %}
+{% block styles %}<link rel="stylesheet" href="{{ url_for('static', filename='members.css') }}">{% endblock %}
+{% block content %}
+<div class="card bg-white shadow-sm" style="max-width: 600px;">
+    <div class="card-body">
+        <div class="d-flex align-items-center mb-3">
+            {% if member.photo %}
+            <img src="{{ url_for('static', filename='uploads/' ~ member.photo) }}"
+                 alt="{{ member.name }}" class="rounded-circle me-3"
+                 style="width: 80px; height: 80px; object-fit: cover;">
+            {% else %}
+            <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center me-3 text-white"
+                 style="width: 80px; height: 80px; font-size: 2rem;">{{ member.name[0] }}</div>
+            {% endif %}
+            <div>
+                <h1 class="card-title mb-1">{{ member.name }}</h1>
+                <p class="text-muted mb-0">
+                    {% if member.cohort %}<span class="badge bg-secondary">{{ member.cohort }}</span>{% endif %}
+                </p>
+                {% if member.join_year %}<p class="text-muted small mb-0">入队年份：{{ member.join_year }}</p>{% endif %}
+            </div>
+        </div>
+
+        {% if member.bio %}
+        <h2 class="h6 text-muted">简介</h2>
+        <p class="card-text member-full-text">{{ member.bio }}</p>
+        {% endif %}
+
+        {% if member.works %}
+        <h2 class="h6 text-muted">代表作</h2>
+        <p class="card-text member-full-text">{{ member.works }}</p>
+        {% endif %}
+
+        {% if member.production_credits %}<h2 class="h6 text-muted mt-4">参与作品</h2><ul class="list-group mb-3">{% for credit in member.production_credits %}<li class="list-group-item"><a href="{{ url_for('theater.production_detail', production_id=credit.production_id) }}">{{ credit.production.title }}</a> · {{ '饰 ' if credit.kind == 'cast' else '' }}{{ credit.role_name }}</li>{% endfor %}</ul>{% endif %}
+        {% if member.resources %}
+        <h2 class="h6 text-muted mt-4">相关作品</h2>
+        <ul class="list-group mb-3">{% for r in member.resources %}<li class="list-group-item"><a href="{{ url_for('resource_detail', res_id=r.id) }}">{{ r.title }} →</a></li>{% endfor %}</ul>
+        {% endif %}
+        <div class="my-4">
+            {% set m = member %}{% include '_flower.html' %}
+            <p class="small text-muted mt-2">每个账号每天可献花一次，北京时间零点后可再次献花。</p>
+        </div>
+
+        {% if bound_user %}
+        <div class="alert alert-light border small">
+            该队员的账号已绑定：<strong>{{ bound_user.username }}</strong>
+        </div>
+        {% endif %}
+
+        {% if session.get('role') == 'admin' %}
+        <a class="btn btn-outline-primary" href="{{ url_for('member_edit', member_id=member.id) }}">编辑</a>
+        <form class="d-inline" method="post" action="{{ url_for('member_delete', member_id=member.id) }}"
+              onsubmit="return confirm('确定删除 {{ member.name }} 吗？');">
+            <button class="btn btn-outline-danger" type="submit">删除</button>
+        </form>
+        {% endif %}
+        <a class="btn btn-outline-secondary" href="{{ url_for('member_list') }}">返回列表</a>
+    </div>
+</div>
+{% endblock %}

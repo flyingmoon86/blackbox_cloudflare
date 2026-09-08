@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block title %}首页 · 黑匣子{% endblock %}
+{% from '_copy_edit.html' import edit_copy with context %}
+{% block content %}
+{% if session.get('user_id') %}
+<section class="stage-hero home-cover {{ 'photo-hero' if troupe and troupe.hero_photo else '' }}">
+{% if troupe and troupe.hero_photo %}<img class="hero-backdrop" src="{{ url_for('static', filename='uploads/' ~ troupe.hero_photo) }}" alt="" aria-hidden="true">{% endif %}
+<div class="hero-copy"><h1 class="preserve-text">{{ page_copy.home_member if session.get('role') in ['member','admin'] else page_copy.home_visitor }}</h1>{{ edit_copy('home_member' if session.get('role') in ['member','admin'] else 'home_visitor', '首页欢迎语') }}{% if page_copy.home_intro %}<p class="preserve-text">{{ page_copy.home_intro }}</p>{% endif %}{{ edit_copy('home_intro', '首页说明') }}</div></section>
+<nav class="home-paths"><a class="path-card" href="{{ url_for('member_list') }}">名人堂 →</a><a class="path-card" href="{{ url_for('theater.productions') }}">戏剧作品 →</a><a class="path-card" href="{{ url_for('resource_list') }}">参考资料 →</a></nav>
+<section><div class="section-heading"><h2>公告</h2><a href="{{ url_for('announcement_list') }}">全部公告 →</a></div>{% if announcements %}<div class="news-list">{% for a in announcements %}{% include '_announcement_row.html' %}{% endfor %}</div>{% else %}<p class="text-muted">暂无公告。</p>{% endif %}</section>
+{% else %}
+<section class="public-hero">
+{% if troupe and troupe.hero_photo %}<img class="public-backdrop" src="{{ url_for('static', filename='uploads/' ~ troupe.hero_photo) }}" alt="" aria-hidden="true">{% endif %}
+<div class="public-hero-copy"><p class="public-kicker">黑匣子</p><h1>{{ page_copy.home_visitor }}</h1><div class="d-flex flex-wrap gap-3 mt-4"><a class="btn btn-light" href="{{ url_for('login') }}">登录</a><a class="btn btn-outline-light" href="{{ url_for('register') }}">注册</a></div></div>
+{% if not troupe or not troupe.hero_photo %}<div class="curtain-light" aria-hidden="true"></div>{% endif %}
+</section>
+{% endif %}
+{% if featured %}<section class="featured-show feature-{{ featured.feature_layout or 'split' }}" aria-labelledby="featured-title">{% if cover_photo(featured) %}<img class="feature-image" src="{{ url_for('theater.featured_cover') }}" alt="{{ featured.title }}封面">{% endif %}<div class="feature-copy"><p class="public-kicker">即将演出</p><h2 id="featured-title">{{ featured.title }}</h2>{% if featured.promo %}<p class="preserve-text">{{ featured.promo }}</p>{% endif %}<a class="btn btn-dark" href="{{ url_for('theater.production_detail', production_id=featured.id) if session.get('user_id') else url_for('login', production=featured.id) }}">{{ '查看作品' if session.get('user_id') else '登录查看作品' }} →</a>
+{% if session.get('user_id') %}<details class="mt-3"><summary>全部演员</summary><ul class="mt-2">{% for credit in featured.credits if credit.kind == 'cast' %}<li><a href="{{ url_for('member_detail', member_id=credit.member_id) }}">{{ credit.member.name }}</a> · {{ credit.role_name }}</li>{% else %}<li>暂无演员信息</li>{% endfor %}</ul></details>{% endif %}{% if session.get('role') == 'admin' %}<a class="d-block mt-3" href="{{ url_for('theater.production_edit', production_id=featured.id) }}">管理首页演出</a>{% endif %}</div></section>{% elif session.get('role') == 'admin' %}<p class="my-4"><a href="{{ url_for('theater.productions') }}">从作品管理中指定首页重点演出 →</a></p>{% endif %}
+{% include '_contact_content.html' %}
+{% endblock %}

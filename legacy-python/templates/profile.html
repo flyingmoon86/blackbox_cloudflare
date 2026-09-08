@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+{% block title %}个人中心 · 黑匣子{% endblock %}
+{% block content %}
+<div class="row">
+    <div class="col-lg-4 mb-4">
+        {# 身份卡片：头像 + 名字 + 身份徽章 + 绑定档案 #}
+        <div class="card bg-white shadow-sm">
+            <div class="card-body text-center">
+                {% if user.member and user.member.photo %}
+                <img src="{{ url_for('static', filename='uploads/' ~ user.member.photo) }}"
+                     alt="{{ user.username }}的头像" class="rounded-circle d-block mx-auto mb-3"
+                     style="width: 90px; height: 90px; object-fit: cover;">
+                {% else %}
+                <div class="rounded-circle bg-primary bg-opacity-25 d-flex align-items-center justify-content-center mx-auto mb-3 text-primary fw-bold"
+                     style="width: 90px; height: 90px; font-size: 2.5rem;">
+                    {{ user.username[0]|upper }}
+                </div>
+                {% endif %}
+                <h1 class="h4 mb-1">{{ user.username }}</h1>
+                <p><a href="{{ url_for('theater.my_uploads') }}">我的资料上传与审核结果 →</a></p>
+                <p class="mb-3">
+                    {% if user.is_admin %}
+                    <span class="badge bg-warning text-dark">管理员</span>
+                    {% elif user.is_member %}
+                    <span class="badge bg-success">认证队员</span>
+                    {% elif my_request %}
+                    <span class="badge bg-warning text-dark">入队申请待审核</span>
+                    {% else %}
+                    <span class="badge bg-secondary">访客</span>
+                    {% endif %}
+                </p>
+                {% if user.member %}
+                <p class="text-muted small mb-0">
+                    名人堂档案：<a href="{{ url_for('member_detail', member_id=user.member.id) }}">{{ user.member.name }}</a>
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <section class="card bg-white shadow-sm mb-4">
+            <div class="card-body">
+                <h2 class="h5">账号邮箱</h2>
+                {% if user.email %}<p>已验证：<strong>{{ user.email }}</strong> <span class="badge bg-success">可找回密码</span></p>{% else %}<p class="text-muted">尚未验证邮箱，忘记密码时将无法自助找回。</p>{% endif %}
+                {% if user.pending_email %}<p class="small">待验证：{{ user.pending_email }}。验证成功后才会成为找回邮箱。</p>{% endif %}
+                {% if not mail_ready %}<div class="alert alert-warning small">邮件服务尚未启用。可以先保存邮箱，启用后再发送验证邮件。</div>{% endif %}
+                <form method="post" action="{{ url_for('account.profile_email') }}">
+                    <input type="hidden" name="csrf_token" value="{{ account_csrf() }}">
+                    <div class="mb-3"><label for="profile-email" class="form-label">邮箱地址</label><input id="profile-email" class="form-control" type="email" name="email" maxlength="254" autocomplete="email" value="{{ user.pending_email or user.email or '' }}" required></div>
+                    <div class="mb-3"><label for="email-password" class="form-label">当前密码</label><input id="email-password" class="form-control" type="password" name="password" autocomplete="current-password" required><div class="form-text">确认本人操作。邮箱仅用于账号联系和密码找回，不会显示在队员档案中。</div></div>
+                    <button class="btn btn-outline-dark" type="submit">{{ '保存并发送验证邮件' if mail_ready else '保存待验证邮箱' }}</button>
+                </form>
+            </div>
+        </section>
+        {% for result in unread_results %}
+        <div class="alert alert-{{ 'success' if result.status == 'approved' else 'warning' }} shadow-sm" role="status">
+            <h2 class="h6">{{ '入队申请已通过' if result.status == 'approved' else '入队申请已驳回' }}</h2>
+            {% if result.status == 'approved' %}
+            <p>你的这次入队申请已通过审核。</p>
+            {% if user.is_member and user.member %}
+            <p>你现在可以编辑自己的档案、上传资源了。<a href="{{ url_for('member_detail', member_id=user.member.id) }}">查看我的档案</a></p>
+            {% endif %}
+            {% else %}
+            <p style="white-space: pre-wrap">驳回理由：{{ result.admin_note or '管理员未填写理由，请联系管理员了解详情。' }}</p>
+            {% if not user.is_member and not user.is_admin and not my_request %}
+            <p>可以在下方修改资料重新提交，也可以改为绑定已有队员。</p>
+            {% endif %}
+            {% endif %}
+            <form method="post" action="{{ url_for('acknowledge_result', req_id=result.id) }}">
+                <button class="btn btn-sm btn-outline-dark" type="submit">我知道了</button>
+            </form>
+        </div>
+        {% endfor %}
+        {# 申请入队横幅（访客未申请时显示） #}
+        {% if not user.is_admin and not user.is_member and not my_request %}
+        <div class="alert alert-primary d-flex align-items-center justify-content-between shadow-sm">
+            <div>
+                <strong>我是队员，申请入队！</strong>
+                <span class="ms-1">认证为队员后就能修改自己的档案、上传资源。</span>
+            </div>
+            <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#join-form">
+                申请入队
+            </button>
+        </div>
+        <div class="collapse {% if retry_request %}show{% endif %} mb-4" id="join-form">
+            <div class="card bg-white shadow-sm">
+                <div class="card-body">
+                    <h2 class="h6 mb-3">方式一：从队员里找到自己</h2>
+                    <form method="post" action="{{ url_for('profile_apply_member') }}" class="mb-4">
+                        <input type="hidden" name="apply_type" value="bind"><label class="form-label d-block">一句台词或参与经历<textarea name="identity_note" class="form-control" maxlength="1000" rows="3" required>{{ retry_request.identity_note or '' if retry_request else '' }}</textarea></label><p class="form-text">没有角色可写后台分工或排练经历，仅本人和管理员可见。</p>
+                        <div class="d-flex gap-2">
+                            <select class="form-select" name="member_id" required>
+                                <option value="">— 在未绑定的队员里找到自己 —</option>
+                                {% for m in members %}
+                                <option value="{{ m.id }}" {% if retry_request and retry_request.member_id == m.id %}selected{% endif %}>{{ m.name }}{% if m.cohort %}（{{ m.cohort }}）{% endif %}</option>
+                                {% endfor %}
+                            </select>
+                            <button class="btn btn-primary" type="submit">提交</button>
+                        </div>
+                    </form>
+
+                    <h2 class="h6 mb-3">方式二：名单里没有我？新建档案</h2>
+                    <form method="post" action="{{ url_for('profile_apply_member') }}">
+                        <input type="hidden" name="apply_type" value="new"><label class="form-label d-block">一句台词或参与经历<textarea name="identity_note" class="form-control" maxlength="1000" rows="3" required>{{ retry_request.identity_note or '' if retry_request else '' }}</textarea></label><p class="form-text">没有角色可写后台分工或排练经历，仅本人和管理员可见。</p>
+                        <div class="mb-2">
+                            <label class="form-label small">姓名 <span class="text-danger">*</span></label>
+                            <input class="form-control" type="text" name="name" maxlength="50" value="{{ retry_request.name if retry_request and retry_request.apply_type == 'new' else '' }}" required>
+                        </div>
+                        <div class="row">
+                            <div class="col-6 mb-2">
+                                <label class="form-label small">入队年份</label>
+                                <input class="form-control" type="number" name="join_year" min="1" max="9999" value="{{ retry_request.join_year if retry_request and retry_request.join_year else '' }}">
+                            </div>
+                            <div class="col-6 mb-2">
+                                <label class="form-label small">届别</label>
+                                <input class="form-control" type="text" name="cohort" maxlength="20" placeholder="如 2015 届" value="{{ retry_request.cohort if retry_request and retry_request.apply_type == 'new' else '' }}">
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small">简介</label>
+                            <textarea class="form-control" name="bio" rows="2">{{ retry_request.bio if retry_request and retry_request.apply_type == 'new' else '' }}</textarea>
+                        </div>
+                        <button class="btn btn-primary" type="submit">提交新建申请</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {# 待审核提示 #}
+        {% if not user.is_admin and not user.is_member and my_request %}
+        <div class="alert alert-warning shadow-sm">
+            {{ '你的入队申请正在等待管理员审核。' if my_request.identity_note else '请先补填台词或参与经历，管理员才能通过申请。' }}
+            <form method="post" action="{{ url_for('supplement_identity', req_id=my_request.id) }}"><input type="hidden" name="csrf_token" value="{{ account_csrf() }}"><label class="form-label d-block">核对信息<textarea class="form-control" name="identity_note" maxlength="1000" required>{{ my_request.identity_note or '' }}</textarea></label><button class="btn btn-outline-dark btn-sm">保存核对信息</button></form>
+            {% if my_request.apply_type == 'bind' %}
+            绑定档案：{{ my_request.member.name if my_request.member else "已有队员" }}
+            {% else %}
+            申请新建档案：{{ my_request.name }}
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {# 队员：编辑自己的档案 #}
+        {% if user.is_member and user.member %}
+        <div class="card bg-white shadow-sm mb-4">
+            <div class="card-body">
+                <h2 class="h5 mb-3">我的档案</h2>
+                <form method="post" enctype="multipart/form-data" action="{{ url_for('profile_edit_member') }}">
+                    <div class="mb-2">
+                        <label class="form-label small">简介</label>
+                        <textarea class="form-control" name="bio" rows="2">{{ user.member.bio }}</textarea>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">代表作</label>
+                        <textarea class="form-control" name="works" rows="2">{{ user.member.works }}</textarea>
+                    </div>
+                    {% set editing_member = user.member %}{% include '_resource_choices.html' %}
+                    <div class="mb-2">
+                        <label class="form-label small">届别</label>
+                        <input class="form-control" type="text" name="cohort" value="{{ user.member.cohort }}">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small" for="profile-photo">头像</label>
+                        {% if user.member.photo %}
+                        <div class="mb-2">
+                            <img src="{{ url_for('static', filename='uploads/' ~ user.member.photo) }}"
+                                 alt="当前已保存的头像" class="img-thumbnail"
+                                 style="width: 100px; height: 100px; object-fit: cover;">
+                        </div>
+                        {% endif %}
+                        <input class="form-control" id="profile-photo" type="file" name="photo"
+                               accept=".png,.jpg,.jpeg,.gif,.webp" aria-describedby="profile-photo-help">
+                        <div class="form-text" id="profile-photo-help">支持 png / jpg / jpeg / gif / webp。不选择新图片会保留原头像；保存后文件选择框会清空，已保存的头像仍会显示。</div>
+                    </div>
+                    <button class="btn btn-sm btn-primary" type="submit">保存我的档案</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        {# 账号安全 #}
+        <div class="card bg-white shadow-sm">
+            <div class="card-body">
+                <h2 class="h5 mb-3">修改密码</h2>
+                {% if pw_ok %}<div class="alert alert-success">{{ pw_ok }}</div>{% endif %}
+                {% if pw_error %}<div class="alert alert-danger">{{ pw_error }}</div>{% endif %}
+                <form method="post" action="{{ url_for('profile_change_password') }}">
+                    <div class="mb-3">
+                        <label class="form-label">原密码</label>
+                        <input class="form-control" type="password" name="old_password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">新密码</label>
+                        <input class="form-control" type="password" name="new_password" required>
+                    </div>
+                    <button class="btn btn-primary" type="submit">修改密码</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

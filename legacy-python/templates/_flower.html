@@ -1,0 +1,14 @@
+<form method="post" action="{{ url_for('send_flower', member_id=m.id) }}" class="flower-form">
+    <input type="hidden" name="flower_token" value="{{ session['flower_token'] }}">
+    <input type="hidden" name="return_to" value="{{ flower_return|default('detail') }}">
+    {% if flower_return|default('detail') == 'list' %}
+    <input type="hidden" name="keyword" value="{{ keyword }}">
+    <input type="hidden" name="year" value="{{ year }}">
+    <input type="hidden" name="page" value="{{ pagination.page }}">
+    {% endif %}
+    <button class="flower-button" type="submit" {% if m.id in flowers_sent %}disabled{% endif %}
+            aria-label="{{ '今日已向' if m.id in flowers_sent else '向' }}{{ m.name }}献花">
+        <span aria-hidden="true">✿</span> {{ '今日已献花' if m.id in flowers_sent else '献一朵花' }}
+        <span class="flower-count">{{ flower_counts.get(m.id, 0) }}</span>
+    </button>
+</form>

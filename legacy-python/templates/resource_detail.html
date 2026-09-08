@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %}{{ resource.title }} · 资源库{% endblock %}
+{% block content %}
+<article class="reading-page"><a href="{{ url_for('resource_list') }}">← 资源库</a><h1>{{ resource.title }}</h1>
+<p class="text-muted">{{ resource_types.get(resource.res_type, '参考资料') }} · {{ resource.created_at.strftime('%Y-%m-%d') }} · {{ resource.download_count }} 次下载</p>
+{% if resource.production %}<p>所属作品：<a href="{{ url_for('theater.production_detail', production_id=resource.production_id) }}">{{ resource.production.title }}</a></p>{% endif %}
+{% if resource.status != 'approved' %}<div class="alert alert-warning">{{ '待审核：仅上传者和管理员可查看，尚未入库。' if resource.status == 'pending' else '资料已驳回。' }}{% if resource.admin_note %}<p class="preserve-text mb-0 mt-2">{{ resource.admin_note }}</p>{% endif %}</div>{% endif %}
+{% if resource.res_type == 'photo' %}<img class="resource-photo" src="{{ url_for('resource_preview', res_id=resource.id) }}" alt="{{ resource.title }}">{% endif %}
+{% if session.get('role') == 'admin' %}<a class="btn btn-outline-dark" href="{{ url_for('theater.resource_edit', res_id=resource.id) }}">编辑归类</a>{% if resource.status == 'pending' %} <a href="{{ url_for('theater.resource_reviews') }}">前往审核</a>{% endif %}{% endif %}
+<div class="reading-card"><p class="preserve-text">{{ resource.description or '暂无作品说明。' }}</p><a class="btn btn-primary" href="{{ url_for('resource_download', res_id=resource.id) }}">下载作品</a></div>
+{% if resource.members %}<h2 class="h5">相关队员</h2><div class="d-flex flex-wrap gap-3">{% for m in resource.members %}<a href="{{ url_for('member_detail', member_id=m.id) }}">{{ m.name }}</a>{% endfor %}</div>{% endif %}
+</article>
+{% endblock %}

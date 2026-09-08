@@ -1,0 +1,4 @@
+<article class="news-item">
+    <time datetime="{{ a.created_at.strftime('%Y-%m-%d') }}">{{ a.created_at.strftime('%Y.%m.%d') }}</time>
+    <div><h3><a href="{{ url_for('announcement_detail', ann_id=a.id) }}">{{ a.title }}</a></h3><p class="news-excerpt">{{ a.content or '点击查看公告。' }}</p></div>
+</article>
