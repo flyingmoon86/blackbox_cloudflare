@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}发布公告 · 黑匣子{% endblock %}
+{% block content %}
+<h1 class="mb-4">发布公告</h1>
+
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% endif %}
+
+<form method="post" class="bg-white p-4 rounded shadow-sm" style="max-width: 600px;">
+    <div class="mb-3">
+        <label class="form-label" for="announcement-title">标题 <span class="text-danger">*</span></label>
+        <input id="announcement-title" class="form-control" type="text" name="title" maxlength="100" value="{{ request.form.get('title', '') }}" required>
+    </div>
+    <div class="mb-3">
+        <label class="form-label" for="announcement-content">内容</label>
+        <textarea id="announcement-content" class="form-control" name="content" rows="5">{{ request.form.get('content', '') }}</textarea>
+    </div>
+    <button class="btn btn-primary" type="submit">发布</button>
+    <a class="btn btn-outline-secondary" href="{{ url_for('hello') }}">返回首页</a>
+</form>
+{% endblock %}

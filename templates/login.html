@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}登录 · 黑匣子{% endblock %}
+{% from '_copy_edit.html' import edit_copy with context %}
+{% block content %}
+<div class="auth-layout">
+    <section class="auth-form">
+        <h1>登录</h1>{% if request.args.get("production")|int %}<p class="alert alert-info">请先登录，再查看作品详情。</p>{% endif %}{% if page_copy.login_intro %}<p class="text-muted mb-4 preserve-text">{{ page_copy.login_intro }}</p>{% endif %}{{ edit_copy('login_intro', '登录说明') }}
+        {% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
+        <form method="post">
+            <input type="hidden" name="csrf_token" value="{{ account_csrf() }}">
+            <div class="mb-3"><label class="form-label" for="login-name">用户名</label><input id="login-name" class="form-control" name="username" maxlength="50" value="{{ request.form.get('username', '') }}" autocomplete="username" required></div>
+            <div class="mb-3"><label class="form-label" for="login-password">密码</label><input id="login-password" class="form-control" type="password" name="password" autocomplete="current-password" required></div>
+            <div class="text-end mb-4"><a href="{{ url_for('account.forgot_password') }}">忘记密码？</a></div>
+            <button class="btn btn-primary w-100 py-2" type="submit">登录</button>
+        </form>
+        <p class="text-center mt-4 mb-0">初次到访？<a href="{{ url_for('register') }}">创建账号</a></p>
+    </section>
+</div>
+{% endblock %}

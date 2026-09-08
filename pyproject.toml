@@ -1,0 +1,15 @@
+[project]
+name = "blackbox-cloudflare"
+version = "0.1.0"
+description = "黑匣子网站 Cloudflare Workers Python 迁移验证"
+requires-python = ">=3.12"
+dependencies = [
+    "flask>=3.1,<4",
+    "werkzeug>=3.1,<4",
+]
+
+[dependency-groups]
+dev = [
+    "workers-py",
+    "workers-runtime-sdk",
+]

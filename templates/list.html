@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}名人堂 · 黑匣子{% endblock %}
+{% block styles %}<link rel="stylesheet" href="{{ url_for('static', filename='members.css') }}">{% endblock %}
+{% from '_copy_edit.html' import edit_copy with context %}
+{% block content %}
+<header class="hall-header">
+    <div class="d-flex align-items-center justify-content-between gap-3">
+        <h1>名人堂</h1><span class="hall-count">{{ pagination.total }} 位队员</span>
+    </div>
+    {% if page_copy.member_intro %}<p class="small mb-0 preserve-text">{{ page_copy.member_intro }}</p>{% endif %}{{ edit_copy('member_intro', '名人堂说明') }}
+</header>
+<form class="row g-2 mb-4 bg-white p-3 rounded shadow-sm" method="get" action="{{ url_for('member_list') }}" role="search">
+    <div class="col-12 col-md-6">
+        <label for="member-keyword" class="visually-hidden">搜索姓名或简介</label>
+        <input id="member-keyword" class="form-control" type="search" name="keyword" placeholder="搜索姓名或简介" value="{{ keyword }}">
+    </div>
+    <div class="col-6 col-md-3">
+        <label for="member-year" class="visually-hidden">入队年份</label>
+        <select id="member-year" class="form-select" name="year">
+            <option value="">全部入队年份</option>
+            {% for y in years %}<option value="{{ y }}" {{ 'selected' if year == y|string }}>{{ y }} 年</option>{% endfor %}
+        </select>
+    </div>
+    <div class="col-6 col-md-3 d-flex gap-2">
+        <button class="btn btn-dark" type="submit">查找队员</button>
+        {% if keyword or year %}<a class="btn btn-outline-secondary" href="{{ url_for('member_list') }}">清除</a>{% endif %}
+    </div>
+</form>
+{% if pagination.items %}
+<div class="member-grid">
+    {% for m in pagination.items %}
+    <article class="member-card">
+        <a class="member-portrait" href="{{ url_for('member_detail', member_id=m.id) }}" aria-label="查看{{ m.name }}的档案">
+            {% if m.photo %}
+            <img src="{{ url_for('static', filename='uploads/' ~ m.photo) }}" alt="{{ m.name }}" loading="lazy" width="640" height="480">
+            {% else %}<div class="member-initial" aria-hidden="true">{{ m.name[:1] }}</div>{% endif %}
+            {% if m.id in bound_member_ids %}<span class="member-certified">✓ 已认证队员</span>{% endif %}
+        </a>
+        <div class="member-body">
+            <h2 class="member-name"><a href="{{ url_for('member_detail', member_id=m.id) }}">{{ m.name }}</a></h2>
+            <p class="member-meta">{{ m.cohort or '届别待补充' }} · {{ (m.join_year|string ~ ' 年入队') if m.join_year else '入队年份待补充' }}</p>
+            <p class="member-bio">{{ m.bio or '暂无简介。' }}</p>
+            {% if m.works %}<p class="member-works" title="{{ m.works }}">代表作 · {{ m.works }}</p>{% endif %}
+            <div class="member-actions">
+                {% set flower_return = 'list' %}{% include '_flower.html' %}
+                <a class="member-detail-link" href="{{ url_for('member_detail', member_id=m.id) }}">查看档案 →</a>
+            </div>
+            {% if session.get('role') == 'admin' %}
+            <div class="member-admin">
+                <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('member_edit', member_id=m.id) }}">编辑</a>
+                <form method="post" action="{{ url_for('member_delete', member_id=m.id) }}" onsubmit="return confirm('确定删除这位队员吗？');">
+                    <button class="btn btn-sm btn-outline-danger" type="submit">删除</button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+    </article>
+    {% endfor %}
+</div>
+<nav aria-label="队员分页">
+    <ul class="pagination justify-content-center flex-wrap">
+        <li class="page-item {{ 'disabled' if not pagination.has_prev }}">
+            {% if pagination.has_prev %}<a class="page-link" href="{{ url_for('member_list', page=pagination.prev_num, keyword=keyword, year=year) }}">上一页</a>
+            {% else %}<span class="page-link">上一页</span>{% endif %}
+        </li>
+        {% for p in pagination.iter_pages() %}
+        {% if p %}
+        <li class="page-item {{ 'active' if p == pagination.page }}"><a class="page-link" {% if p == pagination.page %}aria-current="page"{% endif %} href="{{ url_for('member_list', page=p, keyword=keyword, year=year) }}">{{ p }}</a></li>
+        {% else %}<li class="page-item disabled"><span class="page-link">…</span></li>{% endif %}
+        {% endfor %}
+        <li class="page-item {{ 'disabled' if not pagination.has_next }}">
+            {% if pagination.has_next %}<a class="page-link" href="{{ url_for('member_list', page=pagination.next_num, keyword=keyword, year=year) }}">下一页</a>
+            {% else %}<span class="page-link">下一页</span>{% endif %}
+        </li>
+    </ul>
+</nav>
+{% else %}
+<div class="hall-empty">
+    <h2 class="h5">{{ '没有找到匹配的队员' if keyword or year else '暂无队员' }}</h2>
+    {% if keyword or year %}<p class="text-muted">试试其他关键词，或查看全部队员。</p><a href="{{ url_for('member_list') }}">查看全部队员</a>
+    {% elif session.get('role') == 'admin' %}<a href="{{ url_for('member_new') }}">添加第一位队员</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

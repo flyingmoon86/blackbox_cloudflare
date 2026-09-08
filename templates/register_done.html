@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}注册成功 · 黑匣子{% endblock %}
+{% block content %}
+<div class="bg-white p-4 rounded shadow-sm mx-auto text-center" style="max-width: 460px;">
+    <h1 class="mb-3">注册成功</h1>
+    {% if waiting_member %}
+    <p class="text-muted">你申请成为话剧队队员，<strong>需管理员批准</strong>后才能获得"修改自己的档案 / 上传资源"的资格。</p>
+    <p class="text-muted mb-0">请先登录，稍后在"个人中心"查看审核状态。</p>
+    {% else %}
+    <p class="text-muted">你的账号已创建，现在可以登录了。</p>
+    {% endif %}
+    <a class="btn btn-primary mt-3" href="{{ url_for('login') }}">去登录</a>
+</div>
+{% endblock %}

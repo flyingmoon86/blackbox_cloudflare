@@ -1,0 +1,31 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# Cloudflare / Node
+node_modules/
+.wrangler/
+.dev.vars
+.venv/
+.tools/
+.venv-workers/
+python_modules/
+
+# 数据库/临时文件
+*.sqlite3
+*.db
+
+# 运行时上传
+uploads/
+static/uploads/
+static/resources/
+static/pending/
+
+# 编辑器/系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

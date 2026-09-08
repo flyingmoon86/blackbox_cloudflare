@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}账号帮助 · 黑匣子{% endblock %}
+{% block content %}
+<section class="reading-page" style="max-width: 520px"><div class="reading-card">
+
+    {% if mode == 'forgot' %}
+    <h1 class="h3">找回密码</h1><p class="text-muted">输入已验证的邮箱，我们会发送一个 30 分钟内有效的重置链接。</p>
+    {% if not mail_ready %}<div class="alert alert-warning">邮件服务尚未启用，暂时无法自助找回密码。请联系管理员协助处理。</div>{% endif %}
+    {% elif mode == 'verify' %}<h1 class="h3">确认验证邮箱</h1><p>点击确认，将这个邮箱绑定为账号的找回邮箱。</p>
+    {% elif mode == 'reset' %}<h1 class="h3">设置新密码</h1><p>重置成功后，需要在所有设备重新登录。</p>
+    {% elif mode == 'requested' %}<h1 class="h3">请查看邮箱</h1><p>如果该邮箱已验证、账号可用且未超出发送限制，你会收到重置邮件。</p><p class="text-muted">请检查垃圾邮件文件夹。没有收到？稍后重试，或联系管理员。每分钟可请求一次，每天最多十封。</p>
+    {% else %}<h1 class="h3">链接已失效</h1><p>链接可能已过期、已使用，或账号资料已发生变化。</p><a href="{{ url_for('account.forgot_password') }}">重新找回密码</a><p class="mt-3">需要验证邮箱？请登录个人中心重新发送。</p>{% endif %}
+    {% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
+    {% if mode in ['forgot', 'reset', 'verify'] %}
+    <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ account_csrf() }}">
+        {% if mode == 'forgot' %}<div class="mb-3"><label class="form-label" for="recovery-email">已验证邮箱</label><input id="recovery-email" class="form-control" type="email" name="email" autocomplete="email" maxlength="254" required></div>{% endif %}
+        {% if mode == 'reset' %}
+        <div class="mb-3"><label class="form-label" for="reset-password">新密码</label><input id="reset-password" class="form-control" type="password" name="password" minlength="8" maxlength="128" autocomplete="new-password" required></div>
+        <div class="mb-3"><label class="form-label" for="reset-confirm">再次输入新密码</label><input id="reset-confirm" class="form-control" type="password" name="confirm_password" minlength="8" maxlength="128" autocomplete="new-password" required></div>
+        {% endif %}
+        <button class="btn btn-primary w-100" type="submit" {% if mode == 'forgot' and not mail_ready %}disabled{% endif %}>{{ '发送重置邮件' if mode == 'forgot' else '确认验证' if mode == 'verify' else '保存新密码' }}</button>
+    </form>
+    {% endif %}
+    <div class="d-flex justify-content-between mt-4"><a href="{{ url_for('login') }}">返回登录</a><a href="{{ url_for('contact') }}">联系管理员</a></div>
+</div></section>
+{% endblock %}

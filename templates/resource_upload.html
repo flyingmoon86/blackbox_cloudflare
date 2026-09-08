@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}上传资源 · 黑匣子{% endblock %}
+{% block content %}
+<h1 class="mb-4">上传资源</h1>
+<p class="text-muted">{% if session.get('role') == 'admin' %}管理员上传后直接入库。{% else %}资料提交后由管理员审核，通过后再进入作品档案或参考资料。{% endif %}</p>
+
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% endif %}
+
+<form method="post" enctype="multipart/form-data" class="bg-white p-4 rounded shadow-sm" style="max-width: 600px;">
+    <input type="hidden" name="csrf_token" value="{{ account_csrf() }}">
+    <div class="mb-3"><label for="upload-production" class="form-label">所属作品</label><select id="upload-production" class="form-select" name="production_id"><option value="">参考资料（未归类）</option>{% for p in productions %}<option value="{{ p.id }}" {% if request.form.get('production_id', request.args.get('production_id', '')) == p.id|string %}selected{% endif %}>{{ p.title }}</option>{% endfor %}</select></div>
+    <div class="mb-3">
+        <label class="form-label">标题 <span class="text-danger">*</span></label>
+        <input class="form-control" type="text" name="title" maxlength="100" value="{{ request.form.get('title', '') }}" required>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">类型</label>
+        <select class="form-select" name="res_type">
+            {% for value, label in resource_types.items() %}<option value="{{ value }}" {% if request.form.get('res_type') == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">说明</label>
+        <textarea class="form-control" name="description" rows="3">{{ request.form.get('description', '') }}</textarea>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">文件 <span class="text-danger">*</span></label>
+        <input class="form-control" type="file" name="file" required>
+    </div>
+    <button class="btn btn-primary" type="submit">上传</button>
+    <a class="btn btn-outline-secondary" href="{{ url_for('resource_list') }}">返回</a>
+</form>
+{% endblock %}

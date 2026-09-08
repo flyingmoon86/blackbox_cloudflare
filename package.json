@@ -1,0 +1,13 @@
+{
+  "name": "blackbox-cloudflare",
+  "private": true,
+  "scripts": {
+    "cf:dev": "node tools/run-pywrangler.mjs dev",
+    "cf:db:init": "node tools/run-pywrangler.mjs d1 migrations apply blackbox-poc --local",
+    "cf:auth-poc": "wrangler dev --config wrangler.auth-poc.jsonc",
+    "cf:deploy": "node tools/run-pywrangler.mjs deploy"
+  },
+  "devDependencies": {
+    "wrangler": "4.129.1"
+  }
+}
