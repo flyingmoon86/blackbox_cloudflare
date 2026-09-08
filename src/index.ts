@@ -4,6 +4,7 @@ import { loadUser } from "./middleware/session";
 import { authRoutes } from "./routes/auth";
 import { homeRoutes } from "./routes/home";
 import { memberRoutes } from "./routes/members";
+import { adminRoutes } from "./routes/admin";
 import type { AppEnv } from "./types";
 
 const app = new Hono<AppEnv>();
@@ -17,6 +18,7 @@ app.use("/profile/*", noStore);
 app.route("/", homeRoutes);
 app.route("/", authRoutes);
 app.route("/", memberRoutes);
+app.route("/", adminRoutes);
 
 app.notFound((c) => c.env.ASSETS.fetch(c.req.raw));
 app.onError((error, c) => {

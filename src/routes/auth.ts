@@ -82,7 +82,17 @@ authRoutes.post("/register", async (c) => {
 authRoutes.get("/profile", async (c) => {
   const user = c.get("user");
   if (!user) return c.redirect(`/login?next=${encodeURIComponent("/profile")}`);
-  return c.html(profilePage(user, await csrfFor(c)));
+  const request = await c.env.DB.prepare("SELECT id,apply_type,name,status,admin_note,result_acknowledged FROM join_request WHERE user_id=? ORDER BY id DESC LIMIT 1").bind(user.id).first<{ id: number; apply_type: string; name: string; status: string; admin_note: string; result_acknowledged: number }>();
+  return c.html(profilePage(user, await csrfFor(c), "", request));
+});
+
+authRoutes.post("/profile/requests/:id/acknowledge", async (c) => {
+  const user = c.get("user");
+  if (!user) return c.redirect("/login?next=/profile");
+  const form = await c.req.formData();
+  if (!csrfValid(c, form.get("csrf"))) return c.text("请求已失效，请刷新页面后重试。", 400);
+  await c.env.DB.prepare("UPDATE join_request SET result_acknowledged=1 WHERE id=? AND user_id=? AND status IN ('approved','rejected')").bind(Number(c.req.param("id")), user.id).run();
+  return c.redirect("/profile", 303);
 });
 
 authRoutes.post("/profile/password", async (c) => {

@@ -46,15 +46,17 @@ export function publicHome(): string {
 }
 
 export function memberHome(user: UserSession, csrf: string): string {
+  const adminLink = user.role === "admin" ? '<p><a href="/admin">进入管理员工作台</a></p>' : "";
   return layout("队员首页", `<section class="card"><p class="eyebrow">${escapeHtml(user.role)}</p><h1>${escapeHtml(user.username)}，欢迎回来</h1>
-  <p>账号基础功能已接通 D1。作品、资源和后台将在后续阶段逐项迁移。</p><p><a href="/profile">进入个人中心</a></p>
+  <p>账号基础功能已接通 D1。作品和资源将在后续阶段逐项迁移。</p><p><a href="/profile">进入个人中心</a></p>${adminLink}
   <form method="post" action="/logout"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button type="submit">退出登录</button></form></section>`, true);
 }
 
-export function profilePage(user: UserSession, csrf: string, error = ""): string {
+export function profilePage(user: UserSession, csrf: string, error = "", request: { id: number; apply_type: string; name: string; status: string; admin_note: string; result_acknowledged: number } | null = null): string {
   const email = user.email ? `已验证邮箱：${escapeHtml(user.email)}` : user.pending_email ? `待验证邮箱：${escapeHtml(user.pending_email)}` : "尚未填写邮箱";
   const application = user.role === "user" ? '<p><a class="button secondary" href="/profile/member-application">申请认证为队员</a></p>' : "";
-  return layout("个人中心", `<section class="two-column"><article class="card"><p class="eyebrow">ACCOUNT</p><h1>个人中心</h1><p>用户名：${escapeHtml(user.username)}</p><p>身份：${escapeHtml(user.role)}</p><p>${email}</p>${application}</article>
+  const result = request && request.status !== "pending" && !request.result_acknowledged ? `<aside class="${request.status === "approved" ? "notice" : "alert"}"><strong>${request.status === "approved" ? "队员申请已通过" : "队员申请已驳回"}</strong><p>${request.status === "rejected" ? escapeHtml(request.admin_note || "请联系管理员了解原因。") : "你的账号权限已经更新。"}</p><form method="post" action="/profile/requests/${request.id}/acknowledge"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button class="small secondary">我知道了</button></form></aside>` : "";
+  return layout("个人中心", `${result}<section class="two-column"><article class="card"><p class="eyebrow">ACCOUNT</p><h1>个人中心</h1><p>用户名：${escapeHtml(user.username)}</p><p>身份：${escapeHtml(user.role)}</p><p>${email}</p>${application}</article>
   <article class="card"><h2>修改密码</h2>${message(error)}<form method="post" action="/profile/password"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}">
   <label>当前密码<input type="password" name="current_password" autocomplete="current-password" required></label>
   <label>新密码<input type="password" name="new_password" minlength="8" maxlength="128" autocomplete="new-password" required></label>
