@@ -6,9 +6,8 @@
     "dev": "wrangler dev",
     "db:init": "wrangler d1 migrations apply blackbox-local --local",
     "typecheck": "tsc --noEmit",
-    "deploy": "wrangler deploy",
-    "poc:python": "node tools/run-pywrangler.mjs dev",
-    "poc:auth": "wrangler dev --config wrangler.auth-poc.jsonc"
+    "build": "wrangler deploy --dry-run --outdir .wrangler/dry-run",
+    "deploy": "wrangler deploy"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260908.1",

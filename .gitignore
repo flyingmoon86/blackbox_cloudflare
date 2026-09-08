@@ -1,30 +1,29 @@
-# Python
-venv/
-__pycache__/
-*.pyc
-*.pyo
-.env
-
-# Cloudflare / Node
+# TypeScript / Cloudflare
 node_modules/
 .wrangler/
 .dev.vars
-.venv/
-.tools/
-.venv-workers/
-python_modules/
 
-# 数据库/临时文件
+# 本地数据库和临时文件
 *.sqlite3
 *.db
 
-# 运行时上传
-uploads/
-static/uploads/
-static/resources/
-static/pending/
+# 旧 Python 参考项目的本地环境
+legacy-python/.env
+legacy-python/venv/
+legacy-python/__pycache__/
+legacy-python/**/*.pyc
+.venv/
+.venv-workers/
+.tools/
+python_modules/
 
-# 编辑器/系统
+# 旧站真实上传文件不得进入迁移仓库
+legacy-python/uploads/
+legacy-python/static/uploads/
+legacy-python/static/resources/
+legacy-python/static/pending/
+
+# 编辑器和系统文件
 .vscode/
 .idea/
 .DS_Store
