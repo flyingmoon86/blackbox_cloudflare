@@ -1,0 +1,6 @@
+{% extends 'base.html' %}
+{% block title %}{{ announcement.title }} · 黑匣子{% endblock %}
+{% block content %}
+<article class="reading-page"><a href="{{ url_for('announcement_list') }}">← 全部公告</a><h1>{{ announcement.title }}</h1><p class="text-muted">发布于 {{ announcement.created_at.strftime('%Y-%m-%d') }}</p><div class="reading-card preserve-text">{{ announcement.content or '（暂无正文）' }}</div>
+{% if session.get('role') == 'admin' %}<form method="post" action="{{ url_for('announcement_delete', ann_id=announcement.id) }}" onsubmit="return confirm('确定删除这条公告吗？');"><button class="btn btn-outline-danger" type="submit">删除公告</button></form>{% endif %}</article>
+{% endblock %}

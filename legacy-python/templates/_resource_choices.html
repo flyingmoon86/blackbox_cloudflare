@@ -1,0 +1,10 @@
+<div class="mb-3">
+    <label class="form-label" for="resource-choices">关联资源库中的作品</label>
+    <input type="hidden" name="resources_present" value="1">
+    {% if resource_choices %}
+    <select class="form-select" name="resource_ids" id="resource-choices" multiple size="4" aria-describedby="resource-help">
+        {% set selected_ids = editing_member.resources|map(attribute='id')|list if editing_member else [] %}
+        {% for r in resource_choices %}<option value="{{ r.id }}" {% if r.id in selected_ids %}selected{% endif %}>{{ r.title }}（{{ {'video':'视频','script':'剧本','photo':'剧照','audio':'音频'}.get(r.res_type, '其他') }}）</option>{% endfor %}
+    </select><div id="resource-help" class="form-text">可多选；电脑按住 Ctrl 或 Command 点选。全部取消选择后保存，即可解除关联。原来的代表作文字会保留。</div>
+    {% else %}<p class="text-muted small">资源库暂无作品，上传后即可关联。代表作仍可用文字填写。</p>{% endif %}
+</div>

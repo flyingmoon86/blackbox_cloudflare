@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}用户管理 · 黑匣子{% endblock %}
+{% block content %}
+<h1 class="mb-4">用户管理</h1>
+
+{# 待审核的入队申请 #}
+<h2 class="h5 mb-3">入队申请审核 {% if pending_count %}<span class="badge bg-danger">{{ pending_count }}</span>{% endif %}</h2>
+{% if requests %}
+<table class="table table-striped bg-white rounded shadow-sm mb-5">
+    <thead class="table-dark">
+        <tr>
+            <th>申请人</th>
+            <th>方式</th>
+            <th>内容</th>
+            <th>状态</th>
+            <th>操作</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in requests %}
+        <tr>
+            <td>{{ r.user.username }}</td>
+            <td>{{ '绑定现有队员' if r.apply_type == 'bind' else '新建档案' }}</td>
+            <td>
+                {% if r.apply_type == 'bind' %}
+                绑定：{{ r.member.name if r.member else ('队员#' ~ r.member_id) }}
+                {% else %}
+                姓名 {{ r.name }} · {{ r.cohort or '届别未填' }} · {{ r.bio or '无简介' }}
+                {% endif %}
+            </td>
+<td><p class="preserve-text">核对信息：{{ r.identity_note or "尚未补填" }}</p>
+                {% if r.status == 'pending' %}<span class="badge bg-warning text-dark">待审核</span>
+                {% elif r.status == 'approved' %}<span class="badge bg-success">已通过</span>
+                {% else %}<span class="badge bg-danger">已驳回</span>{% endif %}
+            </td>
+            <td>
+                {% if r.status == 'pending' %}
+                <form class="d-inline" method="post" action="{{ url_for('request_approve', req_id=r.id) }}">
+                    <button class="btn btn-sm btn-success" type="submit" {% if not r.identity_note %}disabled{% endif %}>{{ "通过" if r.identity_note else "待补填" }}</button>
+                </form>
+                <button class="btn btn-sm btn-outline-danger" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#reject-{{ r.id }}">驳回</button>
+                <div class="collapse mt-2" id="reject-{{ r.id }}">
+                    <form class="d-flex" method="post" action="{{ url_for('request_reject', req_id=r.id) }}">
+                        <input class="form-control me-1" type="text" name="note" placeholder="请填写驳回理由（必填）" aria-label="驳回理由" required>
+                        <button class="btn btn-sm btn-danger" type="submit">确认驳回</button>
+                    </form>
+                </div>
+                {% else %}
+                <span class="text-muted small">{{ r.admin_note or "已处理" }}</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="alert alert-light border mb-5">暂无入队申请。</div>
+{% endif %}
+
+{# 用户列表 #}
+<h2 class="h5 mb-3">所有用户</h2>
+{% if users %}
+<table class="table table-striped bg-white rounded shadow-sm">
+    <thead class="table-dark">
+        <tr>
+            <th>#</th>
+            <th>用户名</th>
+            <th>角色</th>
+            <th>绑定档案</th>
+            <th>状态</th>
+            <th>操作</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for u in users %}
+        <tr>
+            <td>{{ u.id }}</td>
+            <td>{{ u.username }}</td>
+            <td>
+                {% if u.is_admin %}<span class="badge bg-warning text-dark">管理员</span>
+                {% elif u.is_member %}<span class="badge bg-success">队员</span>
+                {% else %}<span class="badge bg-secondary">访客</span>{% endif %}
+            </td>
+            <td>
+                {% if u.member %}{{ u.member.name }}{% else %}<span class="text-muted small">未绑定</span>{% endif %}
+            </td>
+            <td>
+                {% if u.is_active %}<span class="badge bg-success">正常</span>
+                {% else %}<span class="badge bg-danger">已禁用</span>{% endif %}
+            </td>
+            <td>
+                {% if not u.is_admin %}
+                {% if u.is_member %}
+                <form class="d-inline" method="post" action="{{ url_for('user_revoke_member', user_id=u.id) }}">
+                    <button class="btn btn-sm btn-outline-secondary" type="submit">取消队员</button>
+                </form>
+                {% endif %}
+                <form class="d-inline" method="post" action="{{ url_for('user_toggle', user_id=u.id) }}">
+                    <button class="btn btn-sm {{ 'btn-outline-success' if not u.is_active else 'btn-outline-warning' }}" type="submit">
+                        {{ '启用' if not u.is_active else '禁用' }}
+                    </button>
+                </form>
+                <form class="d-inline" method="post" action="{{ url_for('user_delete', user_id=u.id) }}"
+                      onsubmit="return confirm('确定删除用户 {{ u.username }} 吗？其申请也会一并删除');">
+                    <button class="btn btn-sm btn-outline-danger" type="submit">删除</button>
+                </form>
+                {% else %}
+                <span class="text-muted small">—</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="alert alert-info">暂无用户。</div>
+{% endif %}
+{% endblock %}
