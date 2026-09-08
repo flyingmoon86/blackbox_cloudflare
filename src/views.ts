@@ -1,5 +1,7 @@
 import type { UserSession } from "./types";
 import type { MemberRow } from "./routes/members";
+import type { AnnouncementRow, SiteProfileRow } from "./routes/content";
+import type { ProductionRow } from "./routes/productions";
 
 export function escapeHtml(value: unknown): string {
   return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
@@ -40,15 +42,17 @@ export function registerDonePage(username: string, hasEmail: boolean): string {
   return layout("注册成功", `<section class="card auth"><p class="eyebrow">WELCOME</p><h1>账号已创建</h1><p>${escapeHtml(username)}，${emailText}</p><a class="button" href="/login">现在登录</a></section>`);
 }
 
-export function publicHome(): string {
-  return layout("首页", `<section class="hero"><div><p class="eyebrow">BLACK BOX THEATRE</p><h1>黑匣子永远是你的家</h1><p>保存每一次排练、演出与相遇。</p><a class="button" href="/login">登录查看剧团档案</a></div></section>
-  <section class="two-column"><article class="card"><h2>关于我们</h2><p>这里记录话剧队共同创作的作品和故事。</p></article><article class="card"><h2>联系我们</h2><p><a href="mailto:moonflying56@gmail.com">moonflying56@gmail.com</a></p></article></section>`);
+function pageTexts(profile:SiteProfileRow):Record<string,string>{try{return JSON.parse(profile.page_texts||"{}")}catch{return {}}}
+export function publicHome(profile:SiteProfileRow,featured:ProductionRow|null): string {
+  const texts=pageTexts(profile);const feature=featured?`<section class="card feature"><p class="eyebrow">即将演出</p><h2>${escapeHtml(featured.title)}</h2><p>${escapeHtml(featured.promo||featured.synopsis)}</p><a class="button" href="/login?next=/productions/${featured.id}">登录后查看</a></section>`:"";
+  return layout("首页", `<section class="hero"><div><p class="eyebrow">BLACK BOX THEATRE</p><h1>${escapeHtml(texts.home_welcome||"黑匣子永远是你的家")}</h1><p>保存每一次排练、演出与相遇。</p><a class="button" href="/login">登录查看剧团档案</a></div></section>${feature}
+  <section class="two-column"><article class="card"><h2>关于我们</h2><p>${escapeHtml(texts.about_text||profile.introduction||"这里记录话剧队共同创作的作品和故事。")}</p></article><article class="card"><h2>联系我们</h2><p>${escapeHtml(texts.contact_intro||"")}</p><p><a href="mailto:${escapeHtml(profile.contact_email||"moonflying56@gmail.com")}">${escapeHtml(profile.contact_email||"moonflying56@gmail.com")}</a></p></article></section>`);
 }
 
-export function memberHome(user: UserSession, csrf: string): string {
+export function memberHome(user: UserSession,csrf:string,profile:SiteProfileRow,featured:ProductionRow|null,announcements:AnnouncementRow[]): string {
+  const texts=pageTexts(profile);const edit=user.role==="admin"?'<a class="edit-link" href="/admin/site#home_welcome">编辑首页文案</a>':"";const news=announcements.length?announcements.map(x=>`<li><a href="/announcements/${x.id}">${escapeHtml(x.title)}</a> <span class="muted">${escapeHtml(x.created_at.slice(0,10))}</span></li>`).join(""):"<li>暂无公告</li>";
   const adminLink = user.role === "admin" ? '<p><a href="/admin">进入管理员工作台</a></p>' : "";
-  return layout("队员首页", `<section class="card"><p class="eyebrow">${escapeHtml(user.role)}</p><h1>${escapeHtml(user.username)}，欢迎回来</h1>
-  <p>账号基础功能已接通 D1。作品和资源将在后续阶段逐项迁移。</p><p><a href="/profile">进入个人中心</a></p>${adminLink}
+  return layout("队员首页", `<section class="hero"><div><p class="eyebrow">${escapeHtml(user.role)}</p><h1>${escapeHtml(texts.home_welcome||"黑匣子永远是你的家")}</h1><p>${escapeHtml(user.username)}，欢迎回来。</p>${edit}</div></section>${featured?`<section class="card feature"><p class="eyebrow">精选大戏</p><h2><a href="/productions/${featured.id}">${escapeHtml(featured.title)}</a></h2><p>${escapeHtml(featured.promo||featured.synopsis)}</p></section>`:""}<section class="two-column"><article class="card"><h2>公告</h2><ul>${news}</ul><a href="/announcements">查看全部公告</a></article><article class="card"><h2>快捷入口</h2><p><a href="/profile">进入个人中心</a></p>${adminLink}</article></section>
   <form method="post" action="/logout"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button type="submit">退出登录</button></form></section>`, true);
 }
 
