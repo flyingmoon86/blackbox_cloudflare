@@ -1,9 +1,9 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "blackbox-poc",
-  "main": "src/worker.py",
+  "name": "blackbox",
+  "main": "src/index.ts",
   "compatibility_date": "2026-09-08",
-  "compatibility_flags": ["python_workers"],
+  "compatibility_flags": ["nodejs_compat"],
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",
@@ -12,9 +12,12 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "blackbox-poc",
+      "database_name": "blackbox-local",
       "database_id": "00000000-0000-0000-0000-000000000000",
       "migrations_dir": "migrations"
     }
-  ]
+  ],
+  "vars": {
+    "ENVIRONMENT": "development"
+  }
 }

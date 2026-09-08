@@ -1,13 +1,22 @@
 {
   "name": "blackbox-cloudflare",
   "private": true,
+  "type": "module",
   "scripts": {
-    "cf:dev": "node tools/run-pywrangler.mjs dev",
-    "cf:db:init": "node tools/run-pywrangler.mjs d1 migrations apply blackbox-poc --local",
-    "cf:auth-poc": "wrangler dev --config wrangler.auth-poc.jsonc",
-    "cf:deploy": "node tools/run-pywrangler.mjs deploy"
+    "dev": "wrangler dev",
+    "db:init": "wrangler d1 migrations apply blackbox-local --local",
+    "typecheck": "tsc --noEmit",
+    "deploy": "wrangler deploy",
+    "poc:python": "node tools/run-pywrangler.mjs dev",
+    "poc:auth": "wrangler dev --config wrangler.auth-poc.jsonc"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260908.1",
+    "@types/node": "^26.5.0",
+    "typescript": "^7.0.2",
     "wrangler": "4.129.1"
+  },
+  "dependencies": {
+    "hono": "^4.13.7"
   }
 }

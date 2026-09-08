@@ -6,17 +6,13 @@
 
 将当前 Flask + MySQL + 本地文件存储的网站迁移为 Cloudflare 原生架构。
 
-目标架构：
+已确认的目标架构（2026-09-08）：
 
     用户浏览器
         |
-    Cloudflare
+    Cloudflare 单 Worker（TypeScript + Hono）
         |
-        ├── Pages
-        |      前端页面
-        |
-        ├── Workers
-        |      后端 API 与业务逻辑
+        ├── 页面、路由、会话与业务逻辑
         |
         ├── D1
         |      SQLite 数据库
@@ -55,6 +51,8 @@
 -   数据完整迁移
 -   文件权限保持
 -   去除服务器依赖
+-   完整保留原 Python 网站，只作功能与数据迁移对照
+-   所有页面和接口由同一个 TypeScript Worker 提供，减少部署单元和跨项目配置
 
 ------------------------------------------------------------------------
 
@@ -70,7 +68,6 @@
 
 -   创建 Cloudflare 项目
 -   配置域名
--   创建 Pages 项目
 -   创建 Workers 项目
 -   创建 D1 数据库
 -   创建 R2 Bucket
@@ -80,7 +77,7 @@
 完成标准：
 
 -   Cloudflare 环境可以正常部署
--   Pages、Workers、D1、R2 已关联
+-   Worker、D1、R2 已关联
 
 ------------------------------------------------------------------------
 
@@ -136,15 +133,15 @@
 -   建立权限验证机制
 -   建立登录会话方案
 
-建议结构：
+确定结构（TypeScript）：
 
-    worker/
+    src/
      routes/
-       auth.js
-       member.js
-       production.js
-       resource.js
-       admin.js
+       auth.ts
+       member.ts
+       production.ts
+       resource.ts
+       admin.ts
      services/
      database/
      middleware/
@@ -289,17 +286,17 @@
 
 ------------------------------------------------------------------------
 
-## Issue CF-009：Pages 前端迁移
+## Issue CF-009：Worker 页面迁移
 
 目标：
 
-替换 Flask Jinja 页面。
+将 Flask Jinja 页面迁移为同一个 Worker 输出的 HTML 页面。
 
 迁移：
 
     templates/
     ↓
-    Pages frontend
+    TypeScript Worker views
 
 页面：
 
@@ -323,7 +320,8 @@
 
 完成标准：
 
--   页面全部由 Pages 提供
+-   页面与业务路由由同一个 Worker 提供
+-   静态资源通过 Worker 的 Assets 绑定提供
 
 ------------------------------------------------------------------------
 
@@ -366,9 +364,7 @@
 
 最终架构：
 
-    Cloudflare Pages
-    +
-    Cloudflare Workers
+    Cloudflare TypeScript Worker
     +
     Cloudflare D1
     +
@@ -385,3 +381,13 @@
 3.  文件系统最后迁移。
 4.  每完成一个 Issue 都保持可运行状态。
 5.  保留旧 Flask 项目作为迁移期间参考。
+6.  原 Python 网站不在迁移目录中改写；新实现只写入 blackbox_cloudflare。
+7.  每个阶段先本地验证并记录结果，所有功能完成后再创建线上资源和切换流量。
+
+------------------------------------------------------------------------
+
+# 当前进度
+
+-   阶段 0：Cloudflare 本地运行能力、D1、静态资源和旧密码兼容性验证完成。
+-   阶段 1（账号基础）：正式 D1 表结构、TypeScript Worker、登录、退出、签名会话和 CSRF 已完成本地验证。
+-   尚未上线，尚未连接真实 Cloudflare 账户、域名、邮件、旧数据库或真实文件。
