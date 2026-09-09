@@ -3,7 +3,7 @@ import { escapeHtml, layout } from "../views";
 
 export function productionListPage(items: ProductionRow[], admin: boolean): string {
   const cards = items.length ? items.map((item) => `<article class="card production-card"><p class="eyebrow">${escapeHtml(item.year || "作品档案")}</p><h2><a href="/productions/${item.id}">${escapeHtml(item.title)}</a></h2><p>${escapeHtml(item.promo || item.synopsis || "暂无介绍")}</p></article>`).join("") : '<p class="card">还没有作品档案。</p>';
-  return layout("作品", `<section class="page-heading"><p class="eyebrow">PRODUCTIONS</p><h1>作品与资料</h1>${admin ? '<a class="button" href="/admin/productions/new">创建作品</a>' : ""}</section><section class="card-grid">${cards}</section>`, true);
+  return layout("作品", `<section class="page-heading"><p class="eyebrow">PRODUCTIONS</p><h1>作品与资料</h1><p><a href="/resources">浏览资料库</a> · <a href="/my-resources">查看我的提交</a> · <a href="/resources/submit">提交资料</a></p>${admin ? '<a class="button" href="/admin/productions/new">创建作品</a>' : ""}</section><section class="card-grid">${cards}</section>`, true);
 }
 
 export function productionDetailPage(item: ProductionRow, credits: CreditRow[], members: MemberChoice[], admin: boolean, csrf: string): string {

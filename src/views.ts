@@ -53,7 +53,7 @@ export function memberHome(user: UserSession,csrf:string,profile:SiteProfileRow,
   const texts=pageTexts(profile);const edit=user.role==="admin"?'<a class="edit-link" href="/admin/site#home_welcome">编辑首页文案</a>':"";const news=announcements.length?announcements.map(x=>`<li><a href="/announcements/${x.id}">${escapeHtml(x.title)}</a> <span class="muted">${escapeHtml(x.created_at.slice(0,10))}</span></li>`).join(""):"<li>暂无公告</li>";
   const adminLink = user.role === "admin" ? '<p><a href="/admin">进入管理员工作台</a></p>' : "";
   return layout("队员首页", `<section class="hero"><div><p class="eyebrow">${escapeHtml(user.role)}</p><h1>${escapeHtml(texts.home_welcome||"黑匣子永远是你的家")}</h1><p>${escapeHtml(user.username)}，欢迎回来。</p>${edit}</div></section>${featured?`<section class="card feature"><p class="eyebrow">精选大戏</p><h2><a href="/productions/${featured.id}">${escapeHtml(featured.title)}</a></h2><p>${escapeHtml(featured.promo||featured.synopsis)}</p></section>`:""}<section class="two-column"><article class="card"><h2>公告</h2><ul>${news}</ul><a href="/announcements">查看全部公告</a></article><article class="card"><h2>快捷入口</h2><p><a href="/profile">进入个人中心</a></p>${adminLink}</article></section>
-  <form method="post" action="/logout"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button type="submit">退出登录</button></form></section>`, true);
+  <form method="post" action="/logout"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button type="submit">退出登录</button></form>`, true);
 }
 
 export function profilePage(user: UserSession, csrf: string, error = "", request: { id: number; apply_type: string; name: string; status: string; admin_note: string; result_acknowledged: number } | null = null): string {

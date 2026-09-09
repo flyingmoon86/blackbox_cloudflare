@@ -16,12 +16,15 @@ export type ManagedUser = {
 
 export const adminRoutes = new Hono<AppEnv>();
 
-adminRoutes.use("*", async (c, next) => {
+const requireAdmin = async (c: any, next: () => Promise<void>) => {
   const user = c.get("user");
   if (!user) return c.redirect(`/login?next=${encodeURIComponent(c.req.path)}`);
   if (user.role !== "admin") return c.text("没有管理员权限。", 403);
   await next();
-});
+};
+
+adminRoutes.use("/admin", requireAdmin);
+adminRoutes.use("/admin/*", requireAdmin);
 
 adminRoutes.get("/admin", async (c) => {
   const [requests, users] = await Promise.all([
