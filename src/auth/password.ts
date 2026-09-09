@@ -6,7 +6,8 @@ type ScryptParameters = { n: number; r: number; p: number };
 
 function fromHex(value: string): Uint8Array {
   const bytes = new Uint8Array(value.length / 2);
-  for (let index = 0; index < value.length; index += 2) bytes[index / 2] = Number.parseInt(value.slice(index, index + 2), 16);
+  for (let index = 0; index < value.length; index += 2)
+    bytes[index / 2] = Number.parseInt(value.slice(index, index + 2), 16);
   return bytes;
 }
 
@@ -16,7 +17,15 @@ function toHex(value: Uint8Array): string {
 
 function parseWerkzeugScrypt(value: string): { params: ScryptParameters; salt: string; expected: Uint8Array } | null {
   const [method, salt, expectedHex, extra] = value.split("$");
-  if (extra !== undefined || !method || !salt || !expectedHex || expectedHex.length % 2 !== 0 || !/^[0-9a-f]+$/i.test(expectedHex)) return null;
+  if (
+    extra !== undefined ||
+    !method ||
+    !salt ||
+    !expectedHex ||
+    expectedHex.length % 2 !== 0 ||
+    !/^[0-9a-f]+$/i.test(expectedHex)
+  )
+    return null;
   const [algorithm, nText, rText, pText, methodExtra] = method.split(":");
   if (methodExtra !== undefined || algorithm !== "scrypt") return null;
   const params = { n: Number(nText), r: Number(rText), p: Number(pText) };

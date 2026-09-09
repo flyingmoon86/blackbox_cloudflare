@@ -6,16 +6,20 @@
     "dev": "node scripts/wrangler.mjs dev",
     "db:init": "node scripts/wrangler.mjs d1 migrations apply blackbox-local --local",
     "typecheck": "tsc --noEmit",
+    "format": "prettier --write \"src/**/*.ts\" \"public/**/*.js\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"public/**/*.js\"",
     "build": "node scripts/wrangler.mjs deploy --dry-run --outdir .wrangler/dry-run",
     "deploy": "node scripts/wrangler.mjs deploy"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260908.1",
     "@types/node": "^26.5.0",
+    "prettier": "^3.9.6",
     "typescript": "^7.0.2",
     "wrangler": "4.129.1"
   },
   "dependencies": {
+    "aws4fetch": "^1.0.20",
     "hono": "^4.13.7"
   }
 }

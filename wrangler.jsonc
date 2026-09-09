@@ -17,7 +17,17 @@
       "migrations_dir": "migrations"
     }
   ],
+  "r2_buckets": [
+    {
+      "binding": "FILES",
+      "bucket_name": "blackbox-files"
+    }
+  ],
   "vars": {
-    "ENVIRONMENT": "development"
+    "ENVIRONMENT": "development",
+    "R2_BUCKET_NAME": "blackbox-files"
+  },
+  "triggers": {
+    "crons": ["17 * * * *"]
   }
 }

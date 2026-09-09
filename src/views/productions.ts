@@ -2,18 +2,57 @@ import type { CreditRow, MemberChoice, ProductionRow } from "../routes/productio
 import { escapeHtml, layout } from "../views";
 
 export function productionListPage(items: ProductionRow[], admin: boolean): string {
-  const cards = items.length ? items.map((item) => `<article class="card production-card"><p class="eyebrow">${escapeHtml(item.year || "作品档案")}</p><h2><a href="/productions/${item.id}">${escapeHtml(item.title)}</a></h2><p>${escapeHtml(item.promo || item.synopsis || "暂无介绍")}</p></article>`).join("") : '<p class="card">还没有作品档案。</p>';
-  return layout("作品", `<section class="page-heading"><p class="eyebrow">PRODUCTIONS</p><h1>作品与资料</h1><p><a href="/resources">浏览资料库</a> · <a href="/my-resources">查看我的提交</a> · <a href="/resources/submit">提交资料</a></p>${admin ? '<a class="button" href="/admin/productions/new">创建作品</a>' : ""}</section><section class="card-grid">${cards}</section>`, true);
+  const cards = items.length
+    ? items
+        .map(
+          (item) =>
+            `<article class="card production-card">${item.cover_id ? `<img class="production-cover" src="/resources/${item.cover_id}/preview" alt="${escapeHtml(item.title)}封面">` : ""}<p class="eyebrow">${escapeHtml(item.year || "作品档案")}</p><h2><a href="/productions/${item.id}">${escapeHtml(item.title)}</a></h2><p>${escapeHtml(item.promo || item.synopsis || "暂无介绍")}</p></article>`,
+        )
+        .join("")
+    : '<p class="card">还没有作品档案。</p>';
+  return layout(
+    "作品",
+    `<section class="page-heading"><p class="eyebrow">PRODUCTIONS</p><h1>作品与资料</h1><p><a href="/resources">浏览资料库</a> · <a href="/my-resources">查看我的提交</a> · <a href="/resources/submit">提交资料</a></p>${admin ? '<a class="button" href="/admin/productions/new">创建作品</a>' : ""}</section><section class="card-grid">${cards}</section>`,
+    true,
+  );
 }
 
-export function productionDetailPage(item: ProductionRow, credits: CreditRow[], members: MemberChoice[], admin: boolean, csrf: string): string {
-  const group = (kind: "cast" | "crew") => credits.filter((credit) => credit.kind === kind).map((credit) => `<li><a href="/members/${credit.member_id}">${escapeHtml(credit.member_name)}</a> · ${escapeHtml(credit.role_name)}${admin ? `<form class="inline" method="post" action="/admin/productions/${item.id}/credits/${credit.id}/delete"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button class="link-button">删除</button></form>` : ""}</li>`).join("") || "<li>暂无记录</li>";
-  return layout(item.title, `<article class="card production-detail"><p class="eyebrow">${escapeHtml(item.year || "PRODUCTION")}</p><h1>${escapeHtml(item.title)}</h1><p class="lead">${escapeHtml(item.promo)}</p><p>${escapeHtml(item.synopsis || "暂无剧情介绍")}</p>
+export function productionDetailPage(
+  item: ProductionRow,
+  credits: CreditRow[],
+  members: MemberChoice[],
+  admin: boolean,
+  csrf: string,
+): string {
+  const group = (kind: "cast" | "crew") =>
+    credits
+      .filter((credit) => credit.kind === kind)
+      .map(
+        (credit) =>
+          `<li><a href="/members/${credit.member_id}">${escapeHtml(credit.member_name)}</a> · ${escapeHtml(credit.role_name)}${admin ? `<form class="inline" method="post" action="/admin/productions/${item.id}/credits/${credit.id}/delete"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button class="link-button">删除</button></form>` : ""}</li>`,
+      )
+      .join("") || "<li>暂无记录</li>";
+  return layout(
+    item.title,
+    `<article class="card production-detail">${item.cover_id ? `<img class="production-cover" src="/resources/${item.cover_id}/preview" alt="${escapeHtml(item.title)}封面">` : ""}<p class="eyebrow">${escapeHtml(item.year || "PRODUCTION")}</p><h1>${escapeHtml(item.title)}</h1><p class="lead">${escapeHtml(item.promo)}</p><p>${escapeHtml(item.synopsis || "暂无剧情介绍")}</p>
     <div class="two-column"><section><h2>演员</h2><ul>${group("cast")}</ul></section><section><h2>后台与创作</h2><ul>${group("crew")}</ul></section></div>
-    ${admin ? `<p><a href="/admin/productions/${item.id}/edit">编辑作品资料</a></p><form class="credit-form" method="post" action="/admin/productions/${item.id}/credits"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>选择队员<select name="member_id" required><option value="">请选择</option>${members.map((member) => `<option value="${member.id}">${escapeHtml(member.name)}${member.cohort ? `（${escapeHtml(member.cohort)}）` : ""}</option>`).join("")}</select></label><label>类别<select name="kind"><option value="cast">演员</option><option value="crew">后台与创作</option></select></label><label>角色或分工<input name="role_name" maxlength="80" required></label><button>添加演职员</button></form>` : ""}</article>`, true);
+    ${admin ? `<p><a href="/admin/productions/${item.id}/edit">编辑作品资料</a></p><form class="credit-form" method="post" action="/admin/productions/${item.id}/credits"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>选择队员<select name="member_id" required><option value="">请选择</option>${members.map((member) => `<option value="${member.id}">${escapeHtml(member.name)}${member.cohort ? `（${escapeHtml(member.cohort)}）` : ""}</option>`).join("")}</select></label><label>类别<select name="kind"><option value="cast">演员</option><option value="crew">后台与创作</option></select></label><label>角色或分工<input name="role_name" maxlength="80" required></label><button>添加演职员</button></form>` : ""}</article>`,
+    true,
+  );
 }
 
-export function productionFormPage(item: ProductionRow | null, csrf: string): string {
+export function productionFormPage(
+  item: ProductionRow | null,
+  csrf: string,
+  covers: Array<{ id: number; title: string }>,
+): string {
   const action = item ? `/admin/productions/${item.id}/edit` : "/admin/productions/new";
-  return layout(item ? "编辑作品" : "创建作品", `<section class="card auth"><p class="eyebrow">PRODUCTION EDITOR</p><h1>${item ? "编辑作品" : "创建作品"}</h1><form method="post" action="${action}"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>作品名称<input name="title" maxlength="100" value="${escapeHtml(item?.title)}" required></label><label>年份<input name="year" type="number" min="1" max="9999" value="${escapeHtml(item?.year)}"></label><label>首页短介绍<input name="promo" maxlength="300" value="${escapeHtml(item?.promo)}"></label><label>剧情与作品介绍<textarea name="synopsis" rows="8">${escapeHtml(item?.synopsis)}</textarea></label><label>封面比例<select name="cover_ratio"><option value="landscape"${item?.cover_ratio !== "portrait" ? " selected" : ""}>横版</option><option value="portrait"${item?.cover_ratio === "portrait" ? " selected" : ""}>竖版</option></select></label><label>首页布局<select name="feature_layout"><option value="split"${item?.feature_layout !== "overlay" ? " selected" : ""}>图文并列</option><option value="overlay"${item?.feature_layout === "overlay" ? " selected" : ""}>文字叠加</option></select></label><button>保存作品</button></form></section>`, true);
+  const coverSelect = item
+    ? `<label>作品封面<select name="cover_id"><option value="">暂不设置</option>${covers.map((cover) => `<option value="${cover.id}"${item.cover_id === cover.id ? " selected" : ""}>${escapeHtml(cover.title)}</option>`).join("")}</select><span class="hint">这里只显示已归入本作品且审核通过的剧照。</span></label>`
+    : "";
+  return layout(
+    item ? "编辑作品" : "创建作品",
+    `<section class="card auth"><p class="eyebrow">PRODUCTION EDITOR</p><h1>${item ? "编辑作品" : "创建作品"}</h1><form method="post" action="${action}"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>作品名称<input name="title" maxlength="100" value="${escapeHtml(item?.title)}" required></label><label>年份<input name="year" type="number" min="1" max="9999" value="${escapeHtml(item?.year)}"></label><label>首页短介绍<input name="promo" maxlength="300" value="${escapeHtml(item?.promo)}"></label><label>剧情与作品介绍<textarea name="synopsis" rows="8">${escapeHtml(item?.synopsis)}</textarea></label>${coverSelect}<label>封面比例<select name="cover_ratio"><option value="landscape"${item?.cover_ratio !== "portrait" ? " selected" : ""}>横版</option><option value="portrait"${item?.cover_ratio === "portrait" ? " selected" : ""}>竖版</option></select></label><label>首页布局<select name="feature_layout"><option value="split"${item?.feature_layout !== "overlay" ? " selected" : ""}>图文并列</option><option value="overlay"${item?.feature_layout === "overlay" ? " selected" : ""}>文字叠加</option></select></label><button>保存作品</button></form></section>`,
+    true,
+  );
 }

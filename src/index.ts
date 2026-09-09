@@ -9,7 +9,9 @@ import { productionRoutes } from "./routes/productions";
 import { contentRoutes } from "./routes/content";
 import { resourceRoutes } from "./routes/resources";
 import { helpRoutes } from "./routes/help";
+import { uploadRoutes } from "./routes/uploads";
 import type { AppEnv } from "./types";
+import { cleanExpiredUploads } from "./storage/cleanup";
 
 const app = new Hono<AppEnv>();
 
@@ -27,6 +29,7 @@ app.route("/", productionRoutes);
 app.route("/", contentRoutes);
 app.route("/", resourceRoutes);
 app.route("/", helpRoutes);
+app.route("/", uploadRoutes);
 
 app.notFound((c) => c.env.ASSETS.fetch(c.req.raw));
 app.onError((error, c) => {
@@ -34,4 +37,9 @@ app.onError((error, c) => {
   return c.text("服务暂时不可用，请稍后重试。", 500);
 });
 
-export default app;
+export default {
+  fetch: app.fetch,
+  scheduled(_controller, env, context) {
+    context.waitUntil(cleanExpiredUploads(env));
+  },
+} satisfies ExportedHandler<AppEnv["Bindings"]>;

@@ -1,7 +1,93 @@
-import type{ResourceRow}from"../routes/resources";import type{UserSession}from"../types";import{escapeHtml,layout}from"../views";
-const labels:Record<string,string>={video:"视频",script:"剧本",photo:"剧照",audio:"音频",other:"其他"};
-const statuses:Record<string,string>={approved:"已入库",pending:"等待审核",rejected:"已驳回"};
-export function resourceListPage(rows:ResourceRow[],user:UserSession,_csrf:string,mine=false):string{const cards=rows.length?rows.map(r=>`<article class="card"><p class="eyebrow">${escapeHtml(labels[r.res_type]||r.res_type)} · ${escapeHtml(statuses[r.status]||r.status)}</p><h2><a href="/resources/${r.id}">${escapeHtml(r.title)}</a></h2><p>${escapeHtml(r.description||"暂无说明")}</p><p>所属作品：${escapeHtml(r.production_title||"其他资料")}</p><p>文件：${escapeHtml(r.original_name)}</p>${r.admin_note?`<p class="alert">审核说明：${escapeHtml(r.admin_note)}</p>`:""}</article>`).join(""):'<p class="card">暂无资料。</p>';const canSubmit=user.role!=="user";return layout(mine?"我的资料":"资料库",`<section class="page-heading"><p class="eyebrow">ARCHIVE</p><h1>${mine?"我的资料与审核结果":"资料库"}</h1><p><a href="/resources">已入库资料</a> · <a href="/my-resources">我的提交</a>${canSubmit?' · <a href="/resources/submit">提交资料</a>':""}</p></section><section class="review-grid">${cards}</section>`,true)}
-export function resourceDetailPage(row:ResourceRow,user:UserSession):string{const download=row.status==="approved"?'<p class="notice">文件上传将在 R2 接入后开放。当前可核对资料信息。</p>':"";return layout(row.title,`<article class="card production-detail"><p class="eyebrow">${escapeHtml(labels[row.res_type]||row.res_type)} · ${escapeHtml(statuses[row.status]||row.status)}</p><h1>${escapeHtml(row.title)}</h1><p>${escapeHtml(row.description||"暂无说明")}</p><p>所属作品：${row.production_id?`<a href="/productions/${row.production_id}">${escapeHtml(row.production_title)}</a>`:"其他资料"}</p><p>原文件名：${escapeHtml(row.original_name)}</p><p>提交人：${escapeHtml(row.uploader_name||"未知")}</p>${row.admin_note?`<p class="alert">审核说明：${escapeHtml(row.admin_note)}</p>`:""}${download}<p><a href="${user.id===row.uploader_id?"/my-resources":"/resources"}">返回资料列表</a></p></article>`,true)}
-export function resourceFormPage(productions:Array<{id:number;title:string}>,csrf:string):string{return layout("提交资料",`<section class="card auth"><h1>提交资料</h1><p class="notice">当前阶段先登记资料信息。R2 接入后会在这里选择并上传真实文件。</p><form method="post"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>资料标题<input name="title" maxlength="100" required></label><label>类型<select name="res_type"><option value="video">视频</option><option value="script">剧本</option><option value="photo">剧照</option><option value="audio">音频</option><option value="other">其他</option></select></label><label>所属作品<select name="production_id"><option value="">其他资料</option>${productions.map(p=>`<option value="${p.id}">${escapeHtml(p.title)}</option>`).join("")}</select></label><label>原文件名<input name="original_name" maxlength="255" placeholder="例如：演出录像.mp4" required></label><label>说明<textarea name="description" rows="5"></textarea></label><button>提交审核</button></form></section>`,true)}
-export function resourceReviewsPage(rows:ResourceRow[],csrf:string):string{const cards=rows.length?rows.map(r=>`<article class="card"><h2>${escapeHtml(r.title)}</h2><p>提交人：${escapeHtml(r.uploader_name)} · ${escapeHtml(labels[r.res_type])} · ${escapeHtml(r.production_title||"其他资料")}</p><p>${escapeHtml(r.description)}</p><p>文件：${escapeHtml(r.original_name)}</p><form method="post" action="/admin/resources/${r.id}/review"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>审核说明<input name="admin_note" maxlength="1000"></label><button name="decision" value="approve">通过入库</button> <button class="secondary" name="decision" value="reject">驳回</button></form></article>`).join(""):'<p class="card">没有待审核资料。</p>';return layout("资料审核",`<section class="page-heading"><h1>资料审核</h1></section><section class="review-grid">${cards}</section>`,true)}
+import type { ResourceRow } from "../routes/resources";
+import type { UserSession } from "../types";
+import { escapeHtml, layout } from "../views";
+const labels: Record<string, string> = { video: "视频", script: "剧本", photo: "剧照", audio: "音频", other: "其他" };
+const statuses: Record<string, string> = { approved: "已入库", pending: "等待审核", rejected: "已驳回" };
+export function resourceListPage(rows: ResourceRow[], user: UserSession, _csrf: string, mine = false): string {
+  const cards = rows.length
+    ? rows
+        .map(
+          (r) =>
+            `<article class="card"><p class="eyebrow">${escapeHtml(labels[r.res_type] || r.res_type)} · ${escapeHtml(statuses[r.status] || r.status)}</p><h2><a href="/resources/${r.id}">${escapeHtml(r.title)}</a></h2><p>${escapeHtml(r.description || "暂无说明")}</p><p>所属作品：${escapeHtml(r.production_title || "其他资料")}</p><p>文件：${escapeHtml(r.original_name)}</p>${r.admin_note ? `<p class="alert">审核说明：${escapeHtml(r.admin_note)}</p>` : ""}</article>`,
+        )
+        .join("")
+    : '<p class="card">暂无资料。</p>';
+  const canSubmit = user.role !== "user";
+  return layout(
+    mine ? "我的资料" : "资料库",
+    `<section class="page-heading"><p class="eyebrow">ARCHIVE</p><h1>${mine ? "我的资料与审核结果" : "资料库"}</h1><p><a href="/resources">已入库资料</a> · <a href="/my-resources">我的提交</a>${canSubmit ? ' · <a href="/resources/submit">提交资料</a>' : ""}</p></section><section class="review-grid">${cards}</section>`,
+    true,
+  );
+}
+export function resourceDetailPage(row: ResourceRow, user: UserSession): string {
+  const download =
+    row.status === "approved"
+      ? `<p><a class="button" href="/resources/${row.id}/download">下载文件</a></p>`
+      : row.status === "pending"
+        ? '<p class="notice">文件已安全保存，等待管理员审核后开放下载。</p>'
+        : "";
+  const edit =
+    user.role === "admin"
+      ? `<p><a class="edit-link" href="/admin/resources/${row.id}/edit">编辑或删除这份资料</a></p>`
+      : "";
+  return layout(
+    row.title,
+    `<article class="card production-detail"><p class="eyebrow">${escapeHtml(labels[row.res_type] || row.res_type)} · ${escapeHtml(statuses[row.status] || row.status)}</p><h1>${escapeHtml(row.title)}</h1>${edit}<p>${escapeHtml(row.description || "暂无说明")}</p><p>所属作品：${row.production_id ? `<a href="/productions/${row.production_id}">${escapeHtml(row.production_title)}</a>` : "其他资料"}</p><p>原文件名：${escapeHtml(row.original_name)}</p><p>提交人：${escapeHtml(row.uploader_name || "未知")}</p>${row.admin_note ? `<p class="alert">审核说明：${escapeHtml(row.admin_note)}</p>` : ""}${download}<p><a href="${user.id === row.uploader_id ? "/my-resources" : "/resources"}">返回资料列表</a></p></article>`,
+    true,
+  );
+}
+export function resourceFormPage(productions: Array<{ id: number; title: string }>, csrf: string): string {
+  return layout(
+    "上传资料",
+    `<section class="card auth"><h1>上传资料</h1><p class="notice">支持 1–5GB 演出视频，文件会分片上传。上传中断时可重新选择同一个文件继续。</p><form id="resource-upload" method="post" data-csrf="${escapeHtml(csrf)}"><label>资料标题<input name="title" maxlength="100" required></label><label>类型<select name="res_type"><option value="video">视频</option><option value="script">剧本</option><option value="photo">剧照</option><option value="audio">音频</option><option value="other">其他</option></select></label><label>所属作品<select name="production_id"><option value="">其他资料</option>${productions.map((p) => `<option value="${p.id}">${escapeHtml(p.title)}</option>`).join("")}</select></label><label>选择文件<input name="file" type="file" required></label><label>说明<textarea name="description" maxlength="2000" rows="5"></textarea></label><progress id="upload-progress" value="0"></progress><p id="upload-status" class="muted" role="status">尚未开始上传。</p><button type="submit">开始上传</button> <button type="button" id="upload-cancel" class="secondary" hidden>取消上传</button></form><script src="/upload.js" defer></script></section>`,
+    true,
+  );
+}
+export function resourceReviewsPage(rows: ResourceRow[], csrf: string): string {
+  const cards = rows.length
+    ? rows
+        .map(
+          (r) =>
+            `<article class="card"><h2>${escapeHtml(r.title)}</h2><p>提交人：${escapeHtml(r.uploader_name)} · ${escapeHtml(labels[r.res_type])} · ${escapeHtml(r.production_title || "其他资料")}</p><p>${escapeHtml(r.description)}</p><p>文件：${escapeHtml(r.original_name)}</p><form method="post" action="/admin/resources/${r.id}/review"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>审核说明<input name="admin_note" maxlength="1000"></label><button name="decision" value="approve">通过入库</button> <button class="secondary" name="decision" value="reject">驳回</button></form></article>`,
+        )
+        .join("")
+    : '<p class="card">没有待审核资料。</p>';
+  return layout(
+    "资料审核",
+    `<section class="page-heading"><h1>资料审核</h1></section><section class="review-grid">${cards}</section>`,
+    true,
+  );
+}
+export function resourceAdminPage(rows: ResourceRow[]): string {
+  const cards = rows.length
+    ? rows
+        .map(
+          (r) =>
+            `<article class="card"><p class="eyebrow">${escapeHtml(statuses[r.status] || r.status)} · ${escapeHtml(labels[r.res_type] || r.res_type)}</p><h2><a href="/resources/${r.id}">${escapeHtml(r.title)}</a></h2><p>${escapeHtml(r.production_title || "其他资料")} · ${escapeHtml(r.uploader_name || "未知提交人")}</p><a href="/admin/resources/${r.id}/edit">编辑或删除</a></article>`,
+        )
+        .join("")
+    : '<p class="card">暂无资料。</p>';
+  return layout(
+    "资料管理",
+    `<section class="page-heading"><h1>资料管理</h1><p><a href="/admin/resources/reviews">查看待审核资料</a></p></section><section class="review-grid">${cards}</section>`,
+    true,
+  );
+}
+export function resourceEditPage(
+  row: ResourceRow,
+  productions: Array<{ id: number; title: string }>,
+  csrf: string,
+  saved: boolean,
+): string {
+  return layout(
+    "编辑资料",
+    `<section class="card auth"><h1>编辑资料</h1>${saved ? '<p class="notice">资料信息已保存。</p>' : ""}<form method="post"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>资料标题<input name="title" maxlength="100" value="${escapeHtml(row.title)}" required></label><label>类型<select name="res_type">${Object.entries(
+      labels,
+    )
+      .map(([value, label]) => `<option value="${value}"${row.res_type === value ? " selected" : ""}>${label}</option>`)
+      .join(
+        "",
+      )}</select></label><label>所属作品<select name="production_id"><option value="">其他资料</option>${productions.map((p) => `<option value="${p.id}"${row.production_id === p.id ? " selected" : ""}>${escapeHtml(p.title)}</option>`).join("")}</select></label><label>说明<textarea name="description" maxlength="2000" rows="6">${escapeHtml(row.description)}</textarea></label><button>保存资料信息</button></form><hr><form method="post" action="/admin/resources/${row.id}/delete" onsubmit="return confirm('确定删除这份资料和文件吗？此操作无法撤销。')"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button class="secondary">删除资料与文件</button></form></section>`,
+    true,
+  );
+}
