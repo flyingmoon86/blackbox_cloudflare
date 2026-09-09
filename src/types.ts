@@ -13,6 +13,7 @@ export type UserSession = {
   status: "active" | "disabled";
   email: string | null;
   pending_email: string | null;
+  member_id: number | null;
 };
 
 export type AccountRow = UserSession & { password_hash: string };

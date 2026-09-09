@@ -8,6 +8,7 @@ import { adminRoutes } from "./routes/admin";
 import { productionRoutes } from "./routes/productions";
 import { contentRoutes } from "./routes/content";
 import { resourceRoutes } from "./routes/resources";
+import { helpRoutes } from "./routes/help";
 import type { AppEnv } from "./types";
 
 const app = new Hono<AppEnv>();
@@ -25,6 +26,7 @@ app.route("/", adminRoutes);
 app.route("/", productionRoutes);
 app.route("/", contentRoutes);
 app.route("/", resourceRoutes);
+app.route("/", helpRoutes);
 
 app.notFound((c) => c.env.ASSETS.fetch(c.req.raw));
 app.onError((error, c) => {

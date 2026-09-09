@@ -58,7 +58,7 @@ contentRoutes.post("/admin/site", async (c) => {
   if(!csrfValid(c,form.get("csrf")))return c.text("请求已失效，请刷新页面后重试。",400);
   const current=await c.env.DB.prepare("SELECT page_texts FROM site_profile WHERE id=1").first<{page_texts:string}>();
   let texts:Record<string,string>={};try{texts=JSON.parse(current?.page_texts||"{}");}catch{}
-  for(const key of ["home_welcome","about_text","contact_intro"])texts[key]=String(form.get(key)??"").trim().slice(0,5000);
+  for(const key of ["home_welcome","about_text","contact_intro","member_guide","admin_guide"])texts[key]=String(form.get(key)??"").trim().slice(0,10000);
   const featuredText=String(form.get("featured_production_id")??"");const featured=featuredText?Number(featuredText):null;
   if(featured!==null&&!await c.env.DB.prepare("SELECT id FROM production WHERE id=?").bind(featured).first())return c.text("请选择有效的精选作品。",400);
   await c.env.DB.prepare(`UPDATE site_profile SET troupe_name=?,introduction=?,contact_email=?,contact_wechat=?,qq_group=?,public_account=?,recruitment=?,requirements=?,featured_production_id=?,page_texts=? WHERE id=1`)

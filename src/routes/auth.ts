@@ -34,7 +34,7 @@ authRoutes.post("/login", async (c) => {
   const username = String(form.get("username") ?? "").trim();
   const password = String(form.get("password") ?? "");
   const user = await c.env.DB.prepare(
-    "SELECT id, username, password_hash, auth_version, role, status, email, pending_email FROM user WHERE username = ? COLLATE NOCASE"
+    "SELECT id, username, password_hash, auth_version, role, status, email, pending_email, member_id FROM user WHERE username = ? COLLATE NOCASE"
   ).bind(username).first() as AccountRow | null;
   if (!user || user.status !== "active" || !verifyPassword(user.password_hash, password)) {
     return c.html(loginPage(await csrfFor(c), "用户名或密码不正确。", safeNext(form.get("next"))), 401);
