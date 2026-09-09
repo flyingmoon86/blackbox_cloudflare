@@ -3,6 +3,7 @@ const form = document.querySelector("#resource-upload");
 if (form) {
   const status = document.querySelector("#upload-status");
   const progress = document.querySelector("#upload-progress");
+  const percent = document.querySelector("#upload-percent");
   const cancel = document.querySelector("#upload-cancel");
   const submit = form.querySelector('button[type="submit"]');
   const type = form.elements.res_type;
@@ -11,10 +12,35 @@ if (form) {
   let activeTask = "";
   let storageKey = "";
   let canceled = false;
+  let uploading = false;
+  let wakeLock = null;
 
   const show = (text) => {
     status.textContent = text;
   };
+  const updateProgress = (value, maximum) => {
+    progress.max = maximum || 1;
+    progress.value = value;
+    percent.textContent = `${Math.min(100, Math.round((value / (maximum || 1)) * 100))}%`;
+  };
+  const keepScreenAwake = async () => {
+    try {
+      if ("wakeLock" in navigator && !wakeLock) wakeLock = await navigator.wakeLock.request("screen");
+    } catch {}
+  };
+  const releaseScreen = async () => {
+    if (!wakeLock) return;
+    await wakeLock.release().catch(() => {});
+    wakeLock = null;
+  };
+  addEventListener("beforeunload", (event) => {
+    if (!uploading) return;
+    event.preventDefault();
+    event.returnValue = true;
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (uploading && document.visibilityState === "visible") keepScreenAwake();
+  });
   const readJson = async (response) => {
     const body = await response.json().catch(() => ({ error: "服务器返回异常。" }));
     if (!response.ok) throw new Error(body.error || `请求失败（${response.status}）`);
@@ -83,8 +109,7 @@ if (form) {
     const snapshot = task.parts ? task : await readJson(await fetch(`/api/uploads/${activeTask}`));
     const completedParts = new Set(snapshot.parts.map((part) => part.partNumber));
     let completedBytes = snapshot.parts.reduce((sum, part) => sum + part.sizeBytes, 0);
-    progress.max = totalBytes;
-    progress.value = bytesBefore + completedBytes;
+    updateProgress(bytesBefore + completedBytes, totalBytes);
     const pendingParts = [];
     for (let part = 1; part <= task.totalParts; part += 1) if (!completedParts.has(part)) pendingParts.push(part);
     let nextPart = 0;
@@ -122,10 +147,11 @@ if (form) {
           }
         });
         completedBytes += blob.size;
-        progress.value = bytesBefore + completedBytes;
+        updateProgress(bytesBefore + completedBytes, totalBytes);
       }
     };
-    await Promise.all(Array.from({ length: Math.min(3, pendingParts.length) }, uploadPart));
+    const concurrency = matchMedia("(max-width: 700px)").matches ? 2 : 3;
+    await Promise.all(Array.from({ length: Math.min(concurrency, pendingParts.length) }, uploadPart));
     show(`正在保存第 ${index}/${total} 个文件……`);
     await readJson(
       await fetch(`/api/uploads/${activeTask}/complete`, {
@@ -144,6 +170,8 @@ if (form) {
     if (files.length > 1 && type.value !== "photo") return show("只有剧照支持一次选择多个文件。");
     if (files.length === 1 && !form.elements.title.value.trim()) return show("上传单个文件时请填写资料标题。");
     canceled = false;
+    uploading = true;
+    await keepScreenAwake();
     submit.disabled = true;
     cancel.hidden = false;
     const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
@@ -154,9 +182,13 @@ if (form) {
         bytesBefore += files[index].size;
       }
       show(`${files.length} 个文件已提交，等待管理员分别审核。`);
+      uploading = false;
+      await releaseScreen();
       location.href = "/my-resources";
     } catch (error) {
       show(error.message || "上传失败，可以稍后重试。");
+      uploading = false;
+      await releaseScreen();
       submit.disabled = false;
       cancel.hidden = !activeTask;
     }
@@ -175,6 +207,8 @@ if (form) {
       localStorage.removeItem(storageKey);
       show("当前文件上传已取消。已完成的其他剧照仍会保留并等待审核。");
       activeTask = "";
+      uploading = false;
+      await releaseScreen();
       cancel.hidden = true;
       submit.disabled = false;
     } catch (error) {

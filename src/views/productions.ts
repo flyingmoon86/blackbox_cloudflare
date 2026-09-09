@@ -13,12 +13,23 @@ function archiveTabs(active: "productions" | "resources"): string {
   return `<nav class="section-tabs" aria-label="作品与资料"><a href="/productions"${active === "productions" ? ' class="active" aria-current="page"' : ""}>作品档案</a><a href="/resources"${active === "resources" ? ' class="active" aria-current="page"' : ""}>资料库</a></nav>`;
 }
 
-export function productionListPage(items: ProductionRow[], admin: boolean): string {
+export function productionListPage(items: ProductionRow[], user: UserSession): string {
+  const admin = user.role === "admin";
+  const contributionActions = (item: ProductionRow): string => {
+    if (user.role === "user")
+      return '<p class="contribution-note"><a href="/profile/member-application">认证为队员后，可以申请加入主创并补充资料</a></p>';
+    const joinLink = user.member_id
+      ? `<a class="button secondary" href="/productions/${item.id}#join-production">我是主创！</a>`
+      : admin
+        ? `<a class="button secondary" href="/productions/${item.id}#manage-credits">管理主创</a>`
+        : "";
+    return `<div class="production-actions">${joinLink}<a class="button" href="/resources/submit?production_id=${item.id}">我要补充资料！</a></div>`;
+  };
   const cards = items.length
     ? items
         .map(
           (item) =>
-            `<article class="card production-card ratio-${item.cover_ratio === "portrait" ? "portrait" : "landscape"}">${item.cover_id ? `<img class="production-cover" src="/resources/${item.cover_id}/preview" alt="${escapeHtml(item.title)}封面">` : ""}<p class="eyebrow">${escapeHtml(item.year || "作品档案")}</p><h2><a href="/productions/${item.id}">${escapeHtml(item.title)}</a></h2><p>${escapeHtml(item.promo || item.synopsis || "暂无介绍")}</p></article>`,
+            `<article class="card production-card ratio-${item.cover_ratio === "portrait" ? "portrait" : "landscape"}">${item.cover_id ? `<img class="production-cover" src="/resources/${item.cover_id}/preview" alt="${escapeHtml(item.title)}封面">` : ""}<p class="eyebrow">${escapeHtml(item.year || "作品档案")}</p><h2><a href="/productions/${item.id}">${escapeHtml(item.title)}</a></h2><p>${escapeHtml(item.promo || item.synopsis || "暂无介绍")}</p>${contributionActions(item)}</article>`,
         )
         .join("")
     : '<p class="card">还没有作品档案。</p>';
@@ -72,12 +83,14 @@ export function productionDetailPage(
   const archiveContent =
     gallery || archive ? `${gallery}${archive}` : '<p class="muted">这部作品还没有已入库资料。</p>';
   let join = "";
-  if (alreadyJoined) join = '<p class="notice">你已经在这部作品的演职员名单中。</p>';
-  else if (user.role === "member") {
+  if (alreadyJoined)
+    join =
+      '<section id="join-production" class="join-production"><p class="notice">你已经在这部作品的演职员名单中。</p></section>';
+  else if (user.role === "member" || (admin && user.member_id)) {
     if (myRequest?.status === "pending")
-      join = `<p class="notice">你的“${myRequest.kind === "crew" ? "后台与创作" : "演员"} · ${escapeHtml(myRequest.role_name)}”申请正在等待管理员审核。</p>`;
+      join = `<section id="join-production" class="join-production"><p class="notice">你的“${myRequest.kind === "crew" ? "后台与创作" : "演员"} · ${escapeHtml(myRequest.role_name)}”申请正在等待管理员审核。</p></section>`;
     else
-      join = `${myRequest?.status === "rejected" ? `<p class="alert">上次申请未通过：${escapeHtml(myRequest.admin_note || "请联系管理员了解原因。")}</p>` : ""}<form class="credit-form" method="post" action="/productions/${item.id}/join"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>我想加入<select name="kind"><option value="cast">演员</option><option value="crew">后台与创作</option></select></label><label>角色或分工<input name="role_name" maxlength="80" required placeholder="如：哈姆雷特、灯光、舞台监督"></label><button>提交加入申请</button></form>`;
+      join = `<section id="join-production" class="join-production"><h2>我是主创</h2><p class="muted">填写你的角色或分工，管理员审核后会加入演职员名单。</p>${myRequest?.status === "rejected" ? `<p class="alert">上次申请未通过：${escapeHtml(myRequest.admin_note || "请联系管理员了解原因。")}</p>` : ""}<form class="credit-form" method="post" action="/productions/${item.id}/join"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>我想加入<select name="kind"><option value="cast">演员</option><option value="crew">后台与创作</option></select></label><label>角色或分工<input name="role_name" maxlength="80" required placeholder="如：哈姆雷特、灯光、舞台监督"></label><button>提交加入申请</button></form></section>`;
   }
   return layout(
     item.title,
@@ -85,7 +98,7 @@ export function productionDetailPage(
     <div class="two-column"><section><h2>演员</h2><ul>${group("cast")}</ul></section><section><h2>后台与创作</h2><ul>${group("crew")}</ul></section></div>
     <section class="production-archive"><h2>相关资料</h2><p class="muted">已由管理员审核入库的剧本、剧照、视频和其他档案。</p><div class="card-grid">${archiveContent}</div></section>
     ${join}
-    ${admin ? `<p><a href="/admin/productions/${item.id}/edit">编辑作品资料</a></p><form class="credit-form" method="post" action="/admin/productions/${item.id}/credits"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>选择队员<select name="member_id" required><option value="">请选择</option>${members.map((member) => `<option value="${member.id}">${escapeHtml(member.name)}${member.cohort ? `（${escapeHtml(member.cohort)}）` : ""}</option>`).join("")}</select></label><label>类别<select name="kind"><option value="cast">演员</option><option value="crew">后台与创作</option></select></label><label>角色或分工<input name="role_name" maxlength="80" required></label><button>添加演职员</button></form>` : ""}</article>`,
+    ${admin ? `<section id="manage-credits"><p><a href="/admin/productions/${item.id}/edit">编辑作品资料</a></p><form class="credit-form" method="post" action="/admin/productions/${item.id}/credits"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>选择队员<select name="member_id" required><option value="">请选择</option>${members.map((member) => `<option value="${member.id}">${escapeHtml(member.name)}${member.cohort ? `（${escapeHtml(member.cohort)}）` : ""}</option>`).join("")}</select></label><label>类别<select name="kind"><option value="cast">演员</option><option value="crew">后台与创作</option></select></label><label>角色或分工<input name="role_name" maxlength="80" required></label><button>添加演职员</button></form></section>` : ""}</article>`,
     true,
     admin,
   );

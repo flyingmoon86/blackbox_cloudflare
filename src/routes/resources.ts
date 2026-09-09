@@ -60,7 +60,11 @@ resourceRoutes.get("/resources/submit", async (c) => {
     id: number;
     title: string;
   }>();
-  return c.html(resourceFormPage(productions.results, await csrfFor(c), u.role === "admin"));
+  const requestedProductionId = Number(c.req.query("production_id"));
+  const selectedProductionId = productions.results.some((production) => production.id === requestedProductionId)
+    ? requestedProductionId
+    : null;
+  return c.html(resourceFormPage(productions.results, await csrfFor(c), u.role === "admin", selectedProductionId));
 });
 resourceRoutes.post("/resources/submit", async (c) => {
   const u = c.get("user")!;

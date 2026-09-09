@@ -89,7 +89,7 @@ productionRoutes.get("/productions", async (c) => {
   const result = await c.env.DB.prepare(
     "SELECT id,title,synopsis,promo,year,cover_id,cover_ratio,feature_layout FROM production ORDER BY year DESC,id DESC",
   ).all<ProductionRow>();
-  return c.html(productionListPage(result.results, c.get("user")!.role === "admin"));
+  return c.html(productionListPage(result.results, c.get("user")!));
 });
 
 productionRoutes.get("/productions/:id", async (c) => {
@@ -149,7 +149,7 @@ productionRoutes.get("/productions/:id", async (c) => {
 
 productionRoutes.post("/productions/:id/join", async (c) => {
   const user = c.get("user")!;
-  if (user.role !== "member" || !user.member_id) return c.text("只有认证队员可以申请加入作品。", 403);
+  if (user.role === "user" || !user.member_id) return c.text("只有认证队员可以申请加入作品。", 403);
   const form = await c.req.formData();
   if (!csrfValid(c, form.get("csrf"))) return c.text("请求已失效，请刷新后重试。", 400);
   const productionId = Number(c.req.param("id"));

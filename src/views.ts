@@ -16,9 +16,15 @@ export function layout(title: string, content: string, signedIn = false, admin =
   const nav = signedIn
     ? `<a href="/">首页</a><a href="/productions">作品与资料</a><a href="/members">队员名录</a><a href="/profile">个人中心</a><a href="/help">网站使用指南</a>${admin ? '<a href="/admin">管理员工作台</a>' : ""}`
     : '<a href="/">首页</a><a href="/login">登录</a><a href="/register">注册</a>';
+  const mobileMore = signedIn
+    ? `<details class="mobile-more"><summary>更多</summary><nav><a href="/help">网站使用指南</a>${admin ? '<a href="/admin">管理员工作台</a>' : ""}<a href="/announcements">剧团公告</a></nav></details>`
+    : "";
+  const mobileNav = signedIn
+    ? `<nav class="mobile-nav" aria-label="手机主导航"><a href="/" data-section="home"><span aria-hidden="true">⌂</span>首页</a><a href="/productions" data-section="archive"><span aria-hidden="true">幕</span>作品资料</a><a href="/members" data-section="members"><span aria-hidden="true">人</span>队员</a><a href="/profile" data-section="profile"><span aria-hidden="true">我</span>我的</a></nav>`
+    : "";
   return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>${escapeHtml(title)} · 黑匣子</title><link rel="stylesheet" href="/app.css"><script src="/app.js" defer></script></head>
-  <body><header class="top"><a href="/" class="brand">黑匣子</a><nav>${nav}</nav></header><main>${content}</main></body></html>`;
+  <body class="${signedIn ? "signed-in" : "signed-out"}"><header class="top"><a href="/" class="brand">黑匣子</a><nav class="desktop-nav">${nav}</nav>${mobileMore}</header><main>${content}</main>${mobileNav}</body></html>`;
 }
 
 function message(text: string, kind = "alert"): string {
