@@ -33,7 +33,7 @@ export function adminDashboardPage(
     .join("");
   return layout(
     "管理员",
-    `<section class="page-heading"><p class="eyebrow">ADMIN</p><h1>管理员工作台</h1><p><a href="/productions">管理作品与演职员</a> · <a href="/admin/productions/new">创建作品</a> · <a href="/admin/production-requests">审核作品加入申请</a> · <a href="/admin/resources">管理资料</a> · <a href="/admin/resources/reviews">审核资料</a> · <a href="/admin/suggestions">网站建议收件箱</a> · <a href="/announcements">管理公告</a> · <a href="/admin/site">页面管理</a></p>${notices[message] ? `<p class="notice">${notices[message]}</p>` : ""}</section>
+    `<section class="page-heading"><p class="eyebrow">ADMIN</p><h1>管理员工作台</h1><p><a href="/productions">管理作品与演职员</a> · <a href="/admin/productions/new">创建作品</a> · <a href="/admin/production-requests">审核作品加入申请</a> · <a href="/admin/resources">管理资料</a> · <a href="/admin/resources/reviews">审核资料</a> · <a href="/admin/suggestions">建议与建档申请</a> · <a href="/announcements">管理公告</a> · <a href="/admin/site">页面管理</a></p>${notices[message] ? `<p class="notice">${notices[message]}</p>` : ""}</section>
     <section><h2>待审核申请</h2><div class="review-grid">${requestRows}</div></section><section><h2>账号管理</h2><div class="table-wrap"><table><thead><tr><th>用户名</th><th>身份</th><th>队员档案</th><th>状态</th><th>操作</th></tr></thead><tbody>${userRows}</tbody></table></div></section>`,
     true,
     true,

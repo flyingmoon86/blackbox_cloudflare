@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync, rmSync } from "node:fs";
+import { readFileSync, readdirSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
@@ -11,9 +11,10 @@ execFileSync(
   { stdio: "inherit" },
 );
 const db = new DatabaseSync(":memory:");
-db.exec(readFileSync(resolve("migrations/0001_core.sql"), "utf8"));
-db.exec(readFileSync(resolve("migrations/0002_upload_resume.sql"), "utf8"));
-db.exec(readFileSync(resolve("migrations/0003_feedback_and_production_join.sql"), "utf8"));
+for (const file of readdirSync(resolve("migrations"))
+  .filter((name) => name.endsWith(".sql"))
+  .sort())
+  db.exec(readFileSync(resolve("migrations", file), "utf8"));
 db.exec(readFileSync(resolve(output, "import.sql"), "utf8"));
 const expected = JSON.parse(readFileSync(resolve(output, "expected-counts.json"), "utf8"));
 for (const [table, count] of Object.entries(expected)) {

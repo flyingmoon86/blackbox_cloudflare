@@ -1,5 +1,6 @@
 import type { AnnouncementRow, SiteProfileRow } from "../routes/content";
 import { escapeHtml, layout } from "../views";
+import { ADMIN_GUIDE_DEFAULT, MEMBER_GUIDE_DEFAULT } from "./help";
 
 export function announcementListPage(items: AnnouncementRow[], admin: boolean, csrf: string): string {
   const rows = items.length
@@ -63,7 +64,7 @@ export function siteSettingsPage(
   <h2 id="test_notice">测试须知</h2><label>访客首次进入时显示<textarea name="test_notice" maxlength="10000" rows="6">${escapeHtml(texts.test_notice || "网站正在测试中。你可以浏览和试用功能；认证队员还可以通过首页意见箱提交建议。请勿上传敏感或无权分享的资料。")}</textarea><span class="hint">访客确认后不重复显示；修改这里的内容后会再次显示。</span></label>
   <h2 id="about_text">剧团信息</h2><label>剧团名称<input name="troupe_name" maxlength="100" value="${escapeHtml(p.troupe_name)}"></label><label>剧团介绍<textarea name="introduction" rows="5">${escapeHtml(p.introduction)}</textarea></label><label>首页“关于我们”文案<textarea name="about_text" rows="4">${escapeHtml(texts.about_text)}</textarea></label>
   <h2 id="contact_intro">联系我们</h2><label>联系说明<textarea name="contact_intro" rows="3">${escapeHtml(texts.contact_intro)}</textarea></label><label>邮箱<input name="contact_email" type="email" value="${escapeHtml(p.contact_email)}"></label><label>微信<input name="contact_wechat" value="${escapeHtml(p.contact_wechat)}"></label><label>QQ群<input name="qq_group" value="${escapeHtml(p.qq_group)}"></label><label>公众号<input name="public_account" value="${escapeHtml(p.public_account)}"></label><label>招新说明<textarea name="recruitment" rows="4">${escapeHtml(p.recruitment)}</textarea></label><label>招新要求<textarea name="requirements" rows="4">${escapeHtml(p.requirements)}</textarea></label>
-  <h2 id="member_guide">队员指南</h2><label>登录用户可见内容<textarea name="member_guide" maxlength="10000" rows="10">${escapeHtml(texts.member_guide || "在作品与资料中浏览档案；认证队员可提交资料，并在个人中心维护自己的简介。")}</textarea></label><h2 id="admin_guide">管理员指南</h2><label>仅管理员可见内容<textarea name="admin_guide" maxlength="10000" rows="10">${escapeHtml(texts.admin_guide || "在管理员工作台审核申请和资料，并管理作品、公告及页面内容。")}</textarea></label><button>保存页面内容</button></form></section>`,
+  <h2 id="member_guide">队员指南</h2><p class="hint">这里填写剧团自己的约定；网站会在指南页另行展示固定操作步骤和快捷入口。</p><label>登录用户可见内容<textarea name="member_guide" maxlength="10000" rows="10">${escapeHtml(texts.member_guide || MEMBER_GUIDE_DEFAULT)}</textarea></label><h2 id="admin_guide">管理员指南</h2><p class="hint">仅管理员可见，可记录本队审核标准、资料命名方式和交接事项。</p><label>仅管理员可见内容<textarea name="admin_guide" maxlength="10000" rows="10">${escapeHtml(texts.admin_guide || ADMIN_GUIDE_DEFAULT)}</textarea></label><button>保存页面内容</button></form></section>`,
     true,
     true,
   );
