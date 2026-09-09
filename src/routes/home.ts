@@ -45,6 +45,21 @@ export async function heroImage(c: Context<AppEnv>) {
   return new Response(object.body, { headers });
 }
 
+export async function featuredCoverImage(c: Context<AppEnv>) {
+  const row = await c.env.DB.prepare(
+    `SELECT r.filename FROM site_profile s JOIN production p ON p.id=s.featured_production_id JOIN resource r ON r.id=p.cover_id WHERE s.id=1 AND r.status='approved' AND r.res_type='photo'`,
+  ).first<{ filename: string }>();
+  if (!row) return c.text("精选作品展示图不存在。", 404);
+  const object = await c.env.FILES.get(row.filename);
+  if (!object) return c.text("精选作品展示图文件不存在。", 404);
+  const headers = new Headers();
+  object.writeHttpMetadata(headers);
+  headers.set("etag", object.httpEtag);
+  headers.set("cache-control", "public, max-age=3600");
+  headers.set("content-disposition", "inline");
+  return new Response(object.body, { headers });
+}
+
 export function health(c: Context<AppEnv>) {
   return c.json({ ok: true, runtime: "typescript-worker" });
 }

@@ -3,6 +3,9 @@ import type { UserSession } from "../types";
 import { escapeHtml, layout } from "../views";
 const labels: Record<string, string> = { video: "视频", script: "剧本", photo: "剧照", audio: "音频", other: "其他" };
 const statuses: Record<string, string> = { approved: "已入库", pending: "等待审核", rejected: "已驳回" };
+function archiveTabs(active: "productions" | "resources"): string {
+  return `<nav class="section-tabs" aria-label="作品与资料"><a href="/productions"${active === "productions" ? ' class="active" aria-current="page"' : ""}>作品档案</a><a href="/resources"${active === "resources" ? ' class="active" aria-current="page"' : ""}>资料库</a></nav>`;
+}
 export function resourceListPage(rows: ResourceRow[], user: UserSession, _csrf: string, mine = false): string {
   const card = (r: ResourceRow) =>
     `<article class="card"><p class="eyebrow">${escapeHtml(labels[r.res_type] || r.res_type)} · ${escapeHtml(statuses[r.status] || r.status)}</p><h3><a href="/resources/${r.id}">${escapeHtml(r.title)}</a></h3><p>${escapeHtml(r.description || "暂无说明")}</p><p>文件：${escapeHtml(r.original_name)}</p>${r.admin_note ? `<p class="alert">审核说明：${escapeHtml(r.admin_note)}</p>` : ""}</article>`;
@@ -39,7 +42,7 @@ export function resourceListPage(rows: ResourceRow[], user: UserSession, _csrf: 
   const canSubmit = user.role !== "user";
   return layout(
     mine ? "我的资料" : "资料库",
-    `<section class="page-heading"><p class="eyebrow">ARCHIVE</p><h1>${mine ? "我的资料与审核结果" : "资料库"}</h1><p><a href="/resources">已入库资料</a> · <a href="/my-resources">我的提交</a>${canSubmit ? ' · <a href="/resources/submit">提交资料</a>' : ""}</p></section><section class="review-grid">${mine ? flatCards : groupedCards}</section>`,
+    `${archiveTabs("resources")}<section class="page-heading"><p class="eyebrow">ARCHIVE</p><h1>${mine ? "我的资料与审核结果" : "资料库"}</h1><p><a href="/resources">已入库资料</a> · <a href="/my-resources">我的提交</a>${canSubmit ? ' · <a href="/resources/submit">提交资料</a>' : ""}</p></section><section class="review-grid">${mine ? flatCards : groupedCards}</section>`,
     true,
     user.role === "admin",
   );
@@ -57,7 +60,7 @@ export function resourceDetailPage(row: ResourceRow, user: UserSession): string 
       : "";
   return layout(
     row.title,
-    `<article class="card production-detail"><p class="eyebrow">${escapeHtml(labels[row.res_type] || row.res_type)} · ${escapeHtml(statuses[row.status] || row.status)}</p><h1>${escapeHtml(row.title)}</h1>${edit}<p>${escapeHtml(row.description || "暂无说明")}</p><p>所属作品：${row.production_id ? `<a href="/productions/${row.production_id}">${escapeHtml(row.production_title)}</a>` : "其他资料"}</p><p>原文件名：${escapeHtml(row.original_name)}</p><p>提交人：${escapeHtml(row.uploader_name || "未知")}</p>${row.admin_note ? `<p class="alert">审核说明：${escapeHtml(row.admin_note)}</p>` : ""}${download}<p><a href="${user.id === row.uploader_id ? "/my-resources" : "/resources"}">返回资料列表</a></p></article>`,
+    `${archiveTabs("resources")}<p class="back-links"><a href="${user.id === row.uploader_id ? "/my-resources" : "/resources"}">← 返回资料列表</a><a href="/productions">返回作品档案</a></p><article class="card production-detail"><p class="eyebrow">${escapeHtml(labels[row.res_type] || row.res_type)} · ${escapeHtml(statuses[row.status] || row.status)}</p><h1>${escapeHtml(row.title)}</h1>${edit}<p>${escapeHtml(row.description || "暂无说明")}</p><p>所属作品：${row.production_id ? `<a href="/productions/${row.production_id}">${escapeHtml(row.production_title)}</a>` : "其他资料"}</p><p>原文件名：${escapeHtml(row.original_name)}</p><p>提交人：${escapeHtml(row.uploader_name || "未知")}</p>${row.admin_note ? `<p class="alert">审核说明：${escapeHtml(row.admin_note)}</p>` : ""}${download}</article>`,
     true,
     user.role === "admin",
   );
@@ -69,7 +72,7 @@ export function resourceFormPage(
 ): string {
   return layout(
     "上传资料",
-    `<section class="card auth wide"><h1>上传资料</h1><p class="notice">视频支持 1–5GB 分片与断点续传；剧照可以一次选择多张，每张会生成独立资料并分别审核。</p><form id="resource-upload" method="post" data-csrf="${escapeHtml(csrf)}"><label>资料标题<input name="title" maxlength="100"><span class="hint">单个文件请填写标题；批量剧照会使用每张图片的文件名。</span></label><label>类型<select name="res_type"><option value="video">视频</option><option value="script">剧本</option><option value="photo">剧照</option><option value="audio">音频</option><option value="other">其他</option></select></label><label>所属作品<select name="production_id"><option value="">其他资料</option>${productions.map((p) => `<option value="${p.id}">${escapeHtml(p.title)}</option>`).join("")}</select></label><label>选择文件<input name="file" type="file" required><span class="hint" id="file-hint">选择“剧照”后可以一次选择多张图片。</span></label><label>说明<textarea name="description" maxlength="2000" rows="5"></textarea></label><progress id="upload-progress" value="0"></progress><p id="upload-status" class="muted" role="status">尚未开始上传。</p><button type="submit">开始上传</button> <button type="button" id="upload-cancel" class="secondary" hidden>取消当前文件</button></form><script src="/upload.js" defer></script></section>`,
+    `${archiveTabs("resources")}<p class="back-links"><a href="/resources">← 返回资料库</a><a href="/productions">返回作品档案</a></p><section class="card auth wide"><h1>上传资料</h1><p class="notice">视频支持 1–5GB 分片与断点续传；剧照可以一次选择多张，每张会生成独立资料并分别审核。</p><form id="resource-upload" method="post" data-csrf="${escapeHtml(csrf)}"><label>资料标题<input name="title" maxlength="100"><span class="hint">单个文件请填写标题；批量剧照会使用每张图片的文件名。</span></label><label>类型<select name="res_type"><option value="video">视频</option><option value="script">剧本</option><option value="photo">剧照</option><option value="audio">音频</option><option value="other">其他</option></select></label><label>所属作品<select name="production_id"><option value="">其他资料</option>${productions.map((p) => `<option value="${p.id}">${escapeHtml(p.title)}</option>`).join("")}</select></label><label>选择文件<input name="file" type="file" required><span class="hint" id="file-hint">选择“剧照”后可以一次选择多张图片。</span></label><label>说明<textarea name="description" maxlength="2000" rows="5"></textarea></label><progress id="upload-progress" value="0"></progress><p id="upload-status" class="muted" role="status">尚未开始上传。</p><button type="submit">开始上传</button> <button type="button" id="upload-cancel" class="secondary" hidden>取消当前文件</button></form><script src="/upload.js" defer></script></section>`,
     true,
     admin,
   );

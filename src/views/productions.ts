@@ -9,18 +9,22 @@ import type {
 import type { UserSession } from "../types";
 import { escapeHtml, layout } from "../views";
 
+function archiveTabs(active: "productions" | "resources"): string {
+  return `<nav class="section-tabs" aria-label="作品与资料"><a href="/productions"${active === "productions" ? ' class="active" aria-current="page"' : ""}>作品档案</a><a href="/resources"${active === "resources" ? ' class="active" aria-current="page"' : ""}>资料库</a></nav>`;
+}
+
 export function productionListPage(items: ProductionRow[], admin: boolean): string {
   const cards = items.length
     ? items
         .map(
           (item) =>
-            `<article class="card production-card">${item.cover_id ? `<img class="production-cover" src="/resources/${item.cover_id}/preview" alt="${escapeHtml(item.title)}封面">` : ""}<p class="eyebrow">${escapeHtml(item.year || "作品档案")}</p><h2><a href="/productions/${item.id}">${escapeHtml(item.title)}</a></h2><p>${escapeHtml(item.promo || item.synopsis || "暂无介绍")}</p></article>`,
+            `<article class="card production-card ratio-${item.cover_ratio === "portrait" ? "portrait" : "landscape"}">${item.cover_id ? `<img class="production-cover" src="/resources/${item.cover_id}/preview" alt="${escapeHtml(item.title)}封面">` : ""}<p class="eyebrow">${escapeHtml(item.year || "作品档案")}</p><h2><a href="/productions/${item.id}">${escapeHtml(item.title)}</a></h2><p>${escapeHtml(item.promo || item.synopsis || "暂无介绍")}</p></article>`,
         )
         .join("")
     : '<p class="card">还没有作品档案。</p>';
   return layout(
     "作品",
-    `<section class="page-heading"><p class="eyebrow">PRODUCTIONS</p><h1>作品与资料</h1><p><a href="/resources">浏览资料库</a> · <a href="/my-resources">查看我的提交</a> · <a href="/resources/submit">提交资料</a></p>${admin ? '<a class="button" href="/admin/productions/new">创建作品</a>' : ""}</section><section class="card-grid">${cards}</section>`,
+    `${archiveTabs("productions")}<section class="page-heading"><p class="eyebrow">PRODUCTIONS</p><h1>作品档案</h1><p>浏览剧团作品，进入作品可查看演职员与已经审核入库的相关资料。</p>${admin ? '<a class="button" href="/admin/productions/new">创建作品</a>' : ""}</section><section class="card-grid production-grid">${cards}</section>`,
     true,
     admin,
   );
@@ -77,7 +81,7 @@ export function productionDetailPage(
   }
   return layout(
     item.title,
-    `<article class="card production-detail">${item.cover_id ? `<img class="production-cover" src="/resources/${item.cover_id}/preview" alt="${escapeHtml(item.title)}封面">` : ""}<p class="eyebrow">${escapeHtml(item.year || "PRODUCTION")}</p><h1>${escapeHtml(item.title)}</h1><p class="lead">${escapeHtml(item.promo)}</p><p>${escapeHtml(item.synopsis || "暂无剧情介绍")}</p>
+    `${archiveTabs("productions")}<p class="back-links"><a href="/productions">← 返回作品档案</a><a href="/resources">查看资料库</a></p><article class="card production-detail ratio-${item.cover_ratio === "portrait" ? "portrait" : "landscape"}">${item.cover_id ? `<img class="production-cover" src="/resources/${item.cover_id}/preview" alt="${escapeHtml(item.title)}封面">` : ""}<p class="eyebrow">${escapeHtml(item.year || "PRODUCTION")}</p><h1>${escapeHtml(item.title)}</h1><p class="lead">${escapeHtml(item.promo)}</p><p>${escapeHtml(item.synopsis || "暂无剧情介绍")}</p>
     <div class="two-column"><section><h2>演员</h2><ul>${group("cast")}</ul></section><section><h2>后台与创作</h2><ul>${group("crew")}</ul></section></div>
     <section class="production-archive"><h2>相关资料</h2><p class="muted">已由管理员审核入库的剧本、剧照、视频和其他档案。</p><div class="card-grid">${archiveContent}</div></section>
     ${join}
