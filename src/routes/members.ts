@@ -119,7 +119,7 @@ memberRoutes.get("/profile/member", async (c) => {
 
 memberRoutes.post("/profile/member", async (c) => {
   const user = c.get("user")!;
-  if (user.role !== "member" || !user.member_id) return c.text("只有已认证队员能维护自己的档案。", 403);
+  if (user.role !== "member" || !user.member_id) return c.text("只有已认证队员能修改自己的信息。", 403);
   const form = await c.req.formData();
   if (!csrfValid(c, form.get("csrf"))) return c.text("请求已失效，请刷新页面后重试。", 400);
   const bio = String(form.get("bio") ?? "").trim();

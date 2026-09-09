@@ -40,10 +40,21 @@ resourceRoutes.use("*", async (c, next) => {
 const adminDenied = (c: any) => (c.get("user")?.role === "admin" ? null : c.text("没有管理员权限。", 403));
 
 resourceRoutes.get("/resources", async (c) => {
-  const rows = await c.env.DB.prepare(
-    `SELECT r.id,r.title,r.res_type,r.description,r.original_name,r.preview_filename,r.status,r.admin_note,r.created_at,r.production_id,p.title production_title,r.uploader_id,u.username uploader_name FROM resource r LEFT JOIN production p ON p.id=r.production_id LEFT JOIN user u ON u.id=r.uploader_id WHERE r.status='approved' ORDER BY r.created_at DESC,r.id DESC`,
-  ).all<ResourceRow>();
-  return c.html(resourceListPage(rows.results, c.get("user")!, await csrfFor(c)));
+  const query = (c.req.query("q") || "").trim().slice(0, 100);
+  const base = `SELECT r.id,r.title,r.res_type,r.description,r.original_name,r.preview_filename,r.status,r.admin_note,r.created_at,r.production_id,p.title production_title,r.uploader_id,u.username uploader_name
+    FROM resource r LEFT JOIN production p ON p.id=r.production_id LEFT JOIN user u ON u.id=r.uploader_id
+    WHERE r.status='approved'`;
+  const order = ` ORDER BY CASE WHEN r.production_id IS NULL THEN 1 ELSE 0 END,
+    COALESCE(p.year,0) DESC,p.id DESC,r.created_at DESC,r.id DESC`;
+  const rows = query
+    ? await c.env.DB.prepare(
+        `${base} AND (r.title LIKE ? ESCAPE '\\' COLLATE NOCASE OR r.description LIKE ? ESCAPE '\\' COLLATE NOCASE
+          OR r.original_name LIKE ? ESCAPE '\\' COLLATE NOCASE OR p.title LIKE ? ESCAPE '\\' COLLATE NOCASE)${order}`,
+      )
+        .bind(...Array(4).fill(`%${query.replace(/[\\%_]/g, "\\$&")}%`))
+        .all<ResourceRow>()
+    : await c.env.DB.prepare(`${base}${order}`).all<ResourceRow>();
+  return c.html(resourceListPage(rows.results, c.get("user")!, await csrfFor(c), false, query));
 });
 resourceRoutes.get("/my-resources", async (c) => {
   const u = c.get("user")!;
