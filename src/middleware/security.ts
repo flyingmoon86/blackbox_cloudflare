@@ -6,9 +6,12 @@ export const securityHeaders: MiddlewareHandler<AppEnv> = async (c, next) => {
   c.header("X-Content-Type-Options", "nosniff");
   c.header("Referrer-Policy", "same-origin");
   c.header("X-Frame-Options", "DENY");
+  c.header("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
+  if (new URL(c.req.url).protocol === "https:")
+    c.header("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   c.header(
     "Content-Security-Policy",
-    "default-src 'self'; style-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'self'",
+    "default-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self' https://*.r2.cloudflarestorage.com; style-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'self'",
   );
 };
 

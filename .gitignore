@@ -2,6 +2,10 @@
 node_modules/
 .wrangler/
 .dev.vars
+.dev.vars.*
+.env
+.env.*
+!.dev.vars.example
 
 # 本地数据库和临时文件
 *.sqlite3
