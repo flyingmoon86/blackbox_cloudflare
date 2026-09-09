@@ -1,6 +1,7 @@
 import type { ResourceRow } from "../routes/resources";
 import type { UserSession } from "../types";
 import { escapeHtml, layout } from "../views";
+import { resourceCardArtwork, resourceDetailPreview } from "./resource-preview";
 const labels: Record<string, string> = { video: "视频", script: "剧本", photo: "剧照", audio: "音频", other: "其他" };
 const statuses: Record<string, string> = { approved: "已入库", pending: "等待审核", rejected: "已驳回" };
 function archiveTabs(active: "productions" | "resources"): string {
@@ -8,7 +9,7 @@ function archiveTabs(active: "productions" | "resources"): string {
 }
 export function resourceListPage(rows: ResourceRow[], user: UserSession, _csrf: string, mine = false): string {
   const card = (r: ResourceRow) =>
-    `<article class="card"><p class="eyebrow">${escapeHtml(labels[r.res_type] || r.res_type)} · ${escapeHtml(statuses[r.status] || r.status)}</p><h3><a href="/resources/${r.id}">${escapeHtml(r.title)}</a></h3><p>${escapeHtml(r.description || "暂无说明")}</p><p>文件：${escapeHtml(r.original_name)}</p>${r.admin_note ? `<p class="alert">审核说明：${escapeHtml(r.admin_note)}</p>` : ""}</article>`;
+    `<article class="resource-card type-${escapeHtml(r.res_type)}"><a class="resource-card-link" href="/resources/${r.id}">${resourceCardArtwork(r)}<span class="resource-card-shade"></span><span class="resource-card-copy"><span class="eyebrow">${escapeHtml(labels[r.res_type] || r.res_type)} · ${escapeHtml(statuses[r.status] || r.status)}</span><strong>${escapeHtml(r.title)}</strong><span>${escapeHtml(r.description || r.original_name || "点击查看资料")}</span></span></a>${r.admin_note ? `<p class="alert">审核说明：${escapeHtml(r.admin_note)}</p>` : ""}</article>`;
   const flatCards = rows.length
     ? rows
         .map(
@@ -60,7 +61,7 @@ export function resourceDetailPage(row: ResourceRow, user: UserSession): string 
       : "";
   return layout(
     row.title,
-    `${archiveTabs("resources")}<p class="back-links"><a href="${user.id === row.uploader_id ? "/my-resources" : "/resources"}">← 返回资料列表</a><a href="/productions">返回作品档案</a></p><article class="card production-detail"><p class="eyebrow">${escapeHtml(labels[row.res_type] || row.res_type)} · ${escapeHtml(statuses[row.status] || row.status)}</p><h1>${escapeHtml(row.title)}</h1>${edit}<p>${escapeHtml(row.description || "暂无说明")}</p><p>所属作品：${row.production_id ? `<a href="/productions/${row.production_id}">${escapeHtml(row.production_title)}</a>` : "其他资料"}</p><p>原文件名：${escapeHtml(row.original_name)}</p><p>提交人：${escapeHtml(row.uploader_name || "未知")}</p>${row.admin_note ? `<p class="alert">审核说明：${escapeHtml(row.admin_note)}</p>` : ""}${download}</article>`,
+    `${archiveTabs("resources")}<p class="back-links"><a href="${user.id === row.uploader_id ? "/my-resources" : "/resources"}">← 返回资料列表</a><a href="/productions">返回作品档案</a></p><article class="card production-detail resource-detail"><p class="eyebrow">${escapeHtml(labels[row.res_type] || row.res_type)} · ${escapeHtml(statuses[row.status] || row.status)}</p><h1>${escapeHtml(row.title)}</h1>${edit}${resourceDetailPreview(row)}<div class="resource-metadata"><p>${escapeHtml(row.description || "暂无说明")}</p><p>所属作品：${row.production_id ? `<a href="/productions/${row.production_id}">${escapeHtml(row.production_title)}</a>` : "其他资料"}</p><p>原文件名：${escapeHtml(row.original_name)}</p><p>提交人：${escapeHtml(row.uploader_name || "未知")}</p>${row.admin_note ? `<p class="alert">审核说明：${escapeHtml(row.admin_note)}</p>` : ""}${download}</div></article>`,
     true,
     user.role === "admin",
   );

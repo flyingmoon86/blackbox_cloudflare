@@ -29,6 +29,7 @@ type Task = {
   res_type: string;
   description: string;
   upload_mode: "local" | "direct";
+  preview_filename: string;
 };
 type Part = { part_number: number; etag: string; size_bytes: number };
 
@@ -146,7 +147,44 @@ uploadRoutes.get("/api/uploads/:id", async (c) => {
     mode: task.upload_mode,
     originalName: task.original_name,
     sizeBytes: task.size_bytes,
+    hasPreview: Boolean(task.preview_filename),
   });
+});
+
+uploadRoutes.put("/api/uploads/:id/preview", async (c) => {
+  if (!csrfOk(c)) return c.json({ error: "请求已失效。" }, 400);
+  const task = await ownedTask(c);
+  if (!task || task.status !== "uploading") return c.json({ error: "上传任务不存在或不能继续。" }, 404);
+  if (task.res_type !== "photo" && task.res_type !== "video") return c.json({ error: "这种资料不需要图片预览。" }, 400);
+  const declaredSize = c.req.header("content-length") ? Number(c.req.header("content-length")) : null;
+  if (declaredSize !== null && (!Number.isInteger(declaredSize) || declaredSize < 1 || declaredSize > 1_500_000))
+    return c.json({ error: "预览图大小不正确。" }, 400);
+  const contentType = c.req.header("content-type")?.split(";", 1)[0];
+  if (contentType !== "image/jpeg") return c.json({ error: "预览图必须是 JPEG。" }, 400);
+  const body = await c.req.arrayBuffer();
+  if (body.byteLength < 1 || body.byteLength > 1_500_000 || (declaredSize !== null && body.byteLength !== declaredSize))
+    return c.json({ error: "预览图没有完整上传。" }, 400);
+  const signature = new Uint8Array(body);
+  if (
+    signature.length < 4 ||
+    signature[0] !== 0xff ||
+    signature[1] !== 0xd8 ||
+    signature.at(-2) !== 0xff ||
+    signature.at(-1) !== 0xd9
+  )
+    return c.json({ error: "预览图内容不是有效的 JPEG。" }, 400);
+  const previewKey = `${task.object_key}.preview.jpg`;
+  try {
+    await c.env.FILES.put(previewKey, body, { httpMetadata: { contentType: "image/jpeg" } });
+    await c.env.DB.prepare("UPDATE upload_task SET preview_filename=?,updated_at=CURRENT_TIMESTAMP WHERE id=?")
+      .bind(previewKey, task.id)
+      .run();
+    return c.json({ saved: true });
+  } catch (error) {
+    console.error(error);
+    await c.env.FILES.delete(previewKey).catch(() => {});
+    return c.json({ error: "预览图保存失败，资料仍可继续上传。" }, 502);
+  }
 });
 
 uploadRoutes.post("/api/uploads/:id/parts/:part/url", async (c) => {
@@ -253,7 +291,7 @@ uploadRoutes.post("/api/uploads/:id/complete", async (c) => {
     else await c.env.FILES.resumeMultipartUpload(task.object_key, task.multipart_upload_id).complete(parts);
     const status = c.get("user")!.role === "admin" ? "approved" : "pending";
     const resource = await c.env.DB.prepare(
-      "INSERT INTO resource(production_id,status,uploader_id,title,res_type,description,filename,original_name) VALUES(?,?,?,?,?,?,?,?)",
+      "INSERT INTO resource(production_id,status,uploader_id,title,res_type,description,filename,original_name,preview_filename) VALUES(?,?,?,?,?,?,?,?,?)",
     )
       .bind(
         task.production_id,
@@ -264,6 +302,7 @@ uploadRoutes.post("/api/uploads/:id/complete", async (c) => {
         task.description,
         task.object_key,
         task.original_name,
+        task.preview_filename,
       )
       .run();
     await c.env.DB.prepare(
@@ -290,6 +329,7 @@ uploadRoutes.delete("/api/uploads/:id", async (c) => {
   try {
     if (task.upload_mode === "direct") await abortDirectUpload(c.env, task.object_key, task.multipart_upload_id);
     else await c.env.FILES.resumeMultipartUpload(task.object_key, task.multipart_upload_id).abort();
+    if (task.preview_filename) await c.env.FILES.delete(task.preview_filename);
     await c.env.DB.prepare("UPDATE upload_task SET status='aborted',updated_at=CURRENT_TIMESTAMP WHERE id=?")
       .bind(task.id)
       .run();

@@ -8,6 +8,7 @@ import type {
 } from "../routes/productions";
 import type { UserSession } from "../types";
 import { escapeHtml, layout } from "../views";
+import { resourceCardArtwork } from "./resource-preview";
 
 function archiveTabs(active: "productions" | "resources"): string {
   return `<nav class="section-tabs" aria-label="作品与资料"><a href="/productions"${active === "productions" ? ' class="active" aria-current="page"' : ""}>作品档案</a><a href="/resources"${active === "resources" ? ' class="active" aria-current="page"' : ""}>资料库</a></nav>`;
@@ -76,7 +77,7 @@ export function productionDetailPage(
     ? otherResources
         .map(
           (resource) =>
-            `<article class="card"><p class="eyebrow">${escapeHtml(resourceLabels[resource.res_type] || resource.res_type)}</p><h3><a href="/resources/${resource.id}">${escapeHtml(resource.title)}</a></h3><p>${escapeHtml(resource.description || resource.original_name)}</p></article>`,
+            `<article class="resource-card type-${escapeHtml(resource.res_type)}"><a class="resource-card-link" href="/resources/${resource.id}">${resourceCardArtwork(resource)}<span class="resource-card-shade"></span><span class="resource-card-copy"><span class="eyebrow">${escapeHtml(resourceLabels[resource.res_type] || resource.res_type)}</span><strong>${escapeHtml(resource.title)}</strong><span>${escapeHtml(resource.description || resource.original_name || "点击查看资料")}</span></span></a></article>`,
         )
         .join("")
     : "";

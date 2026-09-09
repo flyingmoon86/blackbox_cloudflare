@@ -32,6 +32,7 @@ export type ProductionResourceRow = {
   res_type: string;
   description: string;
   original_name: string;
+  preview_filename: string;
 };
 export type ResourceChoice = {
   id: number;
@@ -107,7 +108,7 @@ productionRoutes.get("/productions/:id", async (c) => {
     .bind(id)
     .all<CreditRow>();
   const resources = await c.env.DB.prepare(
-    `SELECT id,title,res_type,description,original_name FROM resource
+    `SELECT id,title,res_type,description,original_name,preview_filename FROM resource
     WHERE production_id=? AND status='approved' ORDER BY created_at DESC,id DESC`,
   )
     .bind(id)

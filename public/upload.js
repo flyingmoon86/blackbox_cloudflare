@@ -59,6 +59,96 @@ if (form) {
     throw lastError;
   };
   const baseName = (name) => name.replace(/\.[^.]+$/, "").slice(0, 100) || "未命名剧照";
+  const canvasBlob = (source, width, height) =>
+    new Promise((resolve, reject) => {
+      const scale = Math.min(1, 720 / Math.max(width, height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(width * scale));
+      canvas.height = Math.max(1, Math.round(height * scale));
+      canvas.getContext("2d").drawImage(source, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("无法生成预览图。"))), "image/jpeg", 0.64);
+    });
+  const imageThumbnail = async (file) => {
+    if ("createImageBitmap" in window) {
+      const bitmap = await createImageBitmap(file);
+      try {
+        return await canvasBlob(bitmap, bitmap.width, bitmap.height);
+      } finally {
+        bitmap.close();
+      }
+    }
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      const url = URL.createObjectURL(file);
+      image.onload = async () => {
+        try {
+          resolve(await canvasBlob(image, image.naturalWidth, image.naturalHeight));
+        } catch (error) {
+          reject(error);
+        } finally {
+          URL.revokeObjectURL(url);
+        }
+      };
+      image.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error("无法读取图片。"));
+      };
+      image.src = url;
+    });
+  };
+  const videoThumbnail = (file) =>
+    new Promise((resolve, reject) => {
+      const video = document.createElement("video");
+      const url = URL.createObjectURL(file);
+      let settled = false;
+      const timeout = setTimeout(() => finish(new Error("视频首帧读取超时。")), 15000);
+      const finish = async (error) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        try {
+          if (error) reject(error);
+          else resolve(await canvasBlob(video, video.videoWidth, video.videoHeight));
+        } catch (reason) {
+          reject(reason);
+        } finally {
+          video.removeAttribute("src");
+          video.load();
+          URL.revokeObjectURL(url);
+        }
+      };
+      video.muted = true;
+      video.playsInline = true;
+      video.preload = "metadata";
+      video.addEventListener(
+        "loadedmetadata",
+        () => {
+          video.currentTime = Number.isFinite(video.duration) ? Math.min(1, Math.max(0.1, video.duration * 0.05)) : 0.1;
+        },
+        { once: true },
+      );
+      video.addEventListener("seeked", () => finish(), { once: true });
+      video.addEventListener("error", () => finish(new Error("无法读取视频首帧。")), { once: true });
+      video.src = url;
+    });
+  const uploadThumbnail = async (task, file) => {
+    if (task.hasPreview || (type.value !== "photo" && type.value !== "video")) return;
+    show(`正在生成轻量预览：${file.name}`);
+    try {
+      const blob = type.value === "photo" ? await imageThumbnail(file) : await videoThumbnail(file);
+      await retry(async () => {
+        const response = await fetch(`/api/uploads/${task.id}/preview`, {
+          method: "PUT",
+          headers: { "content-type": "image/jpeg", "x-csrf-token": csrf },
+          body: blob,
+        });
+        await readJson(response);
+      });
+      task.hasPreview = true;
+    } catch (error) {
+      console.warn("预览图生成失败，继续上传原文件。", error);
+    }
+  };
   const syncFileMode = () => {
     const photos = type.value === "photo";
     fileInput.multiple = photos;
@@ -106,6 +196,7 @@ if (form) {
     } else show(`继续第 ${index}/${total} 个文件：${file.name}`);
 
     activeTask = task.id;
+    await uploadThumbnail(task, file);
     const snapshot = task.parts ? task : await readJson(await fetch(`/api/uploads/${activeTask}`));
     const completedParts = new Set(snapshot.parts.map((part) => part.partNumber));
     let completedBytes = snapshot.parts.reduce((sum, part) => sum + part.sizeBytes, 0);
