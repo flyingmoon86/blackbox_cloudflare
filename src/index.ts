@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { securityHeaders, noStore } from "./middleware/security";
 import { loadUser } from "./middleware/session";
 import { authRoutes } from "./routes/auth";
-import { health, heroImage, homePage } from "./routes/home";
+import { featuredCoverImage, health, heroImage, homePage } from "./routes/home";
 import { memberRoutes } from "./routes/members";
 import { adminRoutes } from "./routes/admin";
 import { productionRoutes } from "./routes/productions";
@@ -24,6 +24,7 @@ app.use("/profile/*", noStore);
 
 app.get("/", homePage);
 app.get("/site/hero", heroImage);
+app.get("/site/featured-cover", featuredCoverImage);
 app.get("/health", health);
 app.route("/", authRoutes);
 app.route("/", memberRoutes);

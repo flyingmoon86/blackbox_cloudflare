@@ -16,9 +16,15 @@ export function layout(title: string, content: string, signedIn = false, admin =
   const nav = signedIn
     ? `<a href="/">首页</a><a href="/productions">作品与资料</a><a href="/members">队员名录</a><a href="/profile">个人中心</a><a href="/help">网站使用指南</a>${admin ? '<a href="/admin">管理员工作台</a>' : ""}`
     : '<a href="/">首页</a><a href="/login">登录</a><a href="/register">注册</a>';
+  const mobileMore = signedIn
+    ? `<details class="mobile-more"><summary>更多</summary><nav><a href="/help">网站使用指南</a>${admin ? '<a href="/admin">管理员工作台</a>' : ""}<a href="/announcements">剧团公告</a></nav></details>`
+    : "";
+  const mobileNav = signedIn
+    ? `<nav class="mobile-nav" aria-label="手机主导航"><a href="/" data-section="home"><span aria-hidden="true">⌂</span>首页</a><a href="/productions" data-section="archive"><span aria-hidden="true">幕</span>作品资料</a><a href="/members" data-section="members"><span aria-hidden="true">人</span>队员</a><a href="/profile" data-section="profile"><span aria-hidden="true">我</span>我的</a></nav>`
+    : "";
   return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>${escapeHtml(title)} · 黑匣子</title><link rel="stylesheet" href="/app.css"><script src="/app.js" defer></script></head>
-  <body><header class="top"><a href="/" class="brand">黑匣子</a><nav>${nav}</nav></header><main>${content}</main></body></html>`;
+  <body class="${signedIn ? "signed-in" : "signed-out"}"><header class="top"><a href="/" class="brand">黑匣子</a><nav class="desktop-nav">${nav}</nav>${mobileMore}</header><main>${content}</main>${mobileNav}</body></html>`;
 }
 
 function message(text: string, kind = "alert"): string {
@@ -65,6 +71,18 @@ function pageTexts(profile: SiteProfileRow): Record<string, string> {
     return {};
   }
 }
+
+function featuredProduction(featured: ProductionRow | null, signedIn: boolean): string {
+  if (!featured) return "";
+  const ratio = featured.cover_ratio === "portrait" ? "portrait" : "landscape";
+  const mode = featured.feature_layout === "overlay" && featured.cover_id ? "overlay" : "split";
+  const href = signedIn ? `/productions/${featured.id}` : `/login?next=/productions/${featured.id}`;
+  const image = featured.cover_id
+    ? `<img class="feature-cover" src="/site/featured-cover" alt="${escapeHtml(featured.title)}展示图">`
+    : "";
+  return `<section class="card feature feature-${mode} feature-ratio-${ratio}${image ? "" : " feature-without-cover"}">${image}<div class="feature-copy"><p class="eyebrow">${signedIn ? "精选大戏" : "即将演出"}</p><h2><a href="${href}">${escapeHtml(featured.title)}</a></h2><p>${escapeHtml(featured.promo || featured.synopsis || "演出信息即将公布。")}</p><a class="button" href="${href}">${signedIn ? "查看作品" : "登录后查看"}</a></div></section>`;
+}
+
 export function publicHome(profile: SiteProfileRow, featured: ProductionRow | null): string {
   const texts = pageTexts(profile);
   const notice =
@@ -72,9 +90,7 @@ export function publicHome(profile: SiteProfileRow, featured: ProductionRow | nu
     "网站正在测试中。你可以浏览和试用功能；认证队员还可以通过首页意见箱提交建议。请勿上传敏感或无权分享的资料。";
   let noticeKey = 2166136261;
   for (const character of notice) noticeKey = Math.imul(noticeKey ^ character.charCodeAt(0), 16777619);
-  const feature = featured
-    ? `<section class="card feature"><p class="eyebrow">即将演出</p><h2>${escapeHtml(featured.title)}</h2><p>${escapeHtml(featured.promo || featured.synopsis)}</p><a class="button" href="/login?next=/productions/${featured.id}">登录后查看</a></section>`
-    : "";
+  const feature = featuredProduction(featured, false);
   const hero = profile.hero_photo
     ? ' style="background-image:linear-gradient(90deg,rgba(10,8,8,.94),rgba(10,8,8,.25)),url(/site/hero)"'
     : "";
@@ -116,7 +132,7 @@ export function memberHome(
       : texts.visitor_welcome || "这里是黑匣子";
   return layout(
     "队员首页",
-    `<section class="hero"${hero}><div><p class="eyebrow">${escapeHtml(user.role)}</p><h1>${escapeHtml(welcome)}</h1><p>${escapeHtml(user.username)}，欢迎回来。</p>${edit}</div></section>${featured ? `<section class="card feature"><p class="eyebrow">精选大戏</p><h2><a href="/productions/${featured.id}">${escapeHtml(featured.title)}</a></h2><p>${escapeHtml(featured.promo || featured.synopsis)}</p></section>` : ""}<section class="two-column"><article class="card"><h2>公告</h2><ul>${news}</ul><a href="/announcements">查看全部公告</a></article><article class="card"><h2>快捷入口</h2><ul class="link-list"><li><a href="/">首页</a></li><li><a href="/productions">作品与资料</a></li><li><a href="/members">队员名录</a></li><li><a href="/profile">个人中心</a></li>${adminLink}</ul></article></section><section class="two-column"><article class="card"><h2>招新</h2><p class="preline">${escapeHtml(profile.recruitment || "欢迎喜欢舞台的你加入我们。")}</p><p class="muted preline">${escapeHtml(profile.requirements || "关注剧团通知，了解本学期招新安排。")}</p></article><article class="card"><h2>关于我们</h2><p class="preline">${escapeHtml(texts.about_text || profile.introduction || "这里记录话剧队共同创作的作品和故事。")}</p><p><a href="mailto:${escapeHtml(profile.contact_email || "moonflying56@gmail.com")}">联系我们</a></p>${suggestionLink}</article></section>`,
+    `<section class="hero"${hero}><div><p class="eyebrow">${escapeHtml(user.role)}</p><h1>${escapeHtml(welcome)}</h1><p>${escapeHtml(user.username)}，欢迎回来。</p>${edit}</div></section>${featuredProduction(featured, true)}<section class="two-column"><article class="card"><h2>公告</h2><ul>${news}</ul><a href="/announcements">查看全部公告</a></article><article class="card"><h2>快捷入口</h2><ul class="link-list"><li><a href="/">首页</a></li><li><a href="/productions">作品与资料</a></li><li><a href="/members">队员名录</a></li><li><a href="/profile">个人中心</a></li>${adminLink}</ul></article></section><section class="two-column"><article class="card"><h2>招新</h2><p class="preline">${escapeHtml(profile.recruitment || "欢迎喜欢舞台的你加入我们。")}</p><p class="muted preline">${escapeHtml(profile.requirements || "关注剧团通知，了解本学期招新安排。")}</p></article><article class="card"><h2>关于我们</h2><p class="preline">${escapeHtml(texts.about_text || profile.introduction || "这里记录话剧队共同创作的作品和故事。")}</p><p><a href="mailto:${escapeHtml(profile.contact_email || "moonflying56@gmail.com")}">联系我们</a></p>${suggestionLink}</article></section>`,
     true,
     user.role === "admin",
   );
