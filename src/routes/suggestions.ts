@@ -27,7 +27,10 @@ suggestionRoutes.get("/suggestions", async (c) => {
   const user = c.get("user")!;
   if (user.role === "user") return c.html(suggestionPermissionPage(false), 403);
   const category = c.req.query("type") === "production" ? "production" : "website";
-  return c.html(suggestionFormPage(await csrfFor(c), c.req.query("sent") === "1", user.role === "admin", category));
+  const source = c.req.query("source") === "productions" ? "productions" : "upload";
+  return c.html(
+    suggestionFormPage(await csrfFor(c), c.req.query("sent") === "1", user.role === "admin", category, source),
+  );
 });
 
 suggestionRoutes.post("/suggestions", async (c) => {
@@ -36,6 +39,7 @@ suggestionRoutes.post("/suggestions", async (c) => {
   const form = await c.req.formData();
   if (!csrfValid(c, form.get("csrf"))) return c.text("请求已失效，请刷新页面后重试。", 400);
   const category = form.get("category") === "production" ? "production" : "website";
+  const source = form.get("source") === "productions" ? "productions" : "upload";
   const content = String(form.get("content") ?? "").trim();
   const productionTitle = String(form.get("production_title") ?? "").trim();
   const productionYearText = String(form.get("production_year") ?? "").trim();
@@ -54,7 +58,7 @@ suggestionRoutes.post("/suggestions", async (c) => {
   )
     .bind(user.id, content || "请管理员新建这部作品的档案。", category, productionTitle || null, productionYear)
     .run();
-  return c.redirect(`/suggestions?type=${category}&sent=1`, 303);
+  return c.redirect(`/suggestions?type=${category}&source=${source}&sent=1`, 303);
 });
 
 suggestionRoutes.get("/admin/suggestions", async (c) => {

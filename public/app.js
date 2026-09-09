@@ -30,3 +30,24 @@ for (const video of document.querySelectorAll("video[data-preview-frame]")) {
     { once: true },
   );
 }
+
+for (const section of document.querySelectorAll("[data-role-counts]")) {
+  const kind = section.querySelector("[data-role-kind]");
+  const name = section.querySelector("[data-role-name]");
+  const hint = section.querySelector("[data-role-hint]");
+  if (!kind || !name || !hint) continue;
+  let counts = { cast: {}, crew: {} };
+  try {
+    counts = JSON.parse(section.dataset.roleCounts || "{}");
+  } catch {}
+  const updateRoleHint = () => {
+    const value = name.value.trim().toLocaleLowerCase();
+    const count = counts[kind.value]?.[value] || 0;
+    hint.textContent = count
+      ? `当前已有 ${count} 位队员登记这项${kind.value === "cast" ? "角色；通过后会作为多人饰演或 AB 角共同显示。" : "分工；通过后会作为共同分工显示。"}`
+      : "这是新的角色或分工；也可以从已有名称中选择。";
+    hint.classList.toggle("role-match", Boolean(count));
+  };
+  kind.addEventListener("change", updateRoleHint);
+  name.addEventListener("input", updateRoleHint);
+}

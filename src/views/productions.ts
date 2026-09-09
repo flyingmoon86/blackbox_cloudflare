@@ -36,7 +36,7 @@ export function productionListPage(items: ProductionRow[], user: UserSession): s
     : '<p class="card">还没有作品档案。</p>';
   return layout(
     "作品",
-    `${archiveTabs("productions")}<section class="page-heading"><p class="eyebrow">PRODUCTIONS</p><h1>作品档案</h1><p>浏览剧团作品，进入作品可查看演职员与已经审核入库的相关资料。</p>${admin ? '<a class="button" href="/admin/productions/new">创建作品</a>' : ""}</section><section class="card-grid production-grid">${cards}</section>`,
+    `${archiveTabs("productions")}<section class="page-heading"><p class="eyebrow">PRODUCTIONS</p><h1>作品档案</h1><p>浏览剧团作品，进入作品可查看演职员与已经审核入库的相关资料。</p>${admin ? '<a class="button" href="/admin/productions/new">创建作品</a>' : user.role === "member" ? '<a class="button" href="/suggestions?type=production&source=productions">申请创建作品</a>' : ""}</section><section class="card-grid production-grid">${cards}</section>`,
     true,
     admin,
   );
@@ -48,19 +48,34 @@ export function productionDetailPage(
   resources: ProductionResourceRow[],
   members: MemberChoice[],
   user: UserSession,
-  myRequest: { status: string; kind: string; role_name: string; admin_note: string } | null,
-  alreadyJoined: boolean,
+  myRequests: Array<{ status: string; kind: string; role_name: string; admin_note: string }>,
   csrf: string,
 ): string {
   const admin = user.role === "admin";
-  const group = (kind: "cast" | "crew") =>
-    credits
-      .filter((credit) => credit.kind === kind)
-      .map(
-        (credit) =>
-          `<li><a href="/members/${credit.member_id}">${escapeHtml(credit.member_name)}</a> · ${escapeHtml(credit.role_name)}${admin ? `<form class="inline" method="post" action="/admin/productions/${item.id}/credits/${credit.id}/delete"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button class="link-button">删除</button></form>` : ""}</li>`,
-      )
-      .join("") || "<li>暂无记录</li>";
+  const group = (kind: "cast" | "crew") => {
+    const roles = new Map<string, CreditRow[]>();
+    for (const credit of credits.filter((entry) => entry.kind === kind)) {
+      const key = credit.role_name.trim().toLocaleLowerCase();
+      roles.set(key, [...(roles.get(key) || []), credit]);
+    }
+    return (
+      [...roles.values()]
+        .map((entries) => {
+          const people = entries
+            .map(
+              (credit) =>
+                `<span class="credit-person"><a href="/members/${credit.member_id}">${escapeHtml(credit.member_name)}</a>${admin ? `<form class="inline" method="post" action="/admin/productions/${item.id}/credits/${credit.id}/delete"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button class="link-button" aria-label="删除${escapeHtml(credit.member_name)}的${escapeHtml(credit.role_name)}记录">删除</button></form>` : ""}</span>`,
+            )
+            .join("、");
+          const shared =
+            entries.length > 1
+              ? `<span class="role-badge">${kind === "cast" ? "多人饰演 / AB角" : "共同分工"}</span>`
+              : "";
+          return `<li class="role-credit"><strong>${escapeHtml(entries[0].role_name)}</strong>${shared}<span>${people}</span></li>`;
+        })
+        .join("") || "<li>暂无记录</li>"
+    );
+  };
   const resourceLabels: Record<string, string> = {
     video: "视频",
     script: "剧本",
@@ -84,14 +99,26 @@ export function productionDetailPage(
   const archiveContent =
     gallery || archive ? `${gallery}${archive}` : '<p class="muted">这部作品还没有已入库资料。</p>';
   let join = "";
-  if (alreadyJoined)
-    join =
-      '<section id="join-production" class="join-production"><p class="notice">你已经在这部作品的演职员名单中。</p></section>';
-  else if (user.role === "member" || (admin && user.member_id)) {
-    if (myRequest?.status === "pending")
-      join = `<section id="join-production" class="join-production"><p class="notice">你的“${myRequest.kind === "crew" ? "后台与创作" : "演员"} · ${escapeHtml(myRequest.role_name)}”申请正在等待管理员审核。</p></section>`;
-    else
-      join = `<section id="join-production" class="join-production"><h2>我是主创</h2><p class="muted">填写你的角色或分工，管理员审核后会加入演职员名单。</p>${myRequest?.status === "rejected" ? `<p class="alert">上次申请未通过：${escapeHtml(myRequest.admin_note || "请联系管理员了解原因。")}</p>` : ""}<form class="credit-form" method="post" action="/productions/${item.id}/join"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>我想加入<select name="kind"><option value="cast">演员</option><option value="crew">后台与创作</option></select></label><label>角色或分工<input name="role_name" maxlength="80" required placeholder="如：哈姆雷特、灯光、舞台监督"></label><button>提交加入申请</button></form></section>`;
+  if (user.role === "member" || (admin && user.member_id)) {
+    const mine = user.member_id ? credits.filter((credit) => credit.member_id === user.member_id) : [];
+    const current = mine.length
+      ? `<p class="notice">你已登记：${mine.map((credit) => `${credit.kind === "crew" ? "后台与创作" : "演员"} · ${escapeHtml(credit.role_name)}`).join("；")}。你仍可申请其他角色或分工。</p>`
+      : "";
+    const pending = myRequests.filter((request) => request.status === "pending");
+    const pendingNotice = pending.length
+      ? `<div class="pending-roles"><strong>等待审核：</strong>${pending.map((request) => `<span>${request.kind === "crew" ? "后台与创作" : "演员"} · ${escapeHtml(request.role_name)}</span>`).join("")}</div>`
+      : "";
+    const rejected = myRequests.find((request) => request.status === "rejected");
+    const roleCounts = credits.reduce<Record<string, Record<string, number>>>(
+      (all, credit) => {
+        const key = credit.role_name.trim().toLocaleLowerCase();
+        all[credit.kind][key] = (all[credit.kind][key] || 0) + 1;
+        return all;
+      },
+      { cast: {}, crew: {} },
+    );
+    const knownRoles = [...new Set(credits.map((credit) => credit.role_name.trim()).filter(Boolean))];
+    join = `<section id="join-production" class="join-production" data-role-counts="${escapeHtml(JSON.stringify(roleCounts))}"><h2>我是主创</h2><p class="muted">可以自由填写，也可以选择已有角色。同一角色允许多人饰演，提交后会作为 AB 角或轮换演员保留；一位队员也可以分别申请多个角色或分工。</p>${current}${pendingNotice}${rejected ? `<p class="alert">最近一次未通过：${escapeHtml(rejected.kind === "crew" ? "后台与创作" : "演员")} · ${escapeHtml(rejected.role_name)}。${escapeHtml(rejected.admin_note || "请联系管理员了解原因。")}</p>` : ""}<form class="credit-form" method="post" action="/productions/${item.id}/join"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>我想加入<select name="kind" data-role-kind><option value="cast">演员</option><option value="crew">后台与创作</option></select></label><label>角色或分工<input name="role_name" maxlength="80" required list="production-role-options" data-role-name placeholder="如：哈姆雷特、灯光、舞台监督"><span class="hint" data-role-hint>填写新角色，或从已有角色中选择。</span></label><datalist id="production-role-options">${knownRoles.map((role) => `<option value="${escapeHtml(role)}"></option>`).join("")}</datalist><button>提交加入申请</button></form></section>`;
   }
   return layout(
     item.title,
@@ -132,7 +159,7 @@ export function productionRequestsPage(rows: ProductionJoinRequestRow[], csrf: s
     ? rows
         .map(
           (row) =>
-            `<article class="card"><p class="eyebrow">${escapeHtml(row.production_title)}</p><h2>${escapeHtml(row.member_name)}申请${row.kind === "crew" ? "后台与创作" : "演员"}</h2><p>角色或分工：${escapeHtml(row.role_name)}</p><p class="muted">账号：${escapeHtml(row.username)} · ${escapeHtml(row.created_at.slice(0, 16))}</p><form method="post" action="/admin/production-requests/${row.id}/review"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>审核说明<input name="admin_note" maxlength="1000" placeholder="驳回时必填"></label><button name="decision" value="approve">通过并加入名单</button> <button class="secondary" name="decision" value="reject">驳回</button></form></article>`,
+            `<article class="card"><p class="eyebrow">${escapeHtml(row.production_title)}</p><h2>${escapeHtml(row.member_name)}申请${row.kind === "crew" ? "后台与创作" : "演员"}</h2><p>角色或分工：${escapeHtml(row.role_name)}</p>${row.existing_names ? `<p class="notice">相同角色或分工已有：${escapeHtml(row.existing_names)}。通过后会共同列入，不会覆盖原记录。</p>` : '<p class="muted">这是当前名单中的新角色或分工。</p>'}<p class="muted">账号：${escapeHtml(row.username)} · ${escapeHtml(row.created_at.slice(0, 16))}</p><form method="post" action="/admin/production-requests/${row.id}/review"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>审核说明<input name="admin_note" maxlength="1000" placeholder="驳回时必填"></label><button name="decision" value="approve">通过并加入名单</button> <button class="secondary" name="decision" value="reject">驳回</button></form></article>`,
         )
         .join("")
     : '<p class="card">当前没有待审核的作品加入申请。</p>';

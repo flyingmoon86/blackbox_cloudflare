@@ -54,6 +54,7 @@ export type ProductionJoinRequestRow = {
   status: "pending" | "approved" | "rejected";
   admin_note: string;
   created_at: string;
+  existing_names: string;
 };
 
 export const productionRoutes = new Hono<AppEnv>();
@@ -115,20 +116,13 @@ productionRoutes.get("/productions/:id", async (c) => {
     .all<ProductionResourceRow>();
   const user = c.get("user")!;
   const admin = user.role === "admin";
-  const myRequest = user.member_id
+  const myRequests = user.member_id
     ? await c.env.DB.prepare(
-        "SELECT status,kind,role_name,admin_note FROM production_join_request WHERE user_id=? AND production_id=? ORDER BY id DESC LIMIT 1",
+        "SELECT status,kind,role_name,admin_note FROM production_join_request WHERE user_id=? AND production_id=? AND status IN ('pending','rejected') ORDER BY id DESC LIMIT 8",
       )
         .bind(user.id, id)
-        .first<{ status: string; kind: string; role_name: string; admin_note: string }>()
-    : null;
-  const alreadyJoined = user.member_id
-    ? Boolean(
-        await c.env.DB.prepare("SELECT id FROM production_credit WHERE production_id=? AND member_id=? LIMIT 1")
-          .bind(id, user.member_id)
-          .first(),
-      )
-    : false;
+        .all<{ status: string; kind: string; role_name: string; admin_note: string }>()
+    : { results: [] };
   const members = admin
     ? await c.env.DB.prepare(
         "SELECT id,name,cohort FROM member ORDER BY join_year DESC,name COLLATE NOCASE",
@@ -141,8 +135,7 @@ productionRoutes.get("/productions/:id", async (c) => {
       resources.results,
       members.results,
       user,
-      myRequest,
-      alreadyJoined,
+      myRequests.results,
       await csrfFor(c),
     ),
   );
@@ -160,11 +153,13 @@ productionRoutes.post("/productions/:id/join", async (c) => {
   if (!(await c.env.DB.prepare("SELECT id FROM production WHERE id=?").bind(productionId).first()))
     return c.text("作品不存在。", 404);
   if (
-    await c.env.DB.prepare("SELECT id FROM production_credit WHERE production_id=? AND member_id=? LIMIT 1")
-      .bind(productionId, user.member_id)
+    await c.env.DB.prepare(
+      "SELECT id FROM production_credit WHERE production_id=? AND member_id=? AND kind=? AND role_name=? COLLATE NOCASE LIMIT 1",
+    )
+      .bind(productionId, user.member_id, kind, roleName)
       .first()
   )
-    return c.text("你已经在这部作品的演职员名单中。", 409);
+    return c.text("这条角色或分工已经在演职员名单中，可以继续申请其他角色。", 409);
   try {
     await c.env.DB.prepare(
       "INSERT INTO production_join_request(user_id,member_id,production_id,kind,role_name) VALUES(?,?,?,?,?)",
@@ -172,7 +167,7 @@ productionRoutes.post("/productions/:id/join", async (c) => {
       .bind(user.id, user.member_id, productionId, kind, roleName)
       .run();
   } catch {
-    return c.text("你已有一条等待审核的申请。", 409);
+    return c.text("这条角色或分工已经提交并正在等待审核，可以继续申请不同的角色。", 409);
   }
   return c.redirect(`/productions/${productionId}?join=pending`, 303);
 });
@@ -327,6 +322,14 @@ productionRoutes.post("/admin/productions/:id/credits", async (c) => {
     !(await c.env.DB.prepare("SELECT id FROM member WHERE id=?").bind(memberId).first())
   )
     return c.text("请选择队员并填写分工。", 400);
+  if (
+    await c.env.DB.prepare(
+      "SELECT id FROM production_credit WHERE production_id=? AND member_id=? AND kind=? AND role_name=? COLLATE NOCASE LIMIT 1",
+    )
+      .bind(productionId, memberId, kind, roleName)
+      .first()
+  )
+    return c.text("这位队员已经登记了相同的角色或分工。", 409);
   await c.env.DB.prepare("INSERT INTO production_credit(production_id,member_id,kind,role_name) VALUES(?,?,?,?)")
     .bind(productionId, memberId, kind, roleName)
     .run();
@@ -338,7 +341,10 @@ productionRoutes.get("/admin/production-requests", async (c) => {
   if (denied) return denied;
   const rows = await c.env.DB.prepare(
     `SELECT r.id,r.user_id,u.username,r.member_id,m.name member_name,r.production_id,p.title production_title,
-    r.kind,r.role_name,r.status,r.admin_note,r.created_at FROM production_join_request r
+    r.kind,r.role_name,r.status,r.admin_note,r.created_at,
+    COALESCE((SELECT group_concat(m2.name,'、') FROM production_credit pc2 JOIN member m2 ON m2.id=pc2.member_id
+      WHERE pc2.production_id=r.production_id AND pc2.kind=r.kind AND pc2.role_name=r.role_name COLLATE NOCASE),'') existing_names
+    FROM production_join_request r
     JOIN user u ON u.id=r.user_id JOIN member m ON m.id=r.member_id JOIN production p ON p.id=r.production_id
     WHERE r.status='pending' ORDER BY r.created_at,r.id`,
   ).all<ProductionJoinRequestRow>();
