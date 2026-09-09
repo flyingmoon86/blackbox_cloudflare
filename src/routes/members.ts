@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { csrfFor, csrfValid } from "../http/cookies";
 import type { AppEnv } from "../types";
-import { memberApplicationPage, memberDetailPage, memberListPage } from "../views";
+import { memberApplicationPage, memberDetailPage, memberEditPage, memberListPage } from "../views";
 
 export type MemberRow = {
   id: number;
@@ -47,7 +47,52 @@ memberRoutes.get("/members/:id", async (c) => {
   const member = await c.env.DB.prepare(`SELECT m.id, m.name, m.bio, m.join_year, m.cohort, m.works, m.photo,
     COUNT(f.id) AS flower_count FROM member m LEFT JOIN flower f ON f.member_id = m.id WHERE m.id = ? GROUP BY m.id`).bind(id).first<MemberRow>();
   if (!member) return c.text("未找到队员档案。", 404);
-  return c.html(memberDetailPage(member, await csrfFor(c), c.req.query("flower") ?? ""));
+  const user = c.get("user")!;
+  return c.html(memberDetailPage(member, await csrfFor(c), c.req.query("flower") ?? "", user.member_id === id, user.role === "admin"));
+});
+
+memberRoutes.get("/profile/member", async (c) => {
+  const user = c.get("user")!;
+  if (user.role !== "member" || !user.member_id) return c.redirect("/profile");
+  const member = await c.env.DB.prepare("SELECT id,name,bio,join_year,cohort,works,photo,0 flower_count FROM member WHERE id=?").bind(user.member_id).first<MemberRow>();
+  return member ? c.html(memberEditPage(member, await csrfFor(c), false, c.req.query("saved") === "1")) : c.text("未找到队员档案。", 404);
+});
+
+memberRoutes.post("/profile/member", async (c) => {
+  const user = c.get("user")!;
+  if (user.role !== "member" || !user.member_id) return c.text("只有已认证队员能维护自己的档案。", 403);
+  const form = await c.req.formData();
+  if (!csrfValid(c, form.get("csrf"))) return c.text("请求已失效，请刷新页面后重试。", 400);
+  const bio = String(form.get("bio") ?? "").trim();
+  const works = String(form.get("works") ?? "").trim();
+  if (bio.length > 5000 || works.length > 2000) return c.text("简介或代表作内容过长。", 400);
+  await c.env.DB.prepare("UPDATE member SET bio=?,works=? WHERE id=?").bind(bio, works, user.member_id).run();
+  return c.redirect("/profile/member?saved=1", 303);
+});
+
+memberRoutes.get("/admin/members/:id/edit", async (c) => {
+  const user = c.get("user")!;
+  if (user.role !== "admin") return c.text("没有管理员权限。", 403);
+  const member = await c.env.DB.prepare("SELECT id,name,bio,join_year,cohort,works,photo,0 flower_count FROM member WHERE id=?").bind(Number(c.req.param("id"))).first<MemberRow>();
+  return member ? c.html(memberEditPage(member, await csrfFor(c), true, c.req.query("saved") === "1")) : c.text("未找到队员档案。", 404);
+});
+
+memberRoutes.post("/admin/members/:id/edit", async (c) => {
+  const user = c.get("user")!;
+  if (user.role !== "admin") return c.text("没有管理员权限。", 403);
+  const form = await c.req.formData();
+  if (!csrfValid(c, form.get("csrf"))) return c.text("请求已失效，请刷新页面后重试。", 400);
+  const id = Number(c.req.param("id"));
+  const name = String(form.get("name") ?? "").trim();
+  const yearText = String(form.get("join_year") ?? "").trim();
+  const year = yearText ? Number(yearText) : null;
+  const cohort = String(form.get("cohort") ?? "").trim();
+  const bio = String(form.get("bio") ?? "").trim();
+  const works = String(form.get("works") ?? "").trim();
+  if (!name || name.length > 50 || cohort.length > 20 || bio.length > 5000 || works.length > 2000 || (year !== null && (!Number.isInteger(year) || year < 1 || year > 9999))) return c.text("请检查队员档案内容。", 400);
+  const result = await c.env.DB.prepare("UPDATE member SET name=?,join_year=?,cohort=?,bio=?,works=? WHERE id=?").bind(name, year, cohort, bio, works, id).run();
+  if (result.meta.changes !== 1) return c.text("未找到队员档案。", 404);
+  return c.redirect(`/admin/members/${id}/edit?saved=1`, 303);
 });
 
 memberRoutes.post("/members/:id/flowers", async (c) => {
