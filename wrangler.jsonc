@@ -27,7 +27,45 @@
     "ENVIRONMENT": "development",
     "R2_BUCKET_NAME": "blackbox-files"
   },
+  "secrets": {
+    "required": ["SESSION_SECRET"]
+  },
   "triggers": {
     "crons": ["17 * * * *"]
+  },
+  "env": {
+    "production": {
+      "name": "blackbox-production",
+      "routes": [
+        {
+          "pattern": "REPLACE_WITH_YOUR_DOMAIN",
+          "custom_domain": true
+        }
+      ],
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "blackbox-production",
+          "database_id": "REPLACE_WITH_D1_DATABASE_ID",
+          "migrations_dir": "migrations"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "FILES",
+          "bucket_name": "REPLACE_WITH_R2_BUCKET_NAME"
+        }
+      ],
+      "vars": {
+        "ENVIRONMENT": "production",
+        "R2_BUCKET_NAME": "REPLACE_WITH_R2_BUCKET_NAME"
+      },
+      "secrets": {
+        "required": ["SESSION_SECRET", "R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY"]
+      },
+      "observability": {
+        "enabled": true
+      }
+    }
   }
 }
