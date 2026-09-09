@@ -24,7 +24,7 @@ export function layout(title: string, content: string, signedIn = false, admin =
     : "";
   return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>${escapeHtml(title)} · 黑匣子</title><link rel="stylesheet" href="/app.css"><script src="/app.js" defer></script></head>
-  <body class="${signedIn ? "signed-in" : "signed-out"}"><header class="top"><a href="/" class="brand">黑匣子</a><nav class="desktop-nav">${nav}</nav>${mobileMore}</header><main>${content}</main>${mobileNav}</body></html>`;
+  <body class="${signedIn ? "signed-in" : "signed-out"}"><header class="top"><a href="/" class="brand">黑匣子</a><nav class="desktop-nav">${nav}</nav>${admin ? '<div class="admin-notification-host" data-admin-notifications aria-live="polite"></div>' : ""}${mobileMore}</header><main>${content}</main>${mobileNav}</body></html>`;
 }
 
 function message(text: string, kind = "alert"): string {
@@ -96,7 +96,7 @@ export function publicHome(profile: SiteProfileRow, featured: ProductionRow | nu
     : "";
   return layout(
     "首页",
-    `<dialog class="test-notice" data-test-notice="${noticeKey >>> 0}"><form method="dialog"><p class="eyebrow">TEST NOTICE</p><h2>测试须知</h2><p class="preline">${escapeHtml(notice)}</p><button value="understood">我已明白</button></form></dialog><section class="hero"${hero}><div><p class="eyebrow">BLACK BOX THEATRE</p><h1>${escapeHtml(texts.visitor_welcome || "这里是黑匣子")}</h1><p>保存每一次排练、演出与相遇。</p><a class="button" href="/login">登录查看剧团档案</a></div></section>${feature}
+    `<dialog class="test-notice" data-test-notice="${noticeKey >>> 0}"><form method="dialog"><p class="eyebrow">TEST NOTICE</p><h2>测试须知</h2><p class="preline">${escapeHtml(notice)}</p><button value="understood">我已明白</button></form></dialog><div class="home-stage"><section class="hero"${hero}><div><p class="eyebrow">BLACK BOX THEATRE</p><h1>${escapeHtml(texts.visitor_welcome || "这里是黑匣子")}</h1><p>保存每一次排练、演出与相遇。</p><a class="button" href="/login">登录查看剧团档案</a></div></section>${feature}</div>
   <section class="two-column"><article class="card"><h2>关于我们</h2><p>${escapeHtml(texts.about_text || profile.introduction || "这里记录话剧队共同创作的作品和故事。")}</p></article><article class="card"><h2>联系我们</h2><p>${escapeHtml(texts.contact_intro || "")}</p><p><a href="mailto:${escapeHtml(profile.contact_email || "moonflying56@gmail.com")}">${escapeHtml(profile.contact_email || "moonflying56@gmail.com")}</a></p></article></section>`,
   );
 }
@@ -114,7 +114,7 @@ export function memberHome(
     ? announcements
         .map(
           (x) =>
-            `<li><a href="/announcements/${x.id}">${escapeHtml(x.title)}</a> <span class="muted">${escapeHtml(x.created_at.slice(0, 10))}</span></li>`,
+            `<li><a href="/announcements/${x.id}">${escapeHtml(x.title)}</a><time datetime="${escapeHtml(x.created_at.slice(0, 10))}">${escapeHtml(x.created_at.slice(0, 10))}</time></li>`,
         )
         .join("")
     : "<li>暂无公告</li>";
@@ -123,15 +123,28 @@ export function memberHome(
     : "";
   const suggestionLink =
     user.role === "member" || user.role === "admin"
-      ? '<p><a class="button secondary" href="/suggestions">提交网站建议</a></p>'
+      ? '<a class="button secondary" href="/suggestions">提交网站建议</a>'
       : "";
+  const contactEmail = profile.contact_email || "moonflying56@gmail.com";
+  const qqContact = profile.qq_group
+    ? `<li><span>QQ群</span><strong>${escapeHtml(profile.qq_group)}</strong></li>`
+    : "";
   const welcome =
     user.role === "member" || user.role === "admin"
       ? texts.home_welcome || "黑匣子永远是你的家"
       : texts.visitor_welcome || "这里是黑匣子";
   return layout(
     "队员首页",
-    `<section class="hero"${hero}><div><p class="eyebrow">${escapeHtml(user.role)}</p><h1>${escapeHtml(welcome)}</h1><p>${escapeHtml(user.username)}，欢迎回来。</p>${edit}</div></section>${featuredProduction(featured, true)}<section class="two-column"><article class="card"><h2>公告</h2><ul>${news}</ul><a href="/announcements">查看全部公告</a></article><article class="card guide-invite"><p class="eyebrow">START HERE</p><h2>第一次使用网站？</h2><p>网站使用指南会带你找到作品、登记角色、上传资料和修改个人信息${user.role === "admin" ? "，也包含队长与管理员的审核步骤" : ""}。</p><p><a class="button" href="/help">查看网站使用指南</a></p></article></section><section class="two-column"><article class="card"><h2>招新</h2><p class="preline">${escapeHtml(profile.recruitment || "欢迎喜欢舞台的你加入我们。")}</p><p class="muted preline">${escapeHtml(profile.requirements || "关注剧团通知，了解本学期招新安排。")}</p></article><article class="card"><h2>关于我们</h2><p class="preline">${escapeHtml(texts.about_text || profile.introduction || "这里记录话剧队共同创作的作品和故事。")}</p><p><a href="mailto:${escapeHtml(profile.contact_email || "moonflying56@gmail.com")}">联系我们</a></p>${suggestionLink}</article></section>`,
+    `<div class="home-stage"><section class="hero"${hero}><div><p class="eyebrow">${escapeHtml(user.role)}</p><h1>${escapeHtml(welcome)}</h1><p>${escapeHtml(user.username)}，欢迎回来。</p>${edit}</div></section>${featuredProduction(featured, true)}</div>
+    <section class="home-card-grid">
+      <article class="card home-card"><p class="eyebrow">NOTICE</p><h2>剧团公告</h2><ul class="announcement-list">${news}</ul><footer class="home-card-actions"><a class="button secondary" href="/announcements">查看全部公告</a></footer></article>
+      <article class="card home-card guide-invite"><p class="eyebrow">START HERE</p><h2>第一次使用网站？</h2><p>网站使用指南会带你找到作品、登记角色、上传资料和修改个人信息${user.role === "admin" ? "，也包含队长与管理员的审核步骤" : ""}。</p><footer class="home-card-actions"><a class="button" href="/help">查看网站使用指南</a>${suggestionLink}</footer></article>
+    </section>
+    <article class="card troupe-card">
+      <section><p class="eyebrow">JOIN US</p><h2>招新</h2><p class="preline">${escapeHtml(profile.recruitment || "欢迎喜欢舞台的你加入我们。")}</p><p class="muted preline">${escapeHtml(profile.requirements || "关注剧团通知，了解本学期招新安排。")}</p></section>
+      <section><p class="eyebrow">ABOUT</p><h2>关于我们</h2><p class="preline">${escapeHtml(texts.about_text || profile.introduction || "这里记录话剧队共同创作的作品和故事。")}</p></section>
+      <section class="contact-panel"><div><p class="eyebrow">CONTACT</p><h2>联系剧团</h2><p class="preline">${escapeHtml(texts.contact_intro || "有问题或想加入我们，可以通过下面的方式联系剧团。")}</p></div><ul class="contact-list"><li><span>邮箱</span><strong>${escapeHtml(contactEmail)}</strong></li>${qqContact}</ul><div class="contact-actions"><a class="button secondary" href="mailto:${escapeHtml(contactEmail)}">写邮件</a><button type="button" class="secondary" data-copy-contact="${escapeHtml(contactEmail)}">复制邮箱</button><span class="hint" data-copy-feedback role="status" aria-live="polite"></span></div></section>
+    </article>`,
     true,
     user.role === "admin",
   );
@@ -196,9 +209,18 @@ export function memberListPage(
     .join("");
   return layout(
     "队员名录",
-    `<section class="page-heading"><p class="eyebrow">HALL OF FAME</p><h1>队员名录</h1><form method="get" class="filters"><input name="q" value="${escapeHtml(search)}" placeholder="搜索姓名、届别或作品"><select name="year"><option value="">全部年份</option>${options}</select><button>查找</button></form></section><section class="card-grid">${cards}</section>`,
+    `<section class="page-heading"><p class="eyebrow">HALL OF FAME</p><h1>队员名录</h1>${admin ? '<p><a class="button" href="/admin/members/new">＋ 新建队员档案</a></p>' : ""}<form method="get" class="filters"><input name="q" value="${escapeHtml(search)}" placeholder="搜索姓名、届别或作品"><select name="year"><option value="">全部年份</option>${options}</select><button>查找</button></form></section><section class="card-grid">${cards}</section>`,
     true,
     admin,
+  );
+}
+
+export function memberCreatePage(csrf: string, error = ""): string {
+  return layout(
+    "新建队员档案",
+    `<section class="card auth"><p class="eyebrow">NEW MEMBER</p><h1>新建队员档案</h1>${message(error)}<p class="muted">先建立没有账号的历史或现役队员档案。队员注册后，可以申请绑定到这份档案。</p><form method="post" action="/admin/members/new"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>姓名<input name="name" maxlength="50" required></label><label>入队年份<input name="join_year" type="number" min="1" max="9999" inputmode="numeric"></label><label>届别<input name="cohort" maxlength="20"></label><label>个人简介<textarea name="bio" maxlength="5000" rows="7"></textarea></label><label>代表作与经历<textarea name="works" maxlength="2000" rows="5"></textarea></label><button>建立档案</button></form><p><a href="/members">返回队员名录</a></p></section>`,
+    true,
+    true,
   );
 }
 

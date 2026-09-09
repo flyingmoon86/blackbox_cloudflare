@@ -27,6 +27,20 @@ export type ManagedUser = {
   member_name: string | null;
 };
 
+export type PendingCounts = {
+  member_requests: number;
+  production_joins: number;
+  resource_reviews: number;
+  production_creates: number;
+  website_suggestions: number;
+};
+
+type NotificationGroup = {
+  kind: "member" | "production-join" | "resource" | "production-create" | "suggestion";
+  count: number;
+  newest_id: number;
+};
+
 export const adminRoutes = new Hono<AppEnv>();
 
 const requireAdmin = async (c: any, next: () => Promise<void>) => {
@@ -40,7 +54,7 @@ adminRoutes.use("/admin", requireAdmin);
 adminRoutes.use("/admin/*", requireAdmin);
 
 adminRoutes.get("/admin", async (c) => {
-  const [requests, users] = await Promise.all([
+  const [requests, users, counts] = await Promise.all([
     c.env.DB.prepare(
       `SELECT r.id,r.user_id,u.username,r.apply_type,r.identity_note,r.member_id,m.name AS member_name,
       r.name,r.bio,r.join_year,r.cohort,r.created_at FROM join_request r JOIN user u ON u.id=r.user_id
@@ -50,8 +64,81 @@ adminRoutes.get("/admin", async (c) => {
       `SELECT u.id,u.username,u.email,u.role,u.status,m.name AS member_name FROM user u
       LEFT JOIN member m ON m.id=u.member_id ORDER BY u.id DESC LIMIT 200`,
     ).all<ManagedUser>(),
+    c.env.DB.prepare(
+      `SELECT
+      (SELECT COUNT(*) FROM join_request WHERE status='pending') member_requests,
+      (SELECT COUNT(*) FROM production_join_request WHERE status='pending') production_joins,
+      (SELECT COUNT(*) FROM resource WHERE status='pending') resource_reviews,
+      (SELECT COUNT(*) FROM suggestion WHERE status='open' AND category='production') production_creates,
+      (SELECT COUNT(*) FROM suggestion WHERE status='open' AND category='website') website_suggestions`,
+    ).first<PendingCounts>(),
   ]);
-  return c.html(adminDashboardPage(requests.results, users.results, await csrfFor(c), c.req.query("message") ?? ""));
+  return c.html(
+    adminDashboardPage(
+      requests.results,
+      users.results,
+      counts || {
+        member_requests: 0,
+        production_joins: 0,
+        resource_reviews: 0,
+        production_creates: 0,
+        website_suggestions: 0,
+      },
+      await csrfFor(c),
+      c.req.query("message") ?? "",
+    ),
+  );
+});
+
+adminRoutes.get("/admin/notifications", async (c) => {
+  const user = c.get("user")!;
+  const [groups, reads] = await Promise.all([
+    c.env.DB.prepare(
+      `SELECT 'member' kind,COUNT(*) count,COALESCE(MAX(id),0) newest_id FROM join_request WHERE status='pending'
+      UNION ALL SELECT 'production-join',COUNT(*),COALESCE(MAX(id),0) FROM production_join_request WHERE status='pending'
+      UNION ALL SELECT 'resource',COUNT(*),COALESCE(MAX(id),0) FROM resource WHERE status='pending'
+      UNION ALL SELECT 'production-create',COUNT(*),COALESCE(MAX(id),0) FROM suggestion WHERE status='open' AND category='production'
+      UNION ALL SELECT 'suggestion',COUNT(*),COALESCE(MAX(id),0) FROM suggestion WHERE status='open' AND category='website'`,
+    ).all<NotificationGroup>(),
+    c.env.DB.prepare("SELECT notification_key FROM admin_notification_read WHERE user_id=?")
+      .bind(user.id)
+      .all<{ notification_key: string }>(),
+  ]);
+  const seen = new Set(reads.results.map((row) => row.notification_key));
+  const labels: Record<NotificationGroup["kind"], { title: string; href: string }> = {
+    member: { title: "新队员认证申请", href: "/admin#member-requests" },
+    "production-join": { title: "新作品加入申请", href: "/admin/production-requests" },
+    resource: { title: "新资料等待审核", href: "/admin/resources/reviews" },
+    "production-create": { title: "新作品建档申请", href: "/admin/suggestions" },
+    suggestion: { title: "新网站建议", href: "/admin/suggestions" },
+  };
+  const unread = groups.results
+    .filter((group) => group.count > 0)
+    .map((group) => ({
+      key: `${group.kind}:${group.newest_id}`,
+      count: group.count,
+      ...labels[group.kind],
+    }))
+    .filter((item) => !seen.has(item.key));
+  return c.json({
+    csrf: await csrfFor(c),
+    total: unread.reduce((sum, item) => sum + item.count, 0),
+    hidden: Math.max(0, unread.length - 4),
+    items: unread.slice(0, 4),
+  });
+});
+
+adminRoutes.post("/admin/notifications/dismiss", async (c) => {
+  const user = c.get("user")!;
+  const form = await c.req.formData();
+  if (!csrfValid(c, form.get("csrf"))) return c.json({ error: "请求已失效，请刷新后重试。" }, 400);
+  const key = String(form.get("key") ?? "");
+  if (!/^(member|production-join|resource|production-create|suggestion):\d+$/.test(key))
+    return c.json({ error: "通知不存在。" }, 400);
+  await c.env.DB.prepare("INSERT OR IGNORE INTO admin_notification_read(user_id,notification_key) VALUES(?,?)")
+    .bind(user.id, key)
+    .run();
+  return c.json({ ok: true });
 });
 
 adminRoutes.post("/admin/requests/:id/approve", async (c) => {

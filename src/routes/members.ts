@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { csrfFor, csrfValid } from "../http/cookies";
 import type { AppEnv } from "../types";
-import { memberApplicationPage, memberDetailPage, memberEditPage, memberListPage } from "../views";
+import { memberApplicationPage, memberCreatePage, memberDetailPage, memberEditPage, memberListPage } from "../views";
 
 export type MemberRow = {
   id: number;
@@ -163,6 +163,36 @@ memberRoutes.get("/members/:id/avatar", async (c) => {
   return new Response(object.body, { headers });
 });
 
+memberRoutes.get("/admin/members/new", async (c) => {
+  if (c.get("user")!.role !== "admin") return c.text("没有管理员权限。", 403);
+  return c.html(memberCreatePage(await csrfFor(c)));
+});
+
+memberRoutes.post("/admin/members/new", async (c) => {
+  if (c.get("user")!.role !== "admin") return c.text("没有管理员权限。", 403);
+  const form = await c.req.formData();
+  if (!csrfValid(c, form.get("csrf"))) return c.text("请求已失效，请刷新页面后重试。", 400);
+  const name = String(form.get("name") ?? "").trim();
+  const yearText = String(form.get("join_year") ?? "").trim();
+  const year = yearText ? Number(yearText) : null;
+  const cohort = String(form.get("cohort") ?? "").trim();
+  const bio = String(form.get("bio") ?? "").trim();
+  const works = String(form.get("works") ?? "").trim();
+  if (
+    !name ||
+    name.length > 50 ||
+    cohort.length > 20 ||
+    bio.length > 5000 ||
+    works.length > 2000 ||
+    (year !== null && (!Number.isInteger(year) || year < 1 || year > 9999))
+  )
+    return c.html(memberCreatePage(await csrfFor(c), "请检查姓名、年份和文字长度。"), 400);
+  const result = await c.env.DB.prepare("INSERT INTO member(name,bio,join_year,cohort,works) VALUES(?,?,?,?,?)")
+    .bind(name, bio, year, cohort, works)
+    .run();
+  return c.redirect(`/admin/members/${Number(result.meta.last_row_id)}/edit?created=1`, 303);
+});
+
 memberRoutes.get("/admin/members/:id/edit", async (c) => {
   const user = c.get("user")!;
   if (user.role !== "admin") return c.text("没有管理员权限。", 403);
@@ -172,7 +202,9 @@ memberRoutes.get("/admin/members/:id/edit", async (c) => {
     .bind(Number(c.req.param("id")))
     .first<MemberRow>();
   return member
-    ? c.html(memberEditPage(member, await csrfFor(c), true, c.req.query("saved") === "1"))
+    ? c.html(
+        memberEditPage(member, await csrfFor(c), true, c.req.query("saved") === "1" || c.req.query("created") === "1"),
+      )
     : c.text("未找到队员档案。", 404);
 });
 
