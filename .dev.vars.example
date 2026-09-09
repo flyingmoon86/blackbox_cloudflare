@@ -1,2 +1,7 @@
 # 复制为 .dev.vars，仅用于本地开发，不提交真实值。
 SESSION_SECRET=请替换为至少32字符的随机测试密钥
+
+# 本地开发不需要下面三项；正式 R2 浏览器直传时用 `wrangler secret put` 分别设置。
+# R2_ACCOUNT_ID=
+# R2_ACCESS_KEY_ID=
+# R2_SECRET_ACCESS_KEY=
