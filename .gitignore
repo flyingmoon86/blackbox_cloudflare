@@ -16,6 +16,7 @@ legacy-python/**/*.pyc
 .venv-workers/
 .tools/
 python_modules/
+migration-work/
 
 # 旧站真实上传文件不得进入迁移仓库
 legacy-python/uploads/

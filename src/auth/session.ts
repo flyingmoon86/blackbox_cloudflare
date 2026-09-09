@@ -16,7 +16,9 @@ function decodeBase64Url(value: string): Uint8Array<ArrayBuffer> {
 }
 
 async function hmac(secret: string, value: string): Promise<Uint8Array> {
-  const key = await crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const key = await crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, [
+    "sign",
+  ]);
   return new Uint8Array(await crypto.subtle.sign("HMAC", key, encoder.encode(value)));
 }
 
@@ -30,11 +32,14 @@ export async function readSession(token: string | undefined, secret: string): Pr
   const [body, signature, extra] = token.split(".");
   if (!body || !signature || extra !== undefined) return null;
   try {
-    const key = await crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["verify"]);
+    const key = await crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, [
+      "verify",
+    ]);
     const valid = await crypto.subtle.verify("HMAC", key, decodeBase64Url(signature), encoder.encode(body));
     if (!valid) return null;
     const payload = JSON.parse(new TextDecoder().decode(decodeBase64Url(body))) as Partial<SessionPayload>;
-    if (!Number.isInteger(payload.uid) || !Number.isInteger(payload.version) || !Number.isInteger(payload.exp)) return null;
+    if (!Number.isInteger(payload.uid) || !Number.isInteger(payload.version) || !Number.isInteger(payload.exp))
+      return null;
     if ((payload.exp as number) <= Math.floor(Date.now() / 1000)) return null;
     return payload as SessionPayload;
   } catch {

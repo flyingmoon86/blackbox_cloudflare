@@ -1,0 +1,9 @@
+[
+  {
+    "AllowedOrigins": ["https://请替换为测试域名.example"],
+    "AllowedMethods": ["PUT"],
+    "AllowedHeaders": ["content-type"],
+    "ExposeHeaders": ["etag"],
+    "MaxAgeSeconds": 3600
+  }
+]
