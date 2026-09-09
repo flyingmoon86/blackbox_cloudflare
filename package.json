@@ -13,8 +13,13 @@
     "data:verify": "node scripts/data/verify-converted.mjs",
     "data:upload": "node scripts/data/upload-r2-files.mjs",
     "data:test": "node scripts/data/test-transform.mjs",
-    "build": "node scripts/wrangler.mjs deploy --dry-run --outdir .wrangler/dry-run",
-    "deploy": "node scripts/wrangler.mjs deploy"
+    "build": "node scripts/wrangler.mjs deploy --env \"\" --dry-run --outdir .wrangler/dry-run",
+    "deploy:check": "node scripts/predeploy.mjs check",
+    "db:production:migrate": "node scripts/predeploy.mjs migrate",
+    "db:production:backup": "node scripts/predeploy.mjs backup",
+    "r2:production:cors": "node scripts/predeploy.mjs cors",
+    "smoke:production": "node scripts/predeploy.mjs smoke",
+    "deploy": "node scripts/predeploy.mjs deploy"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260908.1",
