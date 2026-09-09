@@ -35,6 +35,12 @@ function validImage(bytes: Uint8Array, type: string): boolean {
 }
 
 memberRoutes.use("*", async (c, next) => {
+  if (
+    !c.req.path.startsWith("/members") &&
+    !c.req.path.startsWith("/profile/member") &&
+    !c.req.path.startsWith("/admin/members")
+  )
+    return next();
   if (!c.get("user")) return c.redirect(`/login?next=${encodeURIComponent(c.req.path)}`);
   await next();
 });
@@ -71,6 +77,7 @@ memberRoutes.get("/members", async (c) => {
       years.results.map((item) => item.join_year),
       search,
       year,
+      c.get("user")!.role === "admin",
     ),
   );
 });

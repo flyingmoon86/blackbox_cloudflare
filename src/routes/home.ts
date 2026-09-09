@@ -1,13 +1,11 @@
-import { Hono } from "hono";
+import type { Context } from "hono";
 import { csrfFor } from "../http/cookies";
 import type { AppEnv } from "../types";
 import { memberHome, publicHome } from "../views";
 import type { AnnouncementRow, SiteProfileRow } from "./content";
 import type { ProductionRow } from "./productions";
 
-export const homeRoutes = new Hono<AppEnv>();
-
-homeRoutes.get("/", async (c) => {
+export async function homePage(c: Context<AppEnv>) {
   const user = c.get("user");
   const profile = await c.env.DB.prepare(
     "SELECT troupe_name,introduction,contact_email,contact_wechat,qq_group,public_account,recruitment,requirements,hero_photo,featured_production_id,page_texts FROM site_profile WHERE id=1",
@@ -24,9 +22,9 @@ homeRoutes.get("/", async (c) => {
     "SELECT id,title,content,created_at FROM announcement ORDER BY created_at DESC,id DESC LIMIT 3",
   ).all<AnnouncementRow>();
   return c.html(memberHome(user, await csrfFor(c), profile!, featured, announcements.results));
-});
+}
 
-homeRoutes.get("/site/hero", async (c) => {
+export async function heroImage(c: Context<AppEnv>) {
   const profile = await c.env.DB.prepare("SELECT hero_photo FROM site_profile WHERE id=1").first<{
     hero_photo: string;
   }>();
@@ -45,6 +43,8 @@ homeRoutes.get("/site/hero", async (c) => {
   headers.set("etag", object.httpEtag);
   headers.set("cache-control", "public, max-age=3600");
   return new Response(object.body, { headers });
-});
+}
 
-homeRoutes.get("/health", (c) => c.json({ ok: true, runtime: "typescript-worker" }));
+export function health(c: Context<AppEnv>) {
+  return c.json({ ok: true, runtime: "typescript-worker" });
+}

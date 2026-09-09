@@ -21,6 +21,12 @@ export type SiteProfileRow = {
 export const contentRoutes = new Hono<AppEnv>();
 
 contentRoutes.use("*", async (c, next) => {
+  if (
+    !c.req.path.startsWith("/announcements") &&
+    !c.req.path.startsWith("/admin/announcements") &&
+    c.req.path !== "/admin/site"
+  )
+    return next();
   if (!c.get("user")) return c.redirect(`/login?next=${encodeURIComponent(c.req.path)}`);
   await next();
 });
@@ -105,7 +111,15 @@ contentRoutes.post("/admin/site", async (c) => {
   try {
     texts = JSON.parse(current?.page_texts || "{}");
   } catch {}
-  for (const key of ["home_welcome", "about_text", "contact_intro", "member_guide", "admin_guide"])
+  for (const key of [
+    "home_welcome",
+    "visitor_welcome",
+    "test_notice",
+    "about_text",
+    "contact_intro",
+    "member_guide",
+    "admin_guide",
+  ])
     texts[key] = String(form.get(key) ?? "")
       .trim()
       .slice(0, 10000);

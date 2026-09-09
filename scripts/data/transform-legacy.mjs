@@ -332,6 +332,8 @@ const columns = {
 const deleteOrder = [
   "upload_part",
   "upload_task",
+  "suggestion",
+  "production_join_request",
   "production_credit",
   "member_resource",
   "flower",

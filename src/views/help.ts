@@ -9,5 +9,6 @@ export function helpPage(texts: Record<string, string>, admin: boolean): string 
     "使用指南",
     `<section class="page-heading"><p class="eyebrow">HELP</p><h1>使用指南</h1></section><section class="review-grid"><article class="card"><h2>队员指南</h2>${admin ? '<a class="edit-link" href="/admin/site#member_guide">编辑这段指南</a>' : ""}${paragraph(memberGuide)}</article>${admin ? `<article class="card"><h2>管理员指南</h2><a class="edit-link" href="/admin/site#admin_guide">编辑这段指南</a>${paragraph(adminGuide)}</article>` : ""}</section>`,
     true,
+    admin,
   );
 }

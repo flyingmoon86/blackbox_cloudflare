@@ -10,6 +10,7 @@
     "format:check": "prettier --check \"src/**/*.ts\" \"public/**/*.js\" \"scripts/**/*.mjs\"",
     "data:export": "node scripts/data/export-mysql.mjs",
     "data:transform": "node scripts/data/transform-legacy.mjs",
+    "data:verify": "node scripts/data/verify-converted.mjs",
     "data:upload": "node scripts/data/upload-r2-files.mjs",
     "data:test": "node scripts/data/test-transform.mjs",
     "build": "node scripts/wrangler.mjs deploy --dry-run --outdir .wrangler/dry-run",

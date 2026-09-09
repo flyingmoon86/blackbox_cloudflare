@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { securityHeaders, noStore } from "./middleware/security";
 import { loadUser } from "./middleware/session";
 import { authRoutes } from "./routes/auth";
-import { homeRoutes } from "./routes/home";
+import { health, heroImage, homePage } from "./routes/home";
 import { memberRoutes } from "./routes/members";
 import { adminRoutes } from "./routes/admin";
 import { productionRoutes } from "./routes/productions";
@@ -10,6 +10,7 @@ import { contentRoutes } from "./routes/content";
 import { resourceRoutes } from "./routes/resources";
 import { helpRoutes } from "./routes/help";
 import { uploadRoutes } from "./routes/uploads";
+import { suggestionRoutes } from "./routes/suggestions";
 import type { AppEnv } from "./types";
 import { cleanExpiredUploads } from "./storage/cleanup";
 
@@ -21,7 +22,9 @@ app.use("/login", noStore);
 app.use("/register", noStore);
 app.use("/profile/*", noStore);
 
-app.route("/", homeRoutes);
+app.get("/", homePage);
+app.get("/site/hero", heroImage);
+app.get("/health", health);
 app.route("/", authRoutes);
 app.route("/", memberRoutes);
 app.route("/", adminRoutes);
@@ -30,6 +33,7 @@ app.route("/", contentRoutes);
 app.route("/", resourceRoutes);
 app.route("/", helpRoutes);
 app.route("/", uploadRoutes);
+app.route("/", suggestionRoutes);
 
 app.notFound((c) => c.env.ASSETS.fetch(c.req.raw));
 app.onError((error, c) => {

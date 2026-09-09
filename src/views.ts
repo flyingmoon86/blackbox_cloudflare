@@ -12,12 +12,12 @@ export function escapeHtml(value: unknown): string {
     .replaceAll("'", "&#39;");
 }
 
-export function layout(title: string, content: string, signedIn = false): string {
+export function layout(title: string, content: string, signedIn = false, admin = false): string {
   const nav = signedIn
-    ? '<a href="/">首页</a><a href="/productions">作品与资料</a><a href="/members">队员名录</a><a href="/profile">个人中心</a>'
+    ? `<a href="/">首页</a><a href="/productions">作品与资料</a><a href="/members">队员名录</a><a href="/profile">个人中心</a><a href="/help">网站使用指南</a>${admin ? '<a href="/admin">管理员工作台</a>' : ""}`
     : '<a href="/">首页</a><a href="/login">登录</a><a href="/register">注册</a>';
   return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>${escapeHtml(title)} · 黑匣子</title><link rel="stylesheet" href="/app.css"></head>
+  <title>${escapeHtml(title)} · 黑匣子</title><link rel="stylesheet" href="/app.css"><script src="/app.js" defer></script></head>
   <body><header class="top"><a href="/" class="brand">黑匣子</a><nav>${nav}</nav></header><main>${content}</main></body></html>`;
 }
 
@@ -28,23 +28,23 @@ function message(text: string, kind = "alert"): string {
 export function loginPage(csrf: string, error = "", next = "/", info = ""): string {
   return layout(
     "登录",
-    `<section class="card auth"><p class="eyebrow">BLACK BOX</p><h1>欢迎回家</h1><p class="muted">登录后查看剧团公告、作品与内部资料。</p>
+    `<section class="auth-stage"><section class="card auth"><p class="eyebrow">BLACK BOX</p><h1>欢迎回来</h1><p class="muted">登录后查看剧团公告、作品与内部资料。</p>
   ${message(info, "notice")}${message(error)}<form method="post" action="/login"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><input type="hidden" name="next" value="${escapeHtml(next)}">
   <label>用户名<input name="username" autocomplete="username" maxlength="50" required></label><label>密码<input name="password" type="password" autocomplete="current-password" required></label>
-  <button type="submit">登录</button></form><p><a href="/register">还没有账号？注册</a></p></section>`,
+  <button type="submit">登录</button></form><p><a href="/register">还没有账号？注册</a></p></section></section>`,
   );
 }
 
 export function registerPage(csrf: string, error = "", values: { username?: string; email?: string } = {}): string {
   return layout(
     "注册",
-    `<section class="card auth"><p class="eyebrow">JOIN US</p><h1>创建账号</h1>${message(error)}
+    `<section class="auth-stage"><section class="card auth"><p class="eyebrow">JOIN US</p><h1>创建账号</h1><p class="muted">先注册普通账号，之后可以在个人中心申请队员认证。</p>${message(error)}
   <form method="post" action="/register"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}">
   <label>用户名<input name="username" autocomplete="username" maxlength="50" value="${escapeHtml(values.username)}" required></label>
   <label>邮箱（可稍后填写）<input name="email" type="email" autocomplete="email" maxlength="254" value="${escapeHtml(values.email)}"><span class="hint">邮件服务接入后，验证邮箱可用于找回密码。</span></label>
   <label>密码<input name="password" type="password" minlength="8" maxlength="128" autocomplete="new-password" required></label>
   <label>再次输入密码<input name="confirm_password" type="password" minlength="8" maxlength="128" autocomplete="new-password" required></label>
-  <button type="submit">注册</button></form></section>`,
+  <button type="submit">注册</button></form><p><a href="/login">已有账号？返回登录</a></p></section></section>`,
   );
 }
 
@@ -67,6 +67,11 @@ function pageTexts(profile: SiteProfileRow): Record<string, string> {
 }
 export function publicHome(profile: SiteProfileRow, featured: ProductionRow | null): string {
   const texts = pageTexts(profile);
+  const notice =
+    texts.test_notice ||
+    "网站正在测试中。你可以浏览和试用功能；认证队员还可以通过首页意见箱提交建议。请勿上传敏感或无权分享的资料。";
+  let noticeKey = 2166136261;
+  for (const character of notice) noticeKey = Math.imul(noticeKey ^ character.charCodeAt(0), 16777619);
   const feature = featured
     ? `<section class="card feature"><p class="eyebrow">即将演出</p><h2>${escapeHtml(featured.title)}</h2><p>${escapeHtml(featured.promo || featured.synopsis)}</p><a class="button" href="/login?next=/productions/${featured.id}">登录后查看</a></section>`
     : "";
@@ -75,7 +80,7 @@ export function publicHome(profile: SiteProfileRow, featured: ProductionRow | nu
     : "";
   return layout(
     "首页",
-    `<section class="hero"${hero}><div><p class="eyebrow">BLACK BOX THEATRE</p><h1>${escapeHtml(texts.home_welcome || "黑匣子永远是你的家")}</h1><p>保存每一次排练、演出与相遇。</p><a class="button" href="/login">登录查看剧团档案</a></div></section>${feature}
+    `<dialog class="test-notice" data-test-notice="${noticeKey >>> 0}"><form method="dialog"><p class="eyebrow">TEST NOTICE</p><h2>测试须知</h2><p class="preline">${escapeHtml(notice)}</p><button value="understood">我已明白</button></form></dialog><section class="hero"${hero}><div><p class="eyebrow">BLACK BOX THEATRE</p><h1>${escapeHtml(texts.visitor_welcome || "这里是黑匣子")}</h1><p>保存每一次排练、演出与相遇。</p><a class="button" href="/login">登录查看剧团档案</a></div></section>${feature}
   <section class="two-column"><article class="card"><h2>关于我们</h2><p>${escapeHtml(texts.about_text || profile.introduction || "这里记录话剧队共同创作的作品和故事。")}</p></article><article class="card"><h2>联系我们</h2><p>${escapeHtml(texts.contact_intro || "")}</p><p><a href="mailto:${escapeHtml(profile.contact_email || "moonflying56@gmail.com")}">${escapeHtml(profile.contact_email || "moonflying56@gmail.com")}</a></p></article></section>`,
   );
 }
@@ -100,12 +105,20 @@ export function memberHome(
   const hero = profile.hero_photo
     ? ' style="background-image:linear-gradient(90deg,rgba(10,8,8,.94),rgba(10,8,8,.25)),url(/site/hero)"'
     : "";
-  const adminLink = user.role === "admin" ? '<p><a href="/admin">进入管理员工作台</a></p>' : "";
+  const adminLink = user.role === "admin" ? '<li><a href="/admin">管理员工作台</a></li>' : "";
+  const suggestionLink =
+    user.role === "member" || user.role === "admin"
+      ? '<p><a class="button secondary" href="/suggestions">提交网站建议</a></p>'
+      : "";
+  const welcome =
+    user.role === "member" || user.role === "admin"
+      ? texts.home_welcome || "黑匣子永远是你的家"
+      : texts.visitor_welcome || "这里是黑匣子";
   return layout(
     "队员首页",
-    `<section class="hero"${hero}><div><p class="eyebrow">${escapeHtml(user.role)}</p><h1>${escapeHtml(texts.home_welcome || "黑匣子永远是你的家")}</h1><p>${escapeHtml(user.username)}，欢迎回来。</p>${edit}</div></section>${featured ? `<section class="card feature"><p class="eyebrow">精选大戏</p><h2><a href="/productions/${featured.id}">${escapeHtml(featured.title)}</a></h2><p>${escapeHtml(featured.promo || featured.synopsis)}</p></section>` : ""}<section class="two-column"><article class="card"><h2>公告</h2><ul>${news}</ul><a href="/announcements">查看全部公告</a></article><article class="card"><h2>快捷入口</h2><p><a href="/profile">进入个人中心</a></p>${adminLink}</article></section>
-  <form method="post" action="/logout"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button type="submit">退出登录</button></form>`,
+    `<section class="hero"${hero}><div><p class="eyebrow">${escapeHtml(user.role)}</p><h1>${escapeHtml(welcome)}</h1><p>${escapeHtml(user.username)}，欢迎回来。</p>${edit}</div></section>${featured ? `<section class="card feature"><p class="eyebrow">精选大戏</p><h2><a href="/productions/${featured.id}">${escapeHtml(featured.title)}</a></h2><p>${escapeHtml(featured.promo || featured.synopsis)}</p></section>` : ""}<section class="two-column"><article class="card"><h2>公告</h2><ul>${news}</ul><a href="/announcements">查看全部公告</a></article><article class="card"><h2>快捷入口</h2><ul class="link-list"><li><a href="/">首页</a></li><li><a href="/productions">作品与资料</a></li><li><a href="/members">队员名录</a></li><li><a href="/profile">个人中心</a></li>${adminLink}</ul></article></section><section class="two-column"><article class="card"><h2>招新</h2><p class="preline">${escapeHtml(profile.recruitment || "欢迎喜欢舞台的你加入我们。")}</p><p class="muted preline">${escapeHtml(profile.requirements || "关注剧团通知，了解本学期招新安排。")}</p></article><article class="card"><h2>关于我们</h2><p class="preline">${escapeHtml(texts.about_text || profile.introduction || "这里记录话剧队共同创作的作品和故事。")}</p><p><a href="mailto:${escapeHtml(profile.contact_email || "moonflying56@gmail.com")}">联系我们</a></p>${suggestionLink}</article></section>`,
     true,
+    user.role === "admin",
   );
 }
 
@@ -138,12 +151,13 @@ export function profilePage(
   return layout(
     "个人中心",
     `${result}<section class="two-column"><article class="card"><p class="eyebrow">ACCOUNT</p><h1>个人中心</h1><p>用户名：${escapeHtml(user.username)}</p><p>身份：${escapeHtml(user.role)}</p><p>${email}</p>${application}</article>
-  <article class="card"><h2>账号与帮助</h2>${user.role === "member" && user.member_id ? '<p><a href="/profile/member">维护我的队员档案</a></p>' : ""}<p><a href="/help">查看使用指南</a></p><h2>修改密码</h2>${message(error)}<form method="post" action="/profile/password"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}">
+  <article class="card"><h2>账号管理</h2>${user.role === "member" && user.member_id ? '<p><a href="/profile/member">维护我的队员档案</a></p>' : ""}<h2>修改密码</h2>${message(error)}<form method="post" action="/profile/password"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}">
   <label>当前密码<input type="password" name="current_password" autocomplete="current-password" required></label>
   <label>新密码<input type="password" name="new_password" minlength="8" maxlength="128" autocomplete="new-password" required></label>
   <label>再次输入新密码<input type="password" name="confirm_password" minlength="8" maxlength="128" autocomplete="new-password" required></label>
-  <button type="submit">保存新密码</button></form></article></section>`,
+  <button type="submit">保存新密码</button></form><hr><form method="post" action="/logout"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button class="secondary" type="submit">退出登录</button></form></article></section>`,
     true,
+    user.role === "admin",
   );
 }
 
@@ -152,6 +166,7 @@ export function memberListPage(
   years: number[],
   search: string,
   selectedYear: number | null,
+  admin: boolean,
 ): string {
   const cards = members.length
     ? members
@@ -168,6 +183,7 @@ export function memberListPage(
     "队员名录",
     `<section class="page-heading"><p class="eyebrow">HALL OF FAME</p><h1>队员名录</h1><form method="get" class="filters"><input name="q" value="${escapeHtml(search)}" placeholder="搜索姓名、届别或作品"><select name="year"><option value="">全部年份</option>${options}</select><button>查找</button></form></section><section class="card-grid">${cards}</section>`,
     true,
+    admin,
   );
 }
 
@@ -187,6 +203,7 @@ export function memberDetailPage(member: MemberRow, csrf: string, flower: string
     member.name,
     `<article class="card profile-detail">${member.photo ? `<img class="avatar avatar-large" src="/members/${member.id}/avatar" alt="${escapeHtml(member.name)}的头像">` : ""}<p class="eyebrow">${escapeHtml(member.cohort || member.join_year || "MEMBER")}</p><h1>${escapeHtml(member.name)}</h1>${edit}${notice}<p>${escapeHtml(member.bio || "暂无简介")}</p><h2>代表作</h2><p>${escapeHtml(member.works || "暂无记录")}</p><p>收到 ${member.flower_count} 朵花</p><form method="post" action="/members/${member.id}/flowers"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button>送一朵花</button></form><p><a href="/members">返回队员名录</a></p></article>`,
     true,
+    admin,
   );
 }
 
@@ -204,6 +221,7 @@ export function memberEditPage(member: MemberRow, csrf: string, admin: boolean, 
     admin ? "编辑队员档案" : "维护我的档案",
     `<section class="card auth"><p class="eyebrow">MEMBER PROFILE</p><h1>${admin ? "编辑队员档案" : "维护我的档案"}</h1>${saved ? '<p class="notice">队员档案已保存。</p>' : ""}${member.photo ? `<img class="avatar avatar-large" src="/members/${member.id}/avatar" alt="当前头像">` : ""}<form method="post" action="${action}"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}">${identity}<label>个人简介<textarea name="bio" maxlength="5000" rows="7">${escapeHtml(member.bio)}</textarea></label><label>代表作与经历<textarea name="works" maxlength="2000" rows="5">${escapeHtml(member.works)}</textarea></label><button>保存档案</button></form><hr>${avatarForm}<p><a href="/members/${member.id}">返回队员档案</a></p></section>`,
     true,
+    admin,
   );
 }
 

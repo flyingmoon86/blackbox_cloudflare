@@ -13,6 +13,7 @@ execFileSync(
 const db = new DatabaseSync(":memory:");
 db.exec(readFileSync(resolve("migrations/0001_core.sql"), "utf8"));
 db.exec(readFileSync(resolve("migrations/0002_upload_resume.sql"), "utf8"));
+db.exec(readFileSync(resolve("migrations/0003_feedback_and_production_join.sql"), "utf8"));
 db.exec(readFileSync(resolve(output, "import.sql"), "utf8"));
 const expected = JSON.parse(readFileSync(resolve(output, "expected-counts.json"), "utf8"));
 for (const [table, count] of Object.entries(expected)) {

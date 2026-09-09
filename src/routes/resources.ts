@@ -7,6 +7,7 @@ import {
   resourceEditPage,
   resourceFormPage,
   resourceListPage,
+  resourcePermissionPage,
   resourceReviewsPage,
 } from "../views/resources";
 
@@ -26,6 +27,12 @@ export type ResourceRow = {
 };
 export const resourceRoutes = new Hono<AppEnv>();
 resourceRoutes.use("*", async (c, next) => {
+  if (
+    !c.req.path.startsWith("/resources") &&
+    c.req.path !== "/my-resources" &&
+    !c.req.path.startsWith("/admin/resources")
+  )
+    return next();
   if (!c.get("user")) return c.redirect(`/login?next=${encodeURIComponent(c.req.path)}`);
   await next();
 });
@@ -48,12 +55,12 @@ resourceRoutes.get("/my-resources", async (c) => {
 });
 resourceRoutes.get("/resources/submit", async (c) => {
   const u = c.get("user")!;
-  if (u.role === "user") return c.text("认证队员或管理员才能提交资料。", 403);
+  if (u.role === "user") return c.html(resourcePermissionPage(), 403);
   const productions = await c.env.DB.prepare("SELECT id,title FROM production ORDER BY year DESC,id DESC").all<{
     id: number;
     title: string;
   }>();
-  return c.html(resourceFormPage(productions.results, await csrfFor(c)));
+  return c.html(resourceFormPage(productions.results, await csrfFor(c), u.role === "admin"));
 });
 resourceRoutes.post("/resources/submit", async (c) => {
   const u = c.get("user")!;
