@@ -21,6 +21,13 @@ export type CreditRow = {
   role_name: string;
 };
 export type MemberChoice = { id: number; name: string; cohort: string };
+export type ProductionResourceRow = {
+  id: number;
+  title: string;
+  res_type: string;
+  description: string;
+  original_name: string;
+};
 
 export const productionRoutes = new Hono<AppEnv>();
 
@@ -54,13 +61,21 @@ productionRoutes.get("/productions/:id", async (c) => {
   )
     .bind(id)
     .all<CreditRow>();
+  const resources = await c.env.DB.prepare(
+    `SELECT id,title,res_type,description,original_name FROM resource
+    WHERE production_id=? AND status='approved' ORDER BY created_at DESC,id DESC`,
+  )
+    .bind(id)
+    .all<ProductionResourceRow>();
   const admin = c.get("user")!.role === "admin";
   const members = admin
     ? await c.env.DB.prepare(
         "SELECT id,name,cohort FROM member ORDER BY join_year DESC,name COLLATE NOCASE",
       ).all<MemberChoice>()
     : { results: [] };
-  return c.html(productionDetailPage(production, credits.results, members.results, admin, await csrfFor(c)));
+  return c.html(
+    productionDetailPage(production, credits.results, resources.results, members.results, admin, await csrfFor(c)),
+  );
 });
 
 productionRoutes.get("/admin/productions/new", async (c) => {

@@ -1,4 +1,4 @@
-import type { CreditRow, MemberChoice, ProductionRow } from "../routes/productions";
+import type { CreditRow, MemberChoice, ProductionResourceRow, ProductionRow } from "../routes/productions";
 import { escapeHtml, layout } from "../views";
 
 export function productionListPage(items: ProductionRow[], admin: boolean): string {
@@ -20,6 +20,7 @@ export function productionListPage(items: ProductionRow[], admin: boolean): stri
 export function productionDetailPage(
   item: ProductionRow,
   credits: CreditRow[],
+  resources: ProductionResourceRow[],
   members: MemberChoice[],
   admin: boolean,
   csrf: string,
@@ -32,10 +33,26 @@ export function productionDetailPage(
           `<li><a href="/members/${credit.member_id}">${escapeHtml(credit.member_name)}</a> · ${escapeHtml(credit.role_name)}${admin ? `<form class="inline" method="post" action="/admin/productions/${item.id}/credits/${credit.id}/delete"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button class="link-button">删除</button></form>` : ""}</li>`,
       )
       .join("") || "<li>暂无记录</li>";
+  const resourceLabels: Record<string, string> = {
+    video: "视频",
+    script: "剧本",
+    photo: "剧照",
+    audio: "音频",
+    other: "其他",
+  };
+  const archive = resources.length
+    ? resources
+        .map(
+          (resource) =>
+            `<article class="card"><p class="eyebrow">${escapeHtml(resourceLabels[resource.res_type] || resource.res_type)}</p><h3><a href="/resources/${resource.id}">${escapeHtml(resource.title)}</a></h3><p>${escapeHtml(resource.description || resource.original_name)}</p></article>`,
+        )
+        .join("")
+    : '<p class="muted">这部作品还没有已入库资料。</p>';
   return layout(
     item.title,
     `<article class="card production-detail">${item.cover_id ? `<img class="production-cover" src="/resources/${item.cover_id}/preview" alt="${escapeHtml(item.title)}封面">` : ""}<p class="eyebrow">${escapeHtml(item.year || "PRODUCTION")}</p><h1>${escapeHtml(item.title)}</h1><p class="lead">${escapeHtml(item.promo)}</p><p>${escapeHtml(item.synopsis || "暂无剧情介绍")}</p>
     <div class="two-column"><section><h2>演员</h2><ul>${group("cast")}</ul></section><section><h2>后台与创作</h2><ul>${group("crew")}</ul></section></div>
+    <section class="production-archive"><h2>相关资料</h2><p class="muted">已由管理员审核入库的剧本、剧照、视频和其他档案。</p><div class="card-grid">${archive}</div></section>
     ${admin ? `<p><a href="/admin/productions/${item.id}/edit">编辑作品资料</a></p><form class="credit-form" method="post" action="/admin/productions/${item.id}/credits"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>选择队员<select name="member_id" required><option value="">请选择</option>${members.map((member) => `<option value="${member.id}">${escapeHtml(member.name)}${member.cohort ? `（${escapeHtml(member.cohort)}）` : ""}</option>`).join("")}</select></label><label>类别<select name="kind"><option value="cast">演员</option><option value="crew">后台与创作</option></select></label><label>角色或分工<input name="role_name" maxlength="80" required></label><button>添加演职员</button></form>` : ""}</article>`,
     true,
   );
