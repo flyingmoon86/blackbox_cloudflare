@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "exportedAt": "2026-09-09T00:00:00.000Z",
+  "source": { "engine": "mysql", "database": "fixture" },
+  "tables": {
+    "member": [{ "id": 1, "name": "测试队员", "bio": "旧简介", "join_year": 2020, "cohort": "2020 届", "works": "旧作品", "photo": "avatar.png" }],
+    "user": [{ "id": 1, "username": "fixture-admin", "password_hash": "scrypt:32768:8:1$fixture$salt", "email": null, "pending_email": null, "auth_version": 0, "join_hint_seen": 1, "role": "admin", "status": "active", "member_id": 1 }],
+    "join_request": [{ "id": 1, "user_id": 1, "apply_type": "bind", "identity_note": "测试经历", "member_id": 1, "name": "", "bio": "", "join_year": null, "cohort": "", "status": "approved", "admin_note": "", "result_acknowledged": 1, "created_at": "2026-01-01 00:00:00" }],
+    "announcement": [{ "id": 1, "title": "测试公告", "content": "公告正文", "created_at": "2026-01-02 00:00:00" }],
+    "production": [{ "id": 1, "title": "测试作品", "synopsis": "剧情", "cover_id": 1, "cover_ratio": "landscape", "promo": "短介绍", "feature_layout": "split", "year": 2026 }],
+    "resource": [{ "id": 1, "production_id": 1, "status": "approved", "uploader_id": 1, "admin_note": "", "title": "测试剧照", "res_type": "photo", "description": "说明", "filename": "photo.png", "original_name": "原剧照.png", "download_count": 3, "created_at": "2026-01-03 00:00:00" }],
+    "member_resource": [{ "member_id": 1, "resource_id": 1 }],
+    "production_credit": [{ "id": 1, "production_id": 1, "member_id": 1, "kind": "cast", "role_name": "角色甲" }],
+    "flower": [{ "id": 1, "user_id": 1, "member_id": 1, "sent_on": "2026-01-04" }],
+    "site_profile": [{ "id": 1, "troupe_name": "测试话剧队", "introduction": "介绍", "contact_email": "moonflying56@gmail.com", "contact_wechat": "", "recruitment_open": 1, "founded_year": 2020, "qq_group": "", "public_account": "", "recruitment": "", "requirements": "", "hero_photo": "hero.png", "featured_production_id": 1, "page_texts": "{\"home_member\":\"旧欢迎语\",\"help_items_member\":[{\"title\":\"第一步\",\"body\":\"先登录\"}]}" }]
+  }
+}
