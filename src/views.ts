@@ -99,6 +99,9 @@ function featuredProduction(featured: ProductionRow | null, signedIn: boolean): 
   const image = featured.cover_id
     ? `<img class="feature-cover" src="/site/featured-cover" alt="${escapeHtml(featured.title)}展示图">`
     : "";
+  if (mode === "overlay") {
+    return `<section class="card feature feature-overlay feature-ratio-${ratio} feature-stage-card"><a class="feature-stage-link" href="${href}">${image}<span class="feature-stage-shade" aria-hidden="true"></span><div class="feature-copy"><p class="eyebrow">${signedIn ? "精选大戏" : "即将演出"}</p><h2>${escapeHtml(featured.title)}</h2><div class="feature-stage-details"><div><p>${escapeHtml(featured.promo || featured.synopsis || "演出信息即将公布。")}</p><span class="feature-stage-action">${signedIn ? "查看作品" : "登录后查看"} <span aria-hidden="true">↗</span></span></div></div></div></a></section>`;
+  }
   return `<section class="card feature feature-${mode} feature-ratio-${ratio}${image ? "" : " feature-without-cover"}">${image}<div class="feature-copy"><p class="eyebrow">${signedIn ? "精选大戏" : "即将演出"}</p><h2><a href="${href}">${escapeHtml(featured.title)}</a></h2><p>${escapeHtml(featured.promo || featured.synopsis || "演出信息即将公布。")}</p><a class="button" href="${href}">${signedIn ? "查看作品" : "登录后查看"}</a></div></section>`;
 }
 

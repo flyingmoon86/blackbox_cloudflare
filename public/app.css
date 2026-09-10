@@ -40,3 +40,27 @@ html{background:#e8e5df}body{position:relative;isolation:isolate;background:tran
 /* 队员名录：以头像为主的舞台剧照卡 */
 .member-card{position:relative;min-height:370px;overflow:hidden;border-radius:10px;background:#171717;box-shadow:0 16px 38px rgba(0,0,0,.16)}.member-card-link{position:absolute;inset:0;display:block;overflow:hidden;color:#fff;text-decoration:none}.member-card-media,.member-card-art{position:absolute;inset:0;width:100%;height:100%;transition:filter .16s ease,transform .22s ease}.member-card-media{object-fit:cover}.member-card-art{display:grid;place-items:center;color:rgba(255,255,255,.72);background:radial-gradient(circle at 50% 32%,#8b3328,#211616 68%);font:700 8rem/1 Georgia,"Songti SC",serif}.member-card-shade{position:absolute;inset:0;background:linear-gradient(0deg,rgba(10,8,8,.95),rgba(10,8,8,.04) 70%);transition:background .18s ease}.member-card-copy{position:absolute;right:0;bottom:0;left:0;display:grid;gap:4px;padding:22px;transform:translateY(calc(100% - 92px));transition:transform .24s cubic-bezier(.2,.75,.25,1)}.member-card-copy .eyebrow{color:#ff8874}.member-card-copy>strong{font:700 1.65rem/1.15 Georgia,"Songti SC",serif}.member-card-details{display:grid;gap:12px;padding-top:12px}.member-card-details>span{display:-webkit-box;overflow:hidden;color:#eee8df;font-size:.9rem;-webkit-box-orient:vertical;-webkit-line-clamp:3}.member-card-details small{color:#ffd1c8;font-weight:750}.member-card-link:hover .member-card-media,.member-card-link:focus-visible .member-card-media{filter:blur(7px);transform:scale(1.07)}.member-card-link:hover .member-card-art,.member-card-link:focus-visible .member-card-art{filter:blur(5px);transform:scale(1.06)}.member-card-link:hover .member-card-shade,.member-card-link:focus-visible .member-card-shade{background:linear-gradient(0deg,rgba(10,8,8,.98),rgba(10,8,8,.3))}.member-card-link:hover .member-card-copy,.member-card-link:focus-visible .member-card-copy{transform:translateY(0)}
 @media(max-width:700px){.member-card{min-height:330px}.member-card-copy{padding:18px;transform:translateY(0)}.member-card-shade{background:linear-gradient(0deg,rgba(10,8,8,.96),rgba(10,8,8,.05) 78%)}.member-card-details>span{-webkit-line-clamp:2}}
+
+/* 首页文字叠加：与队员名录呼应的剧照卡，图文并列保持原样 */
+.home-stage .feature-stage-card{display:block;background:#171717;border-radius:10px;isolation:isolate}
+.feature-stage-card::after{display:none}
+.feature-stage-link{position:relative;display:flex;align-items:flex-end;min-height:inherit;height:100%;color:#fff;text-decoration:none;overflow:hidden}
+.feature-stage-card .feature-cover{transition:filter .16s ease,transform .22s ease}
+.feature-stage-shade{position:absolute;inset:0;background:linear-gradient(0deg,rgba(10,8,8,.96),rgba(10,8,8,.05) 78%);transition:background .18s ease}
+.home-stage .feature-stage-card .feature-copy{width:100%;max-width:none;padding:24px;position:relative;z-index:1}
+.feature-stage-card .feature-copy h2{color:#fff;overflow-wrap:anywhere;line-height:1.15;margin:.2em 0 0}
+.feature-stage-card .eyebrow{color:#ff8874;margin:0}
+.feature-stage-details{display:grid;grid-template-rows:1fr;transition:grid-template-rows .24s cubic-bezier(.2,.75,.25,1),opacity .18s ease}
+.feature-stage-details>div{min-height:0;overflow:hidden}
+.feature-stage-details p{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;color:#eee8df;font-size:.95rem;line-height:1.6;margin:14px 0}
+.feature-stage-action{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:44px;border-top:1px solid rgba(255,255,255,.3);color:#ffd1c8;font-weight:750}
+.feature-stage-action>span{font-size:1.5rem}
+.feature-stage-link:focus-visible{outline:3px solid #ff8874;outline-offset:-5px}
+@media(hover:hover) and (pointer:fine) and (min-width:701px){
+.feature-stage-details{grid-template-rows:0fr;opacity:0}
+.feature-stage-link:hover .feature-cover,.feature-stage-link:focus-visible .feature-cover{filter:blur(7px);transform:scale(1.07)}
+.feature-stage-link:hover .feature-stage-shade,.feature-stage-link:focus-visible .feature-stage-shade{background:linear-gradient(0deg,rgba(10,8,8,.98),rgba(10,8,8,.3))}
+.feature-stage-link:hover .feature-stage-details,.feature-stage-link:focus-visible .feature-stage-details{grid-template-rows:1fr;opacity:1}
+}
+@media(max-width:700px){.home-stage .feature-stage-card .feature-copy{padding:20px}.feature-stage-details p{-webkit-line-clamp:2}}
+@media(prefers-reduced-motion:reduce){.feature-stage-card .feature-cover,.feature-stage-details,.feature-stage-shade{transition:none}}
