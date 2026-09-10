@@ -91,7 +91,7 @@ productionRoutes.get("/productions", async (c) => {
   const result = await c.env.DB.prepare(
     "SELECT id,title,synopsis,promo,year,cover_id,cover_ratio,feature_layout FROM production ORDER BY year DESC,id DESC",
   ).all<ProductionRow>();
-  return c.html(productionListPage(result.results, c.get("user")!));
+  return c.html(productionListPage(result.results, c.get("user")!, c.req.query("deleted") === "1"));
 });
 
 productionRoutes.get("/productions/:id", async (c) => {
@@ -305,6 +305,22 @@ productionRoutes.post("/admin/productions/:id/edit", async (c) => {
     ),
   ]);
   return c.redirect(`/productions/${id}`, 303);
+});
+
+productionRoutes.post("/admin/productions/:id/delete", async (c) => {
+  const denied = adminOnly(c);
+  if (denied) return denied;
+  const form = await c.req.formData();
+  if (!csrfValid(c, form.get("csrf"))) return c.text("请求已失效，请刷新页面后重试。", 400);
+  const id = Number(c.req.param("id"));
+  const production = await c.env.DB.prepare("SELECT title FROM production WHERE id=?")
+    .bind(id)
+    .first<{ title: string }>();
+  if (!production) return c.text("未找到这部作品。", 404);
+  if (String(form.get("confirm_title") ?? "").trim() !== production.title)
+    return c.text("作品名不一致，未执行删除。", 400);
+  await c.env.DB.prepare("DELETE FROM production WHERE id=?").bind(id).run();
+  return c.redirect("/productions?deleted=1", 303);
 });
 
 productionRoutes.post("/admin/productions/:id/credits", async (c) => {
