@@ -11,6 +11,11 @@ import type { AppEnv } from "../types";
 
 const PART_SIZE = 50 * 1024 * 1024;
 const MAX_SIZE = 10 * 1024 * 1024 * 1024;
+const VIDEO_NOTICE = "测试阶段不支持视频";
+const isVideoUpload = (type: string, mime: string, name: string): boolean =>
+  type === "video" ||
+  mime.toLowerCase().startsWith("video/") ||
+  /\.(mp4|m4v|mov|webm|mkv|avi|wmv|flv|mpeg|mpg|3gp|ts|mts|m2ts|ogv)$/i.test(name);
 const TYPES = new Set(["video", "script", "photo", "audio", "other"]);
 
 type Task = {
@@ -70,6 +75,7 @@ uploadRoutes.post("/api/uploads", async (c) => {
     description = String(body.description ?? "").trim(),
     size = Number(body.sizeBytes),
     production = body.productionId ? Number(body.productionId) : null;
+  if (isVideoUpload(resType, contentType, original)) return c.json({ error: VIDEO_NOTICE }, 403);
   if (
     !title ||
     title.length > 100 ||
@@ -130,6 +136,8 @@ uploadRoutes.post("/api/uploads", async (c) => {
 
 uploadRoutes.get("/api/uploads/:id", async (c) => {
   const task = await ownedTask(c);
+  if (task && c.req.method !== "DELETE" && isVideoUpload(task.res_type, task.content_type, task.original_name))
+    return c.json({ error: VIDEO_NOTICE }, 403);
   if (!task) return c.json({ error: "上传任务不存在。" }, 404);
   const parts = await c.env.DB.prepare(
     "SELECT part_number,etag,size_bytes FROM upload_part WHERE task_id=? ORDER BY part_number",
@@ -154,6 +162,8 @@ uploadRoutes.get("/api/uploads/:id", async (c) => {
 uploadRoutes.put("/api/uploads/:id/preview", async (c) => {
   if (!csrfOk(c)) return c.json({ error: "请求已失效。" }, 400);
   const task = await ownedTask(c);
+  if (task && c.req.method !== "DELETE" && isVideoUpload(task.res_type, task.content_type, task.original_name))
+    return c.json({ error: VIDEO_NOTICE }, 403);
   if (!task || task.status !== "uploading") return c.json({ error: "上传任务不存在或不能继续。" }, 404);
   if (task.res_type !== "photo" && task.res_type !== "video") return c.json({ error: "这种资料不需要图片预览。" }, 400);
   const declaredSize = c.req.header("content-length") ? Number(c.req.header("content-length")) : null;
@@ -190,6 +200,8 @@ uploadRoutes.put("/api/uploads/:id/preview", async (c) => {
 uploadRoutes.post("/api/uploads/:id/parts/:part/url", async (c) => {
   if (!csrfOk(c)) return c.json({ error: "请求已失效。" }, 400);
   const task = await ownedTask(c);
+  if (task && c.req.method !== "DELETE" && isVideoUpload(task.res_type, task.content_type, task.original_name))
+    return c.json({ error: VIDEO_NOTICE }, 403);
   if (!task || task.status !== "uploading") return c.json({ error: "上传任务不存在或不能继续。" }, 404);
   const part = Number(c.req.param("part"));
   if (!Number.isInteger(part) || part < 1 || part > expectedParts(task.size_bytes))
@@ -204,6 +216,8 @@ uploadRoutes.post("/api/uploads/:id/parts/:part/url", async (c) => {
 uploadRoutes.put("/api/uploads/:id/parts/:part", async (c) => {
   if (!csrfOk(c)) return c.json({ error: "请求已失效。" }, 400);
   const task = await ownedTask(c);
+  if (task && c.req.method !== "DELETE" && isVideoUpload(task.res_type, task.content_type, task.original_name))
+    return c.json({ error: VIDEO_NOTICE }, 403);
   if (!task || task.status !== "uploading" || task.upload_mode !== "local")
     return c.json({ error: "本地上传任务不存在或不能继续。" }, 404);
   const part = Number(c.req.param("part"));
@@ -236,6 +250,8 @@ uploadRoutes.put("/api/uploads/:id/parts/:part", async (c) => {
 uploadRoutes.post("/api/uploads/:id/parts/:part/complete", async (c) => {
   if (!csrfOk(c)) return c.json({ error: "请求已失效。" }, 400);
   const task = await ownedTask(c);
+  if (task && c.req.method !== "DELETE" && isVideoUpload(task.res_type, task.content_type, task.original_name))
+    return c.json({ error: VIDEO_NOTICE }, 403);
   if (!task || task.status !== "uploading" || task.upload_mode !== "direct")
     return c.json({ error: "直传任务不存在或不能继续。" }, 404);
   const part = Number(c.req.param("part"));
@@ -267,6 +283,8 @@ uploadRoutes.post("/api/uploads/:id/parts/:part/complete", async (c) => {
 uploadRoutes.post("/api/uploads/:id/complete", async (c) => {
   if (!csrfOk(c)) return c.json({ error: "请求已失效。" }, 400);
   const task = await ownedTask(c);
+  if (task && c.req.method !== "DELETE" && isVideoUpload(task.res_type, task.content_type, task.original_name))
+    return c.json({ error: VIDEO_NOTICE }, 403);
   if (!task || task.status !== "uploading") return c.json({ error: "上传任务不存在或不能完成。" }, 404);
   const rows = await c.env.DB.prepare(
     "SELECT part_number,etag,size_bytes FROM upload_part WHERE task_id=? ORDER BY part_number",
@@ -325,6 +343,8 @@ uploadRoutes.post("/api/uploads/:id/complete", async (c) => {
 uploadRoutes.delete("/api/uploads/:id", async (c) => {
   if (!csrfOk(c)) return c.json({ error: "请求已失效。" }, 400);
   const task = await ownedTask(c);
+  if (task && c.req.method !== "DELETE" && isVideoUpload(task.res_type, task.content_type, task.original_name))
+    return c.json({ error: VIDEO_NOTICE }, 403);
   if (!task || task.status !== "uploading") return c.json({ error: "上传任务不存在或不能取消。" }, 404);
   try {
     if (task.upload_mode === "direct") await abortDirectUpload(c.env, task.object_key, task.multipart_upload_id);

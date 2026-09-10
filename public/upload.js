@@ -149,11 +149,29 @@ if (form) {
       console.warn("预览图生成失败，继续上传原文件。", error);
     }
   };
+  const videoNotice = "测试阶段不支持视频";
+  const isVideoFile = (file) =>
+    file.type.toLowerCase().startsWith("video/") ||
+    /\.(mp4|m4v|mov|webm|mkv|avi|wmv|flv|mpeg|mpg|3gp|ts|mts|m2ts|ogv)$/i.test(file.name);
+  const blockVideo = () => {
+    show(videoNotice);
+    window.alert(videoNotice);
+  };
+  fileInput.addEventListener("change", () => {
+    if ([...fileInput.files].some(isVideoFile)) {
+      fileInput.value = "";
+      blockVideo();
+    }
+  });
   const syncFileMode = () => {
     const photos = type.value === "photo";
     fileInput.multiple = photos;
     fileInput.accept = photos ? "image/jpeg,image/png,image/webp,image/avif" : "";
     fileInput.value = "";
+    fileInput.disabled = type.value === "video";
+    submit.disabled = type.value === "video";
+    if (type.value === "video") blockVideo();
+    else show("");
   };
   type.addEventListener("change", syncFileMode);
   syncFileMode();
@@ -257,6 +275,10 @@ if (form) {
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const files = [...fileInput.files];
+    if (type.value === "video" || files.some(isVideoFile)) {
+      blockVideo();
+      return;
+    }
     if (!files.length) return show("请选择文件。");
     if (files.length > 1 && type.value !== "photo") return show("只有剧照支持一次选择多个文件。");
     if (files.length === 1 && !form.elements.title.value.trim()) return show("上传单个文件时请填写资料标题。");
