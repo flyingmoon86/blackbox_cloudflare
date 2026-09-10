@@ -24,6 +24,7 @@ export type ManagedUser = {
   email: string | null;
   role: "user" | "member" | "admin";
   status: "active" | "disabled";
+  member_id: number | null;
   member_name: string | null;
 };
 
@@ -61,7 +62,7 @@ adminRoutes.get("/admin", async (c) => {
       LEFT JOIN member m ON m.id=r.member_id WHERE r.status='pending' ORDER BY r.created_at`,
     ).all<JoinReview>(),
     c.env.DB.prepare(
-      `SELECT u.id,u.username,u.email,u.role,u.status,m.name AS member_name FROM user u
+      `SELECT u.id,u.username,u.email,u.role,u.status,u.member_id,m.name AS member_name FROM user u
       LEFT JOIN member m ON m.id=u.member_id ORDER BY u.id DESC LIMIT 200`,
     ).all<ManagedUser>(),
     c.env.DB.prepare(
@@ -221,4 +222,24 @@ adminRoutes.post("/admin/users/:id/toggle", async (c) => {
     .run();
   if (result.meta.changes !== 1) return c.text("账号不存在。", 404);
   return c.redirect("/admin?message=user-updated", 303);
+});
+
+adminRoutes.post("/admin/users/:id/unlink-member", async (c) => {
+  const form = await c.req.formData();
+  if (!csrfValid(c, form.get("csrf"))) return c.text("请求已失效，请刷新页面后重试。", 400);
+  if (form.get("confirm_unlink") !== "yes") return c.text("请先确认解绑操作。", 400);
+  const id = Number(c.req.param("id"));
+  const target = await c.env.DB.prepare("SELECT role,member_id FROM user WHERE id=?")
+    .bind(id)
+    .first<{ role: string; member_id: number | null }>();
+  if (!target) return c.text("账号不存在。", 404);
+  if (target.role === "admin") return c.text("管理员账号不能在这里解绑档案。", 400);
+  if (target.role !== "member" || !target.member_id) return c.text("该账号当前没有绑定队员档案。", 409);
+  await c.env.DB.batch([
+    c.env.DB.prepare(
+      "UPDATE user SET role='user',member_id=NULL,auth_version=auth_version+1 WHERE id=? AND role='member' AND member_id=?",
+    ).bind(id, target.member_id),
+    c.env.DB.prepare("DELETE FROM production_join_request WHERE user_id=? AND status='pending'").bind(id),
+  ]);
+  return c.redirect("/admin?message=member-unlinked", 303);
 });

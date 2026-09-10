@@ -12,6 +12,7 @@ export function adminDashboardPage(
     approved: "申请已通过。",
     rejected: "申请已驳回。",
     "user-updated": "账号状态已更新。",
+    "member-unlinked": "账号已与队员档案解绑；档案内容和历史关系均已保留。",
   };
   const requestRows = requests.length
     ? requests
@@ -27,10 +28,13 @@ export function adminDashboardPage(
         .join("")
     : '<p class="card">当前没有待审核的队员申请。</p>';
   const userRows = users
-    .map(
-      (user) =>
-        `<tr><td>${escapeHtml(user.username)}</td><td>${escapeHtml(user.role)}</td><td>${escapeHtml(user.member_name || "—")}</td><td>${escapeHtml(user.status)}</td><td><form method="post" action="/admin/users/${user.id}/toggle"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button class="small secondary">${user.status === "active" ? "禁用" : "启用"}</button></form></td></tr>`,
-    )
+    .map((user) => {
+      const unlink =
+        user.role === "member" && user.member_id
+          ? `<details class="account-unlink"><summary>解绑档案</summary><form method="post" action="/admin/users/${user.id}/unlink-member"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><p>解绑“${escapeHtml(user.username)}”与“${escapeHtml(user.member_name)}”。队员档案和历史资料会保留，账号会变回普通用户。</p><label><input type="checkbox" name="confirm_unlink" value="yes" required>我确认解绑</label><button class="small danger">确认解绑</button></form></details>`
+          : "";
+      return `<tr><td>${escapeHtml(user.username)}</td><td>${escapeHtml(user.role)}</td><td>${escapeHtml(user.member_name || "—")}</td><td>${escapeHtml(user.status)}</td><td><div class="account-actions"><form method="post" action="/admin/users/${user.id}/toggle"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button class="small secondary">${user.status === "active" ? "禁用" : "启用"}</button></form>${unlink}</div></td></tr>`;
+    })
     .join("");
   const badge = (count: number) => (count ? `<strong class="count-badge">${count}</strong>` : "");
   return layout(
