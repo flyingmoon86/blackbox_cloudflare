@@ -72,6 +72,25 @@ function pageTexts(profile: SiteProfileRow): Record<string, string> {
   }
 }
 
+function homeTitle(value: string): string {
+  if (!value.startsWith("黑匣子") || value.length === 3) return escapeHtml(value);
+  return `<span>黑匣子</span><br><span>${escapeHtml(value.slice(3))}</span>`;
+}
+
+function homeMascot(): string {
+  return `<figure class="home-mascot" aria-label="黑匣子毛绒小象"><img src="/images/elephant-mascot.jpg" alt="戴眼镜的毛绒小象" data-home-mascot><span aria-hidden="true">🐘</span></figure>`;
+}
+
+function troupeFooter(profile: SiteProfileRow, texts: Record<string, string>): string {
+  const contactEmail = profile.contact_email || "moonflying56@gmail.com";
+  const qqContact = profile.qq_group ? `<span><b>QQ群</b> ${escapeHtml(profile.qq_group)}</span>` : "";
+  return `<footer class="troupe-footer">
+    <section><p class="eyebrow">JOIN US</p><h2>招新</h2><p class="preline">${escapeHtml(profile.recruitment || "欢迎喜欢舞台的你加入我们。")}</p><p class="muted preline">${escapeHtml(profile.requirements || "关注剧团通知，了解本学期招新安排。")}</p></section>
+    <section><p class="eyebrow">ABOUT</p><h2>关于我们</h2><p class="preline">${escapeHtml(texts.about_text || profile.introduction || "这里记录话剧队共同创作的作品和故事。")}</p></section>
+    <section class="troupe-contact"><p class="eyebrow">CONTACT</p><h2>联系剧团</h2><p class="preline">${escapeHtml(texts.contact_intro || "有问题或想加入我们，可以联系剧团。")}</p><p class="contact-line"><span><b>邮箱</b> <a href="mailto:${escapeHtml(contactEmail)}">${escapeHtml(contactEmail)}</a></span>${qqContact}</p></section>
+  </footer>`;
+}
+
 function featuredProduction(featured: ProductionRow | null, signedIn: boolean): string {
   if (!featured) return "";
   const ratio = featured.cover_ratio === "portrait" ? "portrait" : "landscape";
@@ -96,8 +115,7 @@ export function publicHome(profile: SiteProfileRow, featured: ProductionRow | nu
     : "";
   return layout(
     "首页",
-    `<dialog class="test-notice" data-test-notice="${noticeKey >>> 0}"><form method="dialog"><p class="eyebrow">TEST NOTICE</p><h2>测试须知</h2><p class="preline">${escapeHtml(notice)}</p><button value="understood">我已明白</button></form></dialog><div class="home-stage"><section class="hero"${hero}><div><p class="eyebrow">BLACK BOX THEATRE</p><h1>${escapeHtml(texts.visitor_welcome || "这里是黑匣子")}</h1><p>保存每一次排练、演出与相遇。</p><a class="button" href="/login">登录查看剧团档案</a></div></section>${feature}</div>
-  <section class="two-column"><article class="card"><h2>关于我们</h2><p>${escapeHtml(texts.about_text || profile.introduction || "这里记录话剧队共同创作的作品和故事。")}</p></article><article class="card"><h2>联系我们</h2><p>${escapeHtml(texts.contact_intro || "")}</p><p><a href="mailto:${escapeHtml(profile.contact_email || "moonflying56@gmail.com")}">${escapeHtml(profile.contact_email || "moonflying56@gmail.com")}</a></p></article></section>`,
+    `<dialog class="test-notice" data-test-notice="${noticeKey >>> 0}"><form method="dialog"><p class="eyebrow">TEST NOTICE</p><h2>测试须知</h2><p class="preline">${escapeHtml(notice)}</p><button value="understood">我已明白</button></form></dialog><div class="home-stage"><section class="hero"${hero}>${homeMascot()}<div><p class="eyebrow">BLACK BOX THEATRE</p><h1>${homeTitle(texts.visitor_welcome || "这里是黑匣子")}</h1><p>保存每一次排练、演出与相遇。</p><a class="button" href="/login">登录查看剧团档案</a></div></section>${feature}</div>${troupeFooter(profile, texts)}`,
   );
 }
 
@@ -125,26 +143,18 @@ export function memberHome(
     user.role === "member" || user.role === "admin"
       ? '<a class="button secondary" href="/suggestions">提交网站建议</a>'
       : "";
-  const contactEmail = profile.contact_email || "moonflying56@gmail.com";
-  const qqContact = profile.qq_group
-    ? `<li><span>QQ群</span><strong>${escapeHtml(profile.qq_group)}</strong></li>`
-    : "";
   const welcome =
     user.role === "member" || user.role === "admin"
       ? texts.home_welcome || "黑匣子永远是你的家"
       : texts.visitor_welcome || "这里是黑匣子";
   return layout(
     "队员首页",
-    `<div class="home-stage"><section class="hero"${hero}><div><p class="eyebrow">${escapeHtml(user.role)}</p><h1>${escapeHtml(welcome)}</h1><p>${escapeHtml(user.username)}，欢迎回来。</p>${edit}</div></section>${featuredProduction(featured, true)}</div>
+    `<div class="home-stage"><section class="hero"${hero}>${homeMascot()}<div><p class="eyebrow">${escapeHtml(user.role)}</p><h1>${homeTitle(welcome)}</h1><p>${escapeHtml(user.username)}，欢迎回来。</p>${edit}</div></section>${featuredProduction(featured, true)}</div>
     <section class="home-card-grid">
       <article class="card home-card"><p class="eyebrow">NOTICE</p><h2>剧团公告</h2><ul class="announcement-list">${news}</ul><footer class="home-card-actions"><a class="button secondary" href="/announcements">查看全部公告</a></footer></article>
       <article class="card home-card guide-invite"><p class="eyebrow">START HERE</p><h2>第一次使用网站？</h2><p>网站使用指南会带你找到作品、登记角色、上传资料和修改个人信息${user.role === "admin" ? "，也包含队长与管理员的审核步骤" : ""}。</p><footer class="home-card-actions"><a class="button" href="/help">查看网站使用指南</a>${suggestionLink}</footer></article>
     </section>
-    <article class="card troupe-card">
-      <section><p class="eyebrow">JOIN US</p><h2>招新</h2><p class="preline">${escapeHtml(profile.recruitment || "欢迎喜欢舞台的你加入我们。")}</p><p class="muted preline">${escapeHtml(profile.requirements || "关注剧团通知，了解本学期招新安排。")}</p></section>
-      <section><p class="eyebrow">ABOUT</p><h2>关于我们</h2><p class="preline">${escapeHtml(texts.about_text || profile.introduction || "这里记录话剧队共同创作的作品和故事。")}</p></section>
-      <section class="contact-panel"><div><p class="eyebrow">CONTACT</p><h2>联系剧团</h2><p class="preline">${escapeHtml(texts.contact_intro || "有问题或想加入我们，可以通过下面的方式联系剧团。")}</p></div><ul class="contact-list"><li><span>邮箱</span><strong>${escapeHtml(contactEmail)}</strong></li>${qqContact}</ul><div class="contact-actions"><a class="button secondary" href="mailto:${escapeHtml(contactEmail)}">写邮件</a><button type="button" class="secondary" data-copy-contact="${escapeHtml(contactEmail)}">复制邮箱</button><span class="hint" data-copy-feedback role="status" aria-live="polite"></span></div></section>
-    </article>`,
+    ${troupeFooter(profile, texts)}`,
     true,
     user.role === "admin",
   );
@@ -198,10 +208,12 @@ export function memberListPage(
 ): string {
   const cards = members.length
     ? members
-        .map(
-          (member) =>
-            `<article class="card member-card">${member.photo ? `<img class="avatar" src="/members/${member.id}/avatar" alt="${escapeHtml(member.name)}的头像">` : ""}<p class="eyebrow">${escapeHtml(member.cohort || member.join_year || "剧团成员")}</p><h2><a href="/members/${member.id}">${escapeHtml(member.name)}</a></h2><p>${escapeHtml(member.bio || "暂无简介")}</p><p class="muted">🌸 ${member.flower_count}</p></article>`,
-        )
+        .map((member) => {
+          const portrait = member.photo
+            ? `<img class="member-card-media" src="/members/${member.id}/avatar" alt="${escapeHtml(member.name)}的头像">`
+            : `<span class="member-card-art" aria-hidden="true">${escapeHtml(member.name.slice(0, 1) || "剧")}</span>`;
+          return `<article class="member-card${member.photo ? "" : " member-card-empty"}"><a class="member-card-link" href="/members/${member.id}">${portrait}<span class="member-card-shade"></span><span class="member-card-copy"><span class="eyebrow">${escapeHtml(member.cohort || member.join_year || "剧团成员")}</span><strong>${escapeHtml(member.name)}</strong><span class="member-card-details"><span>${escapeHtml(member.bio || "点击查看队员档案与舞台经历")}</span><small>🌸 ${member.flower_count} · 查看档案 →</small></span></span></a></article>`;
+        })
         .join("")
     : '<p class="card">没有找到符合条件的队员。</p>';
   const options = years

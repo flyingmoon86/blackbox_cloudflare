@@ -14,6 +14,7 @@ export type SiteProfileRow = {
   recruitment: string;
   requirements: string;
   hero_photo: string;
+  page_background_photo: string;
   featured_production_id: number | null;
   page_texts: string;
 };
@@ -84,7 +85,7 @@ contentRoutes.get("/admin/site", async (c) => {
   const denied = adminDenied(c);
   if (denied) return denied;
   const profile = await c.env.DB.prepare(
-    "SELECT troupe_name,introduction,contact_email,contact_wechat,qq_group,public_account,recruitment,requirements,hero_photo,featured_production_id,page_texts FROM site_profile WHERE id=1",
+    "SELECT troupe_name,introduction,contact_email,contact_wechat,qq_group,public_account,recruitment,requirements,hero_photo,page_background_photo,featured_production_id,page_texts FROM site_profile WHERE id=1",
   ).first<SiteProfileRow>();
   const productions = await c.env.DB.prepare("SELECT id,title,year FROM production ORDER BY year DESC,id DESC").all<{
     id: number;
@@ -136,8 +137,17 @@ contentRoutes.post("/admin/site", async (c) => {
       .first())
   )
     return c.text("首页背景必须选择已审核的剧照。", 400);
+  const pageBackgroundText = String(form.get("page_background_photo") ?? "");
+  const pageBackground = pageBackgroundText ? Number(pageBackgroundText) : null;
+  if (
+    pageBackground !== null &&
+    !(await c.env.DB.prepare("SELECT id FROM resource WHERE id=? AND status='approved' AND res_type='photo'")
+      .bind(pageBackground)
+      .first())
+  )
+    return c.text("全站背景必须选择已审核的剧照。", 400);
   await c.env.DB.prepare(
-    `UPDATE site_profile SET troupe_name=?,introduction=?,contact_email=?,contact_wechat=?,qq_group=?,public_account=?,recruitment=?,requirements=?,hero_photo=?,featured_production_id=?,page_texts=? WHERE id=1`,
+    `UPDATE site_profile SET troupe_name=?,introduction=?,contact_email=?,contact_wechat=?,qq_group=?,public_account=?,recruitment=?,requirements=?,hero_photo=?,page_background_photo=?,featured_production_id=?,page_texts=? WHERE id=1`,
   )
     .bind(
       String(form.get("troupe_name") ?? "")
@@ -155,6 +165,7 @@ contentRoutes.post("/admin/site", async (c) => {
       String(form.get("recruitment") ?? "").trim(),
       String(form.get("requirements") ?? "").trim(),
       hero === null ? "" : String(hero),
+      pageBackground === null ? "" : String(pageBackground),
       featured,
       JSON.stringify(texts),
     )

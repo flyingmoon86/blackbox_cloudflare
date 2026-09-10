@@ -85,6 +85,7 @@ adminRoutes.get("/admin", async (c) => {
         production_creates: 0,
         website_suggestions: 0,
       },
+      c.get("user")!.id,
       await csrfFor(c),
       c.req.query("message") ?? "",
     ),
@@ -242,4 +243,34 @@ adminRoutes.post("/admin/users/:id/unlink-member", async (c) => {
     c.env.DB.prepare("DELETE FROM production_join_request WHERE user_id=? AND status='pending'").bind(id),
   ]);
   return c.redirect("/admin?message=member-unlinked", 303);
+});
+
+adminRoutes.post("/admin/users/:id/delete", async (c) => {
+  const admin = c.get("user")!;
+  const form = await c.req.formData();
+  if (!csrfValid(c, form.get("csrf"))) return c.text("请求已失效，请刷新页面后重试。", 400);
+  const id = Number(c.req.param("id"));
+  if (id === admin.id) return c.text("不能删除当前登录的管理员账号。", 400);
+  const target = await c.env.DB.prepare("SELECT username,role FROM user WHERE id=?")
+    .bind(id)
+    .first<{ username: string; role: string }>();
+  if (!target) return c.text("账号不存在。", 404);
+  if (String(form.get("confirm_username") ?? "").trim() !== target.username)
+    return c.text("用户名不一致，未执行删除。", 400);
+  if (
+    target.role === "admin" &&
+    (await c.env.DB.prepare("SELECT COUNT(*) count FROM user WHERE role='admin'").first<{ count: number }>())!.count <=
+      1
+  )
+    return c.text("不能删除最后一个管理员账号。", 400);
+  if (
+    await c.env.DB.prepare(
+      "SELECT id FROM upload_task WHERE user_id=? AND status IN ('uploading','completing') LIMIT 1",
+    )
+      .bind(id)
+      .first()
+  )
+    return c.text("该账号还有正在上传的文件，请先等待完成或取消上传。", 409);
+  await c.env.DB.prepare("DELETE FROM user WHERE id=?").bind(id).run();
+  return c.redirect("/admin?message=user-deleted", 303);
 });

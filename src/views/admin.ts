@@ -5,6 +5,7 @@ export function adminDashboardPage(
   requests: JoinReview[],
   users: ManagedUser[],
   counts: PendingCounts,
+  currentAdminId: number,
   csrf: string,
   message: string,
 ): string {
@@ -13,6 +14,7 @@ export function adminDashboardPage(
     rejected: "申请已驳回。",
     "user-updated": "账号状态已更新。",
     "member-unlinked": "账号已与队员档案解绑；档案内容和历史关系均已保留。",
+    "user-deleted": "账号已删除；队员档案和已入库资料均已保留。",
   };
   const requestRows = requests.length
     ? requests
@@ -33,7 +35,11 @@ export function adminDashboardPage(
         user.role === "member" && user.member_id
           ? `<details class="account-unlink"><summary>解绑档案</summary><form method="post" action="/admin/users/${user.id}/unlink-member"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><p>解绑“${escapeHtml(user.username)}”与“${escapeHtml(user.member_name)}”。队员档案和历史资料会保留，账号会变回普通用户。</p><label><input type="checkbox" name="confirm_unlink" value="yes" required>我确认解绑</label><button class="small danger">确认解绑</button></form></details>`
           : "";
-      return `<tr><td>${escapeHtml(user.username)}</td><td>${escapeHtml(user.role)}</td><td>${escapeHtml(user.member_name || "—")}</td><td>${escapeHtml(user.status)}</td><td><div class="account-actions"><form method="post" action="/admin/users/${user.id}/toggle"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button class="small secondary">${user.status === "active" ? "禁用" : "启用"}</button></form>${unlink}</div></td></tr>`;
+      const remove =
+        user.id !== currentAdminId
+          ? `<details class="account-unlink account-delete"><summary>删除账号</summary><form method="post" action="/admin/users/${user.id}/delete"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><p>永久删除账号“${escapeHtml(user.username)}”。队员档案和已入库资料会保留，申请记录等账号数据会清除。</p><label>输入用户名确认<input name="confirm_username" autocomplete="off" required></label><button class="small danger">永久删除账号</button></form></details>`
+          : "";
+      return `<tr><td>${escapeHtml(user.username)}</td><td>${escapeHtml(user.role)}</td><td>${escapeHtml(user.member_name || "—")}</td><td>${escapeHtml(user.status)}</td><td><div class="account-actions"><form method="post" action="/admin/users/${user.id}/toggle"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button class="small secondary">${user.status === "active" ? "禁用" : "启用"}</button></form>${unlink}${remove}</div></td></tr>`;
     })
     .join("");
   const badge = (count: number) => (count ? `<strong class="count-badge">${count}</strong>` : "");

@@ -262,6 +262,7 @@ resourceRoutes.post("/admin/resources/:id/delete", async (c) => {
   await c.env.DB.batch([
     c.env.DB.prepare("UPDATE production SET cover_id=NULL WHERE cover_id=?").bind(id),
     c.env.DB.prepare("UPDATE site_profile SET hero_photo='' WHERE hero_photo=?").bind(String(id)),
+    c.env.DB.prepare("UPDATE site_profile SET page_background_photo='' WHERE page_background_photo=?").bind(String(id)),
     c.env.DB.prepare("DELETE FROM resource WHERE id=?").bind(id),
   ]);
   return c.redirect("/admin/resources", 303);

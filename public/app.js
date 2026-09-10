@@ -109,25 +109,10 @@ for (const section of document.querySelectorAll("[data-role-counts]")) {
   name.addEventListener("input", updateRoleHint);
 }
 
-for (const button of document.querySelectorAll("[data-copy-contact]")) {
-  button.addEventListener("click", async () => {
-    const value = button.dataset.copyContact || "";
-    const feedback = button.closest(".contact-actions")?.querySelector("[data-copy-feedback]");
-    try {
-      if (!navigator.clipboard) throw new Error("clipboard unavailable");
-      await navigator.clipboard.writeText(value);
-      if (feedback) feedback.textContent = "邮箱已复制";
-    } catch {
-      const input = document.createElement("textarea");
-      input.value = value;
-      input.setAttribute("readonly", "");
-      input.style.position = "fixed";
-      input.style.opacity = "0";
-      document.body.append(input);
-      input.select();
-      const copied = document.execCommand("copy");
-      input.remove();
-      if (feedback) feedback.textContent = copied ? "邮箱已复制" : "复制失败，请长按邮箱复制";
-    }
-  });
+for (const mascot of document.querySelectorAll("[data-home-mascot]")) {
+  const ready = () => mascot.classList.add("is-ready");
+  const missing = () => mascot.classList.add("is-missing");
+  mascot.addEventListener("load", ready, { once: true });
+  mascot.addEventListener("error", missing, { once: true });
+  if (mascot.complete) (mascot.naturalWidth ? ready : missing)();
 }
