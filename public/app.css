@@ -64,3 +64,29 @@ html{background:#e8e5df}body{position:relative;isolation:isolate;background:tran
 }
 @media(max-width:700px){.home-stage .feature-stage-card .feature-copy{padding:20px}.feature-stage-details p{-webkit-line-clamp:2}}
 @media(prefers-reduced-motion:reduce){.feature-stage-card .feature-cover,.feature-stage-details,.feature-stage-shade{transition:none}}
+
+/* 作品档案文字叠加：保留主创与上传操作的剧照卡 */
+.production-card.production-stage-card{position:relative;isolation:isolate;padding:0;min-height:370px;background:#171717;border-radius:10px;justify-content:flex-end;color:#fff;align-self:start;width:100%}
+.production-stage-card.ratio-landscape{aspect-ratio:4/3}.production-stage-card.ratio-portrait{aspect-ratio:3/4;min-height:440px}
+.production-stage-image{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:filter .16s ease,transform .22s ease}
+.production-stage-shade{position:absolute;inset:0;background:linear-gradient(0deg,rgba(10,8,8,.96),rgba(10,8,8,.05) 78%);transition:background .18s ease}
+.production-stage-copy{position:static;padding:24px;z-index:1;min-width:0}
+.production-stage-copy .eyebrow{position:relative;color:#ff8874;margin:0 0 5px;pointer-events:none}
+.production-stage-copy h2{font:700 clamp(1.5rem,2.5vw,2rem)/1.2 Georgia,"Songti SC",serif;margin:0;overflow-wrap:anywhere}
+.production-stage-title{color:#fff;text-decoration:none}
+.production-stage-title::after{content:"";position:absolute;inset:0;z-index:2}
+.production-stage-title:focus-visible{outline:none}.production-stage-title:focus-visible::after{outline:3px solid #ff8874;outline-offset:-5px}
+.production-stage-details{display:grid;grid-template-rows:1fr;transition:grid-template-rows .24s cubic-bezier(.2,.75,.25,1),opacity .18s ease}
+.production-stage-details>div{min-height:0;overflow:hidden}
+.production-stage-intro{position:relative;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;margin:14px 0 0;color:#eee8df;font-size:.95rem;line-height:1.6;pointer-events:none}
+.production-stage-details .production-actions,.production-stage-details .contribution-note{position:relative;z-index:3}
+.production-stage-details .contribution-note a{color:#ffd1c8}
+.production-stage-details .button{white-space:normal;text-align:center}
+@media(hover:hover) and (pointer:fine) and (min-width:701px){
+.production-stage-details{grid-template-rows:0fr;opacity:0}
+.production-stage-card:hover .production-stage-image,.production-stage-card:focus-within .production-stage-image{filter:blur(7px);transform:scale(1.07)}
+.production-stage-card:hover .production-stage-shade,.production-stage-card:focus-within .production-stage-shade{background:linear-gradient(0deg,rgba(10,8,8,.98),rgba(10,8,8,.3))}
+.production-stage-card:hover .production-stage-details,.production-stage-card:focus-within .production-stage-details{grid-template-rows:1fr;opacity:1}
+}
+@media(max-width:700px){.production-card.production-stage-card{min-height:330px}.production-stage-card.ratio-portrait{min-height:420px}.production-stage-copy{padding:20px}.production-stage-intro{-webkit-line-clamp:2}}
+@media(prefers-reduced-motion:reduce){.production-stage-image,.production-stage-shade,.production-stage-details{transition:none}}
