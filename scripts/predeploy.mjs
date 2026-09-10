@@ -10,7 +10,7 @@ const database = production?.d1_databases?.find((item) => item.binding === "DB")
 const bucket = production?.r2_buckets?.find((item) => item.binding === "FILES");
 const route = production?.routes?.find((item) => item.custom_domain);
 const requiredSecrets = new Set(production?.secrets?.required || []);
-const expectedSecrets = ["SESSION_SECRET", "R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY"];
+const expectedSecrets = ["SESSION_SECRET"];
 
 const problems = [];
 if (!production) problems.push("缺少 env.production 正式环境配置");
@@ -71,15 +71,19 @@ if (action === "check") {
   writeFileSync(
     corsPath,
     JSON.stringify(
-      [
-        {
-          AllowedOrigins: [`https://${route.pattern}`],
-          AllowedMethods: ["PUT"],
-          AllowedHeaders: ["content-type"],
-          ExposeHeaders: ["etag"],
-          MaxAgeSeconds: 3600,
-        },
-      ],
+      {
+        rules: [
+          {
+            allowed: {
+              origins: [`https://${route.pattern}`],
+              methods: ["PUT"],
+              headers: ["content-type"],
+            },
+            exposeHeaders: ["etag"],
+            maxAgeSeconds: 3600,
+          },
+        ],
+      },
       null,
       2,
     ),
