@@ -7,7 +7,13 @@ const statuses: Record<string, string> = { approved: "已入库", pending: "等�
 function archiveTabs(active: "productions" | "resources"): string {
   return `<nav class="section-tabs" aria-label="作品与资料"><a href="/productions"${active === "productions" ? ' class="active" aria-current="page"' : ""}>作品档案</a><a href="/resources"${active === "resources" ? ' class="active" aria-current="page"' : ""}>资料库</a></nav>`;
 }
-export function resourceListPage(rows: ResourceRow[], user: UserSession, _csrf: string, mine = false): string {
+export function resourceListPage(
+  rows: ResourceRow[],
+  user: UserSession,
+  _csrf: string,
+  mine = false,
+  query = "",
+): string {
   const card = (r: ResourceRow) =>
     `<article class="resource-card type-${escapeHtml(r.res_type)}"><a class="resource-card-link" href="/resources/${r.id}">${resourceCardArtwork(r)}<span class="resource-card-shade"></span><span class="resource-card-copy"><span class="eyebrow">${escapeHtml(labels[r.res_type] || r.res_type)} · ${escapeHtml(statuses[r.status] || r.status)}</span><strong>${escapeHtml(r.title)}</strong><span>${escapeHtml(r.description || r.original_name || "点击查看资料")}</span></span></a>${r.admin_note ? `<p class="alert">审核说明：${escapeHtml(r.admin_note)}</p>` : ""}</article>`;
   const flatCards = rows.length
@@ -16,7 +22,7 @@ export function resourceListPage(rows: ResourceRow[], user: UserSession, _csrf: 
           (r) => `<div><p class="muted">所属作品：${escapeHtml(r.production_title || "其他资料")}</p>${card(r)}</div>`,
         )
         .join("")
-    : '<p class="card">暂无资料。</p>';
+    : `<p class="card">${query ? `没有找到与“${escapeHtml(query)}”相关的资料或作品。` : "暂无资料。"}</p>`;
   const groups = new Map<string, { title: string; productionId: number | null; rows: ResourceRow[] }>();
   for (const row of rows) {
     const key = row.production_id === null ? "other" : String(row.production_id);
@@ -36,14 +42,18 @@ export function resourceListPage(rows: ResourceRow[], user: UserSession, _csrf: 
           const gallery = photos.length
             ? `<article class="card photo-archive"><p class="eyebrow">剧照 · ${photos.length} 张</p><h3>剧照集</h3><div class="photo-grid">${photos.map((photo) => `<a href="/resources/${photo.id}" title="${escapeHtml(photo.title)}"><img src="/resources/${photo.id}/preview" alt="${escapeHtml(photo.title)}"></a>`).join("")}</div></article>`
             : "";
-          return `<section class="archive-group"><h2>${group.productionId ? `<a href="/productions/${group.productionId}">${escapeHtml(group.title)}</a>` : "其他资料"}</h2><div class="card-grid">${gallery}${others.map(card).join("")}</div></section>`;
+          const entries = [
+            ...(gallery ? [{ createdAt: photos[0].created_at, html: gallery }] : []),
+            ...others.map((row) => ({ createdAt: row.created_at, html: card(row) })),
+          ].sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+          return `<section class="archive-group"><h2>${group.productionId ? `<a href="/productions/${group.productionId}">${escapeHtml(group.title)}</a>` : "其他资料"}</h2><p class="muted">按提交时间排列，最新资料在前。</p><div class="card-grid">${entries.map((entry) => entry.html).join("")}</div></section>`;
         })
         .join("")
-    : '<p class="card">暂无资料。</p>';
+    : `<p class="card">${query ? `没有找到与“${escapeHtml(query)}”相关的资料或作品。` : "暂无资料。"}</p>`;
   const canSubmit = user.role !== "user";
   return layout(
     mine ? "我的资料" : "资料库",
-    `${archiveTabs("resources")}<section class="page-heading"><p class="eyebrow">ARCHIVE</p><h1>${mine ? "我的资料与审核结果" : "资料库"}</h1><p><a href="/resources">已入库资料</a> · <a href="/my-resources">我的提交</a>${canSubmit ? ' · <a href="/resources/submit">提交资料</a>' : ""}</p></section><section class="review-grid">${mine ? flatCards : groupedCards}</section>`,
+    `${archiveTabs("resources")}<section class="page-heading"><p class="eyebrow">ARCHIVE</p><h1>${mine ? "我的资料与审核结果" : "资料库"}</h1><p><a href="/resources">已入库资料</a> · <a href="/my-resources">我的提交</a>${canSubmit ? ' · <a href="/resources/submit">提交资料</a>' : ""}</p>${mine ? "" : `<form class="filters resource-search" method="get" action="/resources" role="search"><label>搜索资料或作品<input type="search" name="q" value="${escapeHtml(query)}" maxlength="100" placeholder="输入资料标题、文件名或作品名称"></label><button>搜索</button>${query ? '<a class="button secondary" href="/resources">清除</a>' : ""}</form>${query ? `<p class="search-summary">找到 ${rows.length} 项与“${escapeHtml(query)}”相关的资料。</p>` : ""}`}</section><section class="review-grid">${mine ? flatCards : groupedCards}</section>`,
     true,
     user.role === "admin",
   );

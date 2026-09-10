@@ -20,6 +20,63 @@ const section =
           : "";
 document.querySelector(`[data-section="${section}"]`)?.setAttribute("aria-current", "page");
 
+const notificationHost = document.querySelector("[data-admin-notifications]");
+if (notificationHost) {
+  fetch("/admin/notifications", { headers: { accept: "application/json" } })
+    .then((response) => {
+      if (!response.ok) throw new Error("notification request failed");
+      return response.json();
+    })
+    .then((data) => {
+      if (!Array.isArray(data.items) || !data.items.length) return;
+      const details = document.createElement("details");
+      details.className = "admin-notification-menu";
+      details.open = true;
+      const summary = document.createElement("summary");
+      summary.innerHTML = `<span aria-hidden="true">●</span><span>待处理</span><strong>${data.total}</strong>`;
+      const stack = document.createElement("div");
+      stack.className = "notification-stack";
+      for (const item of data.items) {
+        const card = document.createElement("article");
+        card.className = "notification-card";
+        const copy = document.createElement("div");
+        const title = document.createElement("strong");
+        title.textContent = item.title;
+        const description = document.createElement("span");
+        description.textContent = `${item.count} 项等待处理`;
+        copy.append(title, description);
+        const action = document.createElement("button");
+        action.type = "button";
+        action.className = "small notification-action";
+        action.textContent = "处理 →";
+        action.addEventListener("click", async () => {
+          action.disabled = true;
+          const body = new URLSearchParams({ csrf: data.csrf, key: item.key });
+          const response = await fetch("/admin/notifications/dismiss", { method: "POST", body });
+          if (response.ok) {
+            card.remove();
+            location.assign(item.href);
+          } else {
+            action.disabled = false;
+            description.textContent = "操作失败，请刷新后再试";
+          }
+        });
+        card.append(copy, action);
+        stack.append(card);
+      }
+      if (data.hidden) {
+        const more = document.createElement("a");
+        more.className = "notification-more";
+        more.href = "/admin";
+        more.textContent = `还有 ${data.hidden} 类待办，前往工作台查看`;
+        stack.append(more);
+      }
+      details.append(summary, stack);
+      notificationHost.append(details);
+    })
+    .catch(() => {});
+}
+
 for (const video of document.querySelectorAll("video[data-preview-frame]")) {
   video.addEventListener(
     "loadedmetadata",
@@ -50,4 +107,12 @@ for (const section of document.querySelectorAll("[data-role-counts]")) {
   };
   kind.addEventListener("change", updateRoleHint);
   name.addEventListener("input", updateRoleHint);
+}
+
+for (const mascot of document.querySelectorAll("[data-home-mascot]")) {
+  const ready = () => mascot.classList.add("is-ready");
+  const missing = () => mascot.classList.add("is-missing");
+  mascot.addEventListener("load", ready, { once: true });
+  mascot.addEventListener("error", missing, { once: true });
+  if (mascot.complete) (mascot.naturalWidth ? ready : missing)();
 }

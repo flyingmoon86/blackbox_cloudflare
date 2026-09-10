@@ -20,7 +20,7 @@ export function helpPage(texts: Record<string, string>, admin: boolean): string 
       <article id="find-production" class="card guide-section"><span class="guide-step">01</span><h2>先找到作品</h2><p>打开作品档案，找到你参与的戏。缺少档案时，直接点击页面上方“申请创建作品”，填写作品名、年份和说明。</p><p><a class="button" href="/productions">打开作品档案</a></p></article>
       <article id="join-production-guide" class="card guide-section"><span class="guide-step">02</span><h2>登记角色或分工</h2><p>从作品卡片点击“我是主创！”。已有同名角色时仍可提交，审核通过后会显示为多人饰演或 AB 角；同一个人也能继续申请其他角色。</p><p><a href="/productions">选择作品并申请</a></p></article>
       <article id="upload-guide" class="card guide-section"><span class="guide-step">03</span><h2>补充资料</h2><p>从作品卡片进入上传，作品会自动选中。图片可批量选择；1–5GB 视频支持分片和断点续传。上传后到“我的提交”查看审核结果。</p><p><a href="/resources/submit">上传资料</a> · <a href="/my-resources">查看我的提交</a></p></article>
-      <article id="profile-guide" class="card guide-section"><span class="guide-step">04</span><h2>维护个人档案与账号</h2><p>在个人中心修改头像、简介和代表作，也可以修改密码。姓名、届别等公共档案信息由管理员维护。</p><p><a href="/profile">进入个人中心</a></p></article>
+      <article id="profile-guide" class="card guide-section"><span class="guide-step">04</span><h2>修改个人信息与账号</h2><p>在个人中心修改头像、简介和代表作，也可以修改密码。姓名、届别等公共档案信息由管理员编辑。</p><p><a href="/profile">进入个人中心</a></p></article>
     </section>
     ${
       admin
