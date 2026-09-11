@@ -1,6 +1,6 @@
 # 黑匣子网站
 
-面向话剧队内部使用的资料与档案网站，正在从 Flask 迁移到 Cloudflare。新版本采用 TypeScript + Hono 单 Worker，D1 保存数据，R2 将保存照片、剧本和大视频。
+面向话剧队内部使用的资料与档案网站，已在 Cloudflare 内部试运行。网站采用 TypeScript + Hono 单 Worker，D1 保存数据，R2 保存照片、剧本和音频；视频上传暂不开放。
 
 ## 文件从哪里看起
 
@@ -8,7 +8,8 @@
 src/             正式 TypeScript 网站代码
 public/          CSS、图片等静态文件
 migrations/      D1 数据库结构
-scripts/data/    旧 MySQL 与文件迁移工具
+scripts/backend/ 后端业务与 Cloudflare 本地运行时测试
+scripts/data/    数据迁移与兼容升级验证
 docs/            当前有效的需求、计划和验收说明
 legacy-python/   原 Flask 网站参考副本，不参与新站运行
 test-fixtures/   仅限本地的虚拟测试数据
@@ -33,7 +34,11 @@ npm run dev
 
 本地功能迁移已经覆盖账号、队员、作品建档申请、多人角色与 AB 角、公告、页面文案、意见箱、资料审核与预览、批量剧照、按作品组织的资料库、R2 分片与断点续传、受控下载、头像、作品封面、首页背景和分级操作指南。旧 MySQL 导出、D1 转换、一次性内存导入验证和 R2 文件迁移工具也已完成。
 
-项目已经进入 Cloudflare 正式上线准备阶段。`wrangler.jsonc` 中的 `env.production` 与本地环境分开；在真实 D1 ID、R2 Bucket 和域名填写完整前，`npm run deploy:check` 和 `npm run deploy` 会停止，避免误发布。第一次上线请严格按 [架构与部署](docs/架构与部署.md) 的顺序操作。邮件验证和密码找回仍待确定服务方案。
+正式域名为 https://npublackbox.online 。本轮“后端优化第 0/1 包 + 静态分流”的代码已在本地验证，尚未部署；请先在本地验收新审核历史、上传恢复、9GB 容量预留和文件清理。新增 0009–0011 必须在新代码部署前执行，见 [架构与部署](docs/架构与部署.md)。邮件验证和密码找回仍未开放。
+
+本地使用 Node.js 24 或更新版本。npm run test:backend 执行 30 项隔离测试；npm run deploy:check 还会检查格式、类型、数据转换与打包，该命令不会发布网站。
+
+- [后端优化方案与完成状态](docs/后端优化方案.md)
 
 - [迁移计划](docs/迁移计划.md)
 - [产品与权限规则](docs/产品与权限规则.md)
