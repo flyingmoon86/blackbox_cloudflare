@@ -16,38 +16,56 @@ export function layout(title: string, content: string, signedIn = false, admin =
   const link = (href: string, label: string) => '<a href="' + href + '">' + label + "</a>";
   const menu = (label: string, items: string) =>
     '<details class="nav-menu"><summary>' + label + '</summary><div class="nav-panel">' + items + "</div></details>";
+  const group = (caption: string, href: string, label: string, children: string) =>
+    '<section class="nav-group"><p class="nav-caption">' +
+    caption +
+    "</p><h2>" +
+    link(href, label) +
+    '</h2><ul class="nav-children">' +
+    children +
+    "</ul></section>";
+  const child = (href: string, label: string) => "<li>" + link(href, label) + "</li>";
   const nav =
     link("/", "首页") +
     menu(
       "作品与资料",
-      link("/productions", "作品档案") +
-        link("/resources", "资料库") +
-        link("/resources/submit", "我要补充资料") +
-        link("/suggestions?type=production&source=productions", "申请创建作品"),
+      group(
+        "走进舞台",
+        "/productions",
+        "作品档案",
+        child("/suggestions?type=production&source=productions", "申请创建作品"),
+      ) +
+        group(
+          "留存每一幕",
+          "/resources",
+          "资料库",
+          child("/resources/submit", "我要补充资料") + (signedIn ? child("/my-resources", "我的提交") : ""),
+        ),
     ) +
     menu(
       "队员与剧团",
-      link("/members", "队员名录") +
-        link("/profile/member", "修改我的信息") +
-        link("/profile/member-application", "申请队员认证") +
-        link("/#about", "剧团介绍"),
+      group(
+        "台前与幕后",
+        "/members",
+        "队员名录",
+        child("/profile/member", "修改我的信息") + child("/profile/member-application", "申请队员认证"),
+      ) + group("认识我们", "/#about", "剧团介绍", child("/#contact", "联系我们")),
     ) +
     menu(
       "指南与鸣谢",
-      link("/help", "网站使用指南") +
-        link("/thanks", "鸣谢 · 网站贡献者") +
-        link("/feedback", "提交网站建议") +
-        (admin ? link("/help#captain-guide", "管理员指南") : ""),
+      group("从这里开始", "/help", "网站使用指南", admin ? child("/help#captain-guide", "管理员指南") : "") +
+        group("一起完善黑匣子", "/thanks", "网站贡献者", child("/feedback", "提交网站建议")),
     ) +
-    menu("了解黑匣子", link("/announcements", "公告") + link("/#contact", "联系我们")) +
-    menu(
-      signedIn ? "我的账号" : "登录 / 注册",
-      signedIn
-        ? link("/profile", "个人中心") +
-            link("/my-resources", "我的提交") +
-            (admin ? link("/admin", "管理员工作台") + link("/admin/community", "贡献者与建议") : "")
-        : link("/login", "登录") + link("/register", "注册"),
-    );
+    menu("了解黑匣子", group("最新消息", "/announcements", "剧团公告", child("/#contact", "联系我们"))) +
+    (admin ? menu("管理", group("剧团事务", "/admin", "管理员工作台", child("/admin/community", "贡献者与建议"))) : "");
+  const account =
+    '<a class="account-link" href="' +
+    (signedIn ? "/profile" : "/login") +
+    '" aria-label="' +
+    (signedIn ? "个人中心" : "登录或注册") +
+    '" title="' +
+    (signedIn ? "个人中心" : "登录或注册") +
+    '"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="8" r="3.25"/><path d="M5.5 20v-1.5a6.5 6.5 0 0 1 13 0V20"/><circle cx="12" cy="12" r="10"/></svg></a>';
   const mobile =
     '<nav class="mobile-nav" aria-label="手机主导航">' +
     link("/", "⌂ 首页") +
@@ -58,13 +76,14 @@ export function layout(title: string, content: string, signedIn = false, admin =
   return (
     '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' +
     escapeHtml(title) +
-    ' · 黑匣子</title><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/experience.css?v=1"><script src="/app.js" defer></script><script src="/experience.js?v=1" defer></script></head><body class="' +
+    ' · 黑匣子</title><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/experience.css?v=2"><script src="/app.js" defer></script><script src="/experience.js?v=2" defer></script></head><body class="' +
     (signedIn ? "signed-in" : "signed-out") +
     '"><a class="skip-link" href="#main-content">跳到内容</a><header class="top"><a href="/" class="brand">黑匣子<span>BLACK BOX THEATRE</span></a><button class="menu-toggle" aria-expanded="false" aria-controls="main-navigation">菜单 ＋</button><nav id="main-navigation" class="desktop-nav" aria-label="主导航">' +
     nav +
     "</nav>" +
+    account +
     (admin ? '<div class="admin-notification-host" data-admin-notifications aria-live="polite"></div>' : "") +
-    '</header><main id="main-content" tabindex="-1">' +
+    '</header><div class="nav-scrim" aria-hidden="true"></div><main id="main-content" tabindex="-1">' +
     content +
     "</main>" +
     mobile +
