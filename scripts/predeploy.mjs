@@ -98,8 +98,12 @@ if (action === "check") {
     ["首页", "/", 200, "text/html"],
     ["健康检查", "/health", 200, "application/json"],
     ["静态样式", "/app.css", 200, "text/css"],
-    ["作品权限", "/productions", 302, null],
-    ["公告权限", "/announcements", 302, null],
+    ["作品公开浏览", "/productions", 200, "text/html"],
+    ["公告公开浏览", "/announcements", 200, "text/html"],
+    ["队员公开浏览", "/members", 200, "text/html"],
+    ["资料公开浏览", "/resources", 200, "text/html"],
+    ["鸣谢", "/thanks", 200, "text/html"],
+    ["后台保护", "/admin", 302, null],
   ];
   for (const [label, path, expectedStatus, expectedType] of checks) {
     const response = await fetch(`${origin}${path}`, { redirect: "manual" });

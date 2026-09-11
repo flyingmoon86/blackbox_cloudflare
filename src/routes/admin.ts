@@ -38,7 +38,7 @@ export type PendingCounts = {
 };
 
 type NotificationGroup = {
-  kind: "member" | "production-join" | "resource" | "production-create" | "suggestion";
+  kind: "member" | "production-join" | "resource" | "production-create" | "suggestion" | "feedback";
   count: number;
   newest_id: number;
 };
@@ -72,7 +72,7 @@ adminRoutes.get("/admin", async (c) => {
       (SELECT COUNT(*) FROM production_join_request WHERE status='pending') production_joins,
       (SELECT COUNT(*) FROM resource WHERE status='pending') resource_reviews,
       (SELECT COUNT(*) FROM suggestion WHERE status='open' AND category='production') production_creates,
-      (SELECT COUNT(*) FROM suggestion WHERE status='open' AND category='website') website_suggestions`,
+      (SELECT COUNT(*) FROM suggestion WHERE status='open' AND category='website') + (SELECT COUNT(*) FROM website_feedback WHERE status='open') website_suggestions`,
     ).first<PendingCounts>(),
   ]);
   return c.html(
@@ -101,7 +101,8 @@ adminRoutes.get("/admin/notifications", async (c) => {
       UNION ALL SELECT 'production-join',COUNT(*),COALESCE(MAX(id),0) FROM production_join_request WHERE status='pending'
       UNION ALL SELECT 'resource',COUNT(*),COALESCE(MAX(id),0) FROM resource WHERE status='pending'
       UNION ALL SELECT 'production-create',COUNT(*),COALESCE(MAX(id),0) FROM suggestion WHERE status='open' AND category='production'
-      UNION ALL SELECT 'suggestion',COUNT(*),COALESCE(MAX(id),0) FROM suggestion WHERE status='open' AND category='website'`,
+      UNION ALL SELECT 'suggestion',COUNT(*),COALESCE(MAX(id),0) FROM suggestion WHERE status='open' AND category='website'
+      UNION ALL SELECT 'feedback',COUNT(*),COALESCE(MAX(id),0) FROM website_feedback WHERE status='open'`,
     ).all<NotificationGroup>(),
     c.env.DB.prepare("SELECT notification_key FROM admin_notification_read WHERE user_id=?")
       .bind(user.id)
@@ -113,7 +114,8 @@ adminRoutes.get("/admin/notifications", async (c) => {
     "production-join": { title: "新作品加入申请", href: "/admin/production-requests" },
     resource: { title: "新资料等待审核", href: "/admin/resources/reviews" },
     "production-create": { title: "新作品建档申请", href: "/admin/suggestions" },
-    suggestion: { title: "新网站建议", href: "/admin/suggestions" },
+    suggestion: { title: "旧网站建议", href: "/admin/suggestions" },
+    feedback: { title: "新网站建议", href: "/admin/community" },
   };
   const unread = groups.results
     .filter((group) => group.count > 0)
@@ -136,7 +138,7 @@ adminRoutes.post("/admin/notifications/dismiss", async (c) => {
   const form = await c.req.formData();
   if (!csrfValid(c, form.get("csrf"))) return c.json({ error: "请求已失效，请刷新后重试。" }, 400);
   const key = String(form.get("key") ?? "");
-  if (!/^(member|production-join|resource|production-create|suggestion):\d+$/.test(key))
+  if (!/^(member|production-join|resource|production-create|suggestion|feedback):\d+$/.test(key))
     return c.json({ error: "通知不存在。" }, 400);
   await c.env.DB.prepare("INSERT OR IGNORE INTO admin_notification_read(user_id,notification_key) VALUES(?,?)")
     .bind(user.id, key)

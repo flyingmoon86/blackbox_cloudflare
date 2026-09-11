@@ -56,7 +56,7 @@ export async function unlockUploadTask(env: Bindings, id: string, token: string)
     .run();
 }
 
-async function checkObjectContent(env: Bindings, task: UploadTask): Promise<void> {
+async function checkObjectContent(env: Bindings, task: UploadTask): Promise<boolean> {
   const object = await env.FILES.get(task.object_key, { range: { offset: 0, length: 512 } });
   if (!object) throw new UploadError("文件尚未完整保存，可以稍后重试。", 502);
   const bytes = new Uint8Array(await object.arrayBuffer());
@@ -75,6 +75,22 @@ async function checkObjectContent(env: Bindings, task: UploadTask): Promise<void
     throw new UploadError("剧照内容不是支持的 JPEG、PNG、WebP 或 AVIF 图片。", 400);
   if (/\.pdf$/i.test(task.original_name) && !text.startsWith("%PDF-"))
     throw new UploadError("文件内容不是有效的 PDF。", 400);
+  const extension = task.original_name.toLowerCase().split(".").pop() || "";
+  const photo =
+    (jpeg && /^(jpe?g)$/.test(extension)) ||
+    (png && extension === "png") ||
+    (webp && extension === "webp") ||
+    (avif && extension === "avif");
+  const audio =
+    (extension === "mp3" && (text.startsWith("ID3") || (bytes[0] === 255 && (bytes[1] & 224) === 224))) ||
+    (extension === "wav" && text.startsWith("RIFF") && text.slice(8, 12) === "WAVE") ||
+    (extension === "flac" && text.startsWith("fLaC")) ||
+    (extension === "m4a" && text.slice(4, 8) === "ftyp" && /M4A |M4B /.test(text.slice(8, 16)));
+  return (
+    (task.res_type === "photo" && photo) ||
+    (task.res_type === "script" && extension === "pdf" && text.startsWith("%PDF-")) ||
+    (task.res_type === "audio" && audio)
+  );
 }
 
 async function completedResult(env: Bindings, task: UploadTask): Promise<{ resourceId: number; status: string }> {
@@ -142,11 +158,14 @@ export async function completeUpload(env: Bindings, id: string): Promise<{ resou
       object ??= await env.FILES.head(task.object_key);
     }
     if (!object) throw new UploadError("合并结果暂不可用，请稍后重试。", 502);
+    let lowRisk = false;
     try {
       if (object.size !== task.size_bytes) throw new UploadError("实际文件大小与上传声明不一致，请重新上传。", 400);
-      await checkObjectContent(env, task);
+      lowRisk = await checkObjectContent(env, task);
       if (
-        !(await env.DB.prepare("SELECT id FROM user WHERE id=? AND status='active' AND role IN ('member','admin')")
+        !(await env.DB.prepare(
+          "SELECT id FROM user WHERE id=? AND status='active' AND role IN ('user','member','admin')",
+        )
           .bind(task.user_id)
           .first())
       )
@@ -165,6 +184,7 @@ export async function completeUpload(env: Bindings, id: string): Promise<{ resou
       throw error;
     }
     const preview = await env.FILES.head(previewKeyFor(task));
+    const fingerprint = object.etag + ":" + object.size;
     const reservation = `upload:${id}`;
     const guard = "EXISTS(SELECT 1 FROM upload_task t WHERE t.id=? AND t.lease_token=?)";
     const committed =
@@ -179,8 +199,8 @@ export async function completeUpload(env: Bindings, id: string): Promise<{ resou
         `UPDATE resource SET source_upload_task_id=? WHERE id=? AND source_upload_task_id IS NULL AND ${guard}`,
       ).bind(id, legacy?.id ?? null, id, token),
       env.DB.prepare(
-        `INSERT INTO resource(production_id,status,uploader_id,title,res_type,description,filename,original_name,preview_filename,source_upload_task_id) SELECT t.production_id,CASE WHEN u.role='admin' AND u.status='active' THEN 'approved' ELSE 'pending' END,t.user_id,t.title,t.res_type,t.description,t.object_key,t.original_name,?,t.id FROM upload_task t JOIN user u ON u.id=t.user_id WHERE t.id=? AND t.lease_token=? AND u.status='active' AND u.role IN ('member','admin') AND NOT EXISTS(SELECT 1 FROM resource WHERE source_upload_task_id=t.id) ON CONFLICT DO NOTHING`,
-      ).bind(preview ? preview.key : "", id, token),
+        `INSERT INTO resource(production_id,status,uploader_id,title,res_type,description,filename,original_name,preview_filename,source_upload_task_id,content_fingerprint) SELECT t.production_id,CASE WHEN u.status='active' AND (u.role='admin' OR (u.role='member' AND u.member_id IS NOT NULL AND ?=1 AND NOT EXISTS(SELECT 1 FROM resource d WHERE d.content_fingerprint=?))) THEN 'approved' ELSE 'pending' END,t.user_id,t.title,t.res_type,t.description,t.object_key,t.original_name,?,t.id,? FROM upload_task t JOIN user u ON u.id=t.user_id WHERE t.id=? AND t.lease_token=? AND u.status='active' AND u.role IN ('user','member','admin') AND NOT EXISTS(SELECT 1 FROM resource WHERE source_upload_task_id=t.id) ON CONFLICT DO NOTHING`,
+      ).bind(lowRisk ? 1 : 0, fingerprint, preview ? preview.key : "", fingerprint, id, token),
       env.DB.prepare(`DELETE FROM storage_reservation WHERE id=? AND ${committed}`).bind(reservation, id, token),
       env.DB.prepare(
         `INSERT INTO storage_object(object_key,size_bytes) SELECT ?,? WHERE ${committed} ON CONFLICT(object_key) DO UPDATE SET size_bytes=excluded.size_bytes`,

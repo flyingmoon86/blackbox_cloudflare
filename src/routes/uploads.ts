@@ -33,7 +33,6 @@ export const uploadRoutes = new Hono<AppEnv>();
 uploadRoutes.use("/api/uploads/*", async (c, next) => {
   const user = c.get("user");
   if (!user) return c.json({ error: "请先登录。" }, 401);
-  if (user.role === "user") return c.json({ error: "认证队员或管理员才能上传资料。" }, 403);
   await next();
 });
 const csrfOk = (c: Context<AppEnv>) => {

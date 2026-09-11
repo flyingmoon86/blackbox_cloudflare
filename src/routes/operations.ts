@@ -36,7 +36,7 @@ operationsRoutes.get("/admin/review-history", async (c) => {
         " · " +
         (row.decision === "approved" ? "通过" : "驳回") +
         "</h2><p>" +
-        escapeHtml(row.username || "已删除的管理员") +
+        escapeHtml(row.username || (row.note.startsWith("系统规则") ? "系统自动审核" : "已删除的管理员")) +
         " · " +
         escapeHtml(row.reviewed_at) +
         " UTC</p><p>" +

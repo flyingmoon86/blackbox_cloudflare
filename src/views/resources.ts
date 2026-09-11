@@ -9,13 +9,13 @@ function archiveTabs(active: "productions" | "resources"): string {
 }
 export function resourceListPage(
   rows: ResourceRow[],
-  user: UserSession,
+  user: UserSession | null,
   _csrf: string,
   mine = false,
   query = "",
 ): string {
   const card = (r: ResourceRow) =>
-    `<article class="resource-card type-${escapeHtml(r.res_type)}"><a class="resource-card-link" href="/resources/${r.id}">${resourceCardArtwork(r)}<span class="resource-card-shade"></span><span class="resource-card-copy"><span class="eyebrow">${escapeHtml(labels[r.res_type] || r.res_type)} · ${escapeHtml(statuses[r.status] || r.status)}</span><strong>${escapeHtml(r.title)}</strong><span>${escapeHtml(r.description || r.original_name || "点击查看资料")}</span></span></a>${r.admin_note ? `<p class="alert">审核说明：${escapeHtml(r.admin_note)}</p>` : ""}</article>`;
+    `<article class="resource-card type-${escapeHtml(r.res_type)}"><a class="resource-card-link" href="/resources/${r.id}">${resourceCardArtwork(r)}<span class="resource-card-shade"></span><span class="resource-card-copy"><span class="eyebrow">${escapeHtml(labels[r.res_type] || r.res_type)} · ${escapeHtml(statuses[r.status] || r.status)}</span><strong>${escapeHtml(r.title)}</strong><span>${escapeHtml(r.description || r.original_name || "点击查看资料")}</span></span></a>${mine && r.admin_note ? `<p class="alert">审核说明：${escapeHtml(r.admin_note)}</p>` : ""}</article>`;
   const flatCards = rows.length
     ? rows
         .map(
@@ -50,15 +50,15 @@ export function resourceListPage(
         })
         .join("")
     : `<p class="card">${query ? `没有找到与“${escapeHtml(query)}”相关的资料或作品。` : "暂无资料。"}</p>`;
-  const canSubmit = user.role !== "user";
+  const canSubmit = true;
   return layout(
     mine ? "我的资料" : "资料库",
     `${archiveTabs("resources")}<section class="page-heading"><p class="eyebrow">ARCHIVE</p><h1>${mine ? "我的资料与审核结果" : "资料库"}</h1><p><a href="/resources">已入库资料</a> · <a href="/my-resources">我的提交</a>${canSubmit ? ' · <a href="/resources/submit">提交资料</a>' : ""}</p>${mine ? "" : `<form class="filters resource-search" method="get" action="/resources" role="search"><label>搜索资料或作品<input type="search" name="q" value="${escapeHtml(query)}" maxlength="100" placeholder="输入资料标题、文件名或作品名称"></label><button>搜索</button>${query ? '<a class="button secondary" href="/resources">清除</a>' : ""}</form>${query ? `<p class="search-summary">找到 ${rows.length} 项与“${escapeHtml(query)}”相关的资料。</p>` : ""}`}</section><section class="review-grid">${mine ? flatCards : groupedCards}</section>`,
-    true,
-    user.role === "admin",
+    Boolean(user),
+    user?.role === "admin",
   );
 }
-export function resourceDetailPage(row: ResourceRow, user: UserSession): string {
+export function resourceDetailPage(row: ResourceRow, user: UserSession | null): string {
   const download =
     row.status === "approved"
       ? `<p><a class="button" href="/resources/${row.id}/download">下载文件</a></p>`
@@ -66,14 +66,14 @@ export function resourceDetailPage(row: ResourceRow, user: UserSession): string 
         ? '<p class="notice">文件已安全保存，等待管理员审核后开放下载。</p>'
         : "";
   const edit =
-    user.role === "admin"
+    user?.role === "admin"
       ? `<p><a class="edit-link" href="/admin/resources/${row.id}/edit">编辑或删除这份资料</a></p>`
       : "";
   return layout(
     row.title,
-    `${archiveTabs("resources")}<p class="back-links"><a href="${user.id === row.uploader_id ? "/my-resources" : "/resources"}">← 返回资料列表</a><a href="/productions">返回作品档案</a></p><article class="card production-detail resource-detail"><p class="eyebrow">${escapeHtml(labels[row.res_type] || row.res_type)} · ${escapeHtml(statuses[row.status] || row.status)}</p><h1>${escapeHtml(row.title)}</h1>${edit}${resourceDetailPreview(row)}<div class="resource-metadata"><p>${escapeHtml(row.description || "暂无说明")}</p><p>所属作品：${row.production_id ? `<a href="/productions/${row.production_id}">${escapeHtml(row.production_title)}</a>` : "其他资料"}</p><p>原文件名：${escapeHtml(row.original_name)}</p><p>提交人：${escapeHtml(row.uploader_name || "未知")}</p>${row.admin_note ? `<p class="alert">审核说明：${escapeHtml(row.admin_note)}</p>` : ""}${download}</div></article>`,
-    true,
-    user.role === "admin",
+    `${archiveTabs("resources")}<p class="back-links"><a href="${user?.id === row.uploader_id ? "/my-resources" : "/resources"}">← 返回资料列表</a><a href="/productions">返回作品档案</a></p><article class="card production-detail resource-detail"><p class="eyebrow">${escapeHtml(labels[row.res_type] || row.res_type)} · ${escapeHtml(statuses[row.status] || row.status)}</p><h1>${escapeHtml(row.title)}</h1>${edit}${resourceDetailPreview(row, Boolean(user))}<div class="resource-metadata"><p>${escapeHtml(row.description || "暂无说明")}</p><p>所属作品：${row.production_id ? `<a href="/productions/${row.production_id}">${escapeHtml(row.production_title)}</a>` : "其他资料"}</p><p>原文件名：${escapeHtml(row.original_name)}</p><p>提交人：${escapeHtml(row.uploader_name || "未知")}</p>${user && (user.id === row.uploader_id || user.role === "admin") && row.admin_note ? `<p class="alert">审核说明：${escapeHtml(row.admin_note)}</p>` : ""}${download}</div></article>`,
+    Boolean(user),
+    user?.role === "admin",
   );
 }
 export function resourceFormPage(
@@ -84,7 +84,7 @@ export function resourceFormPage(
 ): string {
   return layout(
     "上传资料",
-    `${archiveTabs("resources")}<p class="back-links"><a href="/resources">← 返回资料库</a><a href="/productions">返回作品档案</a></p><section class="card auth wide"><h1>上传资料</h1><p class="notice">测试阶段暂不支持视频。剧照 20MB、剧本 50MB、音频与其他资料 100MB；剧照可以一次选择多张，每张会生成独立资料并分别审核。</p><form id="resource-upload" method="post" data-csrf="${escapeHtml(csrf)}"><label>资料标题<input name="title" maxlength="100"><span class="hint">单个文件请填写标题；批量剧照会使用每张图片的文件名。</span></label><label>类型<select name="res_type"><option value="video">视频</option><option value="script">剧本</option><option value="photo" selected>剧照</option><option value="audio">音频</option><option value="other">其他</option></select></label><label>所属作品<select name="production_id"><option value="">其他资料</option>${productions.map((p) => `<option value="${p.id}"${selectedProductionId === p.id ? " selected" : ""}>${escapeHtml(p.title)}</option>`).join("")}</select></label><p class="missing-production"><strong>资料对应的戏还没新建？</strong> <a href="/suggestions?type=production&amp;source=upload">申请管理员新建作品档案</a></p><label>选择文件<input name="file" type="file" required><span class="hint" id="file-hint">选择“剧照”后可以一次选择多张图片。</span></label><label>说明<textarea name="description" maxlength="2000" rows="5"></textarea></label><div class="upload-feedback"><progress id="upload-progress" value="0"></progress><output id="upload-percent" for="upload-progress">0%</output><p id="upload-status" class="muted" role="status" aria-live="polite">尚未开始上传。</p></div><div class="upload-actions"><button type="submit">开始上传</button><button type="button" id="upload-cancel" class="secondary" hidden>取消当前文件</button></div></form><script src="/upload.js" defer></script></section>`,
+    `${archiveTabs("resources")}<p class="back-links"><a href="/resources">← 返回资料库</a><a href="/productions">返回作品档案</a></p><section class="card auth wide"><h1>上传资料</h1><p class="notice">测试阶段暂不支持视频。剧照 20MB、剧本 50MB、音频与其他资料 100MB；剧照可以一次选择多张，每张会生成独立资料。认证队员通过规则后自动入库，普通账号提交后由管理员审核。</p><form id="resource-upload" method="post" data-csrf="${escapeHtml(csrf)}"><label>资料标题<input name="title" maxlength="100"><span class="hint">单个文件请填写标题；批量剧照会使用每张图片的文件名。</span></label><label>类型<select name="res_type"><option value="video">视频</option><option value="script">剧本</option><option value="photo" selected>剧照</option><option value="audio">音频</option><option value="other">其他</option></select></label><label>所属作品<select name="production_id"><option value="">其他资料</option>${productions.map((p) => `<option value="${p.id}"${selectedProductionId === p.id ? " selected" : ""}>${escapeHtml(p.title)}</option>`).join("")}</select></label><p class="missing-production"><strong>资料对应的戏还没新建？</strong> <a href="/suggestions?type=production&amp;source=upload">申请管理员新建作品档案</a></p><label>选择文件<input name="file" type="file" required><span class="hint" id="file-hint">选择“剧照”后可以一次选择多张图片。</span></label><label>说明<textarea name="description" maxlength="2000" rows="5"></textarea></label><div class="upload-feedback"><progress id="upload-progress" value="0"></progress><output id="upload-percent" for="upload-progress">0%</output><p id="upload-status" class="muted" role="status" aria-live="polite">尚未开始上传。</p></div><div class="upload-actions"><button type="submit">开始上传</button><button type="button" id="upload-cancel" class="secondary" hidden>取消当前文件</button></div></form><script src="/upload.js" defer></script></section>`,
     true,
     admin,
   );
@@ -142,7 +142,7 @@ export function resourceEditPage(
       .map(([value, label]) => `<option value="${value}"${row.res_type === value ? " selected" : ""}>${label}</option>`)
       .join(
         "",
-      )}</select></label><label>所属作品<select name="production_id"><option value="">其他资料</option>${productions.map((p) => `<option value="${p.id}"${row.production_id === p.id ? " selected" : ""}>${escapeHtml(p.title)}</option>`).join("")}</select></label><label>说明<textarea name="description" maxlength="2000" rows="6">${escapeHtml(row.description)}</textarea></label><button>保存资料信息</button></form><hr><form method="post" action="/admin/resources/${row.id}/delete" onsubmit="return confirm('确定删除这份资料和文件吗？此操作无法撤销。')"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button class="secondary">删除资料与文件</button></form></section>`,
+      )}</select></label><label>所属作品<select name="production_id"><option value="">其他资料</option>${productions.map((p) => `<option value="${p.id}"${row.production_id === p.id ? " selected" : ""}>${escapeHtml(p.title)}</option>`).join("")}</select></label><label>说明<textarea name="description" maxlength="2000" rows="6">${escapeHtml(row.description)}</textarea></label><button>保存资料信息</button></form><hr>${row.status === "approved" ? `<form method="post" action="/admin/resources/${row.id}/revoke"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button class="secondary">撤销入库，重新审核</button></form>` : ""}<hr><form method="post" action="/admin/resources/${row.id}/delete" onsubmit="return confirm('确定删除这份资料和文件吗？此操作无法撤销。')"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button class="secondary">删除资料与文件</button></form></section>`,
     true,
     true,
   );
