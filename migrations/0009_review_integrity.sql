@@ -24,18 +24,18 @@ CREATE INDEX ix_review_history_entity ON review_history(entity_type,entity_id,id
 CREATE TRIGGER member_review_validate BEFORE UPDATE OF status ON join_request
 WHEN NEW.reviewed_by IS NOT NULL AND NEW.status<>OLD.status AND NEW.status='approved'
 BEGIN
- SELECT CASE WHEN OLD.status<>'pending' OR NOT EXISTS(
+ SELECT (CASE WHEN OLD.status<>'pending' OR NOT EXISTS(
   SELECT 1 FROM user WHERE id=NEW.user_id AND role='user' AND status='active'
- ) THEN RAISE(ABORT,'review_applicant_changed') END;
- SELECT CASE WHEN NEW.apply_type='bind' AND (NOT EXISTS(SELECT 1 FROM member WHERE id=NEW.member_id)
-  OR EXISTS(SELECT 1 FROM user WHERE member_id=NEW.member_id)) THEN RAISE(ABORT,'review_member_unavailable') END;
+ ) THEN RAISE(ABORT,'review_applicant_changed') END);
+ SELECT (CASE WHEN NEW.apply_type='bind' AND (NOT EXISTS(SELECT 1 FROM member WHERE id=NEW.member_id)
+  OR EXISTS(SELECT 1 FROM user WHERE member_id=NEW.member_id)) THEN RAISE(ABORT,'review_member_unavailable') END);
 END;
 CREATE TRIGGER member_review_apply AFTER UPDATE OF status ON join_request
 WHEN NEW.reviewed_by IS NOT NULL AND OLD.status='pending' AND NEW.status='approved'
 BEGIN
  INSERT INTO member(name,bio,join_year,cohort)
   SELECT NEW.name,NEW.bio,NEW.join_year,NEW.cohort WHERE NEW.apply_type='new';
- UPDATE user SET role='member',member_id=CASE WHEN NEW.apply_type='new' THEN last_insert_rowid() ELSE NEW.member_id END,
+ UPDATE user SET role='member',member_id=(CASE WHEN NEW.apply_type='new' THEN last_insert_rowid() ELSE NEW.member_id END),
   auth_version=auth_version+1 WHERE id=NEW.user_id;
  INSERT INTO review_history(entity_type,entity_id,actor_id,decision,note,reviewed_at)
   VALUES('member',NEW.id,NEW.reviewed_by,NEW.status,NEW.admin_note,COALESCE(NEW.reviewed_at,CURRENT_TIMESTAMP));
@@ -49,9 +49,9 @@ END;
 CREATE TRIGGER production_review_validate BEFORE UPDATE OF status ON production_join_request
 WHEN NEW.reviewed_by IS NOT NULL AND NEW.status<>OLD.status AND NEW.status='approved'
 BEGIN
- SELECT CASE WHEN OLD.status<>'pending' OR NOT EXISTS(
+ SELECT (CASE WHEN OLD.status<>'pending' OR NOT EXISTS(
  SELECT 1 FROM user WHERE id=NEW.user_id AND status='active' AND role IN ('member','admin') AND member_id=NEW.member_id
- ) THEN RAISE(ABORT,'review_applicant_changed') END;
+ ) THEN RAISE(ABORT,'review_applicant_changed') END);
 END;
 CREATE TRIGGER production_review_apply AFTER UPDATE OF status ON production_join_request
 WHEN NEW.reviewed_by IS NOT NULL AND OLD.status='pending' AND NEW.status='approved'
