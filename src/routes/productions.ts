@@ -1,3 +1,5 @@
+import { consumeAccountLimit } from "../middleware/request-limits";
+import { reviewRequest } from "../services/reviews";
 import { Hono, type Context } from "hono";
 import { csrfFor, csrfValid } from "../http/cookies";
 import type { AppEnv } from "../types";
@@ -160,13 +162,19 @@ productionRoutes.post("/productions/:id/join", async (c) => {
       .first()
   )
     return c.text("这条角色或分工已经在演职员名单中，可以继续申请其他角色。", 409);
+  const retry = await consumeAccountLimit(c, "production-join-request", 30);
+  if (retry) {
+    c.header("Retry-After", String(retry));
+    return c.text("申请次数较多，请稍后重试。", 429);
+  }
   try {
     await c.env.DB.prepare(
       "INSERT INTO production_join_request(user_id,member_id,production_id,kind,role_name) VALUES(?,?,?,?,?)",
     )
       .bind(user.id, user.member_id, productionId, kind, roleName)
       .run();
-  } catch {
+  } catch (error) {
+    if (!/UNIQUE constraint failed/.test(String(error))) throw error;
     return c.text("这条角色或分工已经提交并正在等待审核，可以继续申请不同的角色。", 409);
   }
   return c.redirect(`/productions/${productionId}?join=pending`, 303);
@@ -346,7 +354,9 @@ productionRoutes.post("/admin/productions/:id/credits", async (c) => {
       .first()
   )
     return c.text("这位队员已经登记了相同的角色或分工。", 409);
-  await c.env.DB.prepare("INSERT INTO production_credit(production_id,member_id,kind,role_name) VALUES(?,?,?,?)")
+  await c.env.DB.prepare(
+    "INSERT INTO production_credit(production_id,member_id,kind,role_name) VALUES(?,?,?,?) ON CONFLICT(production_id,member_id,kind,role_name COLLATE NOCASE) DO NOTHING",
+  )
     .bind(productionId, memberId, kind, roleName)
     .run();
   return c.redirect(`/productions/${productionId}`, 303);
@@ -376,41 +386,7 @@ productionRoutes.post("/admin/production-requests/:id/review", async (c) => {
   const decision = form.get("decision") === "approve" ? "approved" : "rejected";
   const note = String(form.get("admin_note") ?? "").trim();
   if (decision === "rejected" && !note) return c.text("驳回时必须填写理由。", 400);
-  const request = await c.env.DB.prepare(
-    "SELECT member_id,production_id,kind,role_name FROM production_join_request WHERE id=? AND status='pending'",
-  )
-    .bind(id)
-    .first<{ member_id: number; production_id: number; kind: string; role_name: string }>();
-  if (!request) return c.text("申请不存在或已处理。", 404);
-  if (decision === "approved") {
-    const exists = await c.env.DB.prepare(
-      "SELECT id FROM production_credit WHERE production_id=? AND member_id=? AND kind=? AND role_name=?",
-    )
-      .bind(request.production_id, request.member_id, request.kind, request.role_name)
-      .first();
-    const statements = [];
-    if (!exists)
-      statements.push(
-        c.env.DB.prepare("INSERT INTO production_credit(production_id,member_id,kind,role_name) VALUES(?,?,?,?)").bind(
-          request.production_id,
-          request.member_id,
-          request.kind,
-          request.role_name,
-        ),
-      );
-    statements.push(
-      c.env.DB.prepare(
-        "UPDATE production_join_request SET status='approved',admin_note=? WHERE id=? AND status='pending'",
-      ).bind(note, id),
-    );
-    await c.env.DB.batch(statements);
-  } else {
-    await c.env.DB.prepare(
-      "UPDATE production_join_request SET status='rejected',admin_note=? WHERE id=? AND status='pending'",
-    )
-      .bind(note, id)
-      .run();
-  }
+  await reviewRequest(c.env.DB, "production-join", id, c.get("user")!.id, decision, note);
   return c.redirect("/admin/production-requests", 303);
 });
 

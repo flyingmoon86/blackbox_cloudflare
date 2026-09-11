@@ -1,30 +1,29 @@
-import { abortDirectUpload } from "./r2-s3";
 import type { Bindings } from "../types";
-
-type ExpiredTask = {
-  id: string;
-  object_key: string;
-  multipart_upload_id: string;
-  upload_mode: "local" | "direct";
-  preview_filename: string;
-};
+import { cancelUpload, completeUpload } from "../services/uploads";
+import { drainFileCleanup } from "../services/file-cleanup";
+import { ensureStorageBudget } from "../services/upload-policy";
 
 export async function cleanExpiredUploads(env: Bindings): Promise<void> {
+  try {
+    await ensureStorageBudget(env);
+  } catch {
+    return;
+  }
   const tasks = await env.DB.prepare(
-    "SELECT id,object_key,multipart_upload_id,upload_mode,preview_filename FROM upload_task WHERE status IN ('uploading','completing') AND expires_at < CURRENT_TIMESTAMP LIMIT 50",
-  ).all<ExpiredTask>();
+    "SELECT id,status FROM upload_task WHERE (status='completing' OR (status='uploading' AND expires_at<CURRENT_TIMESTAMP)) AND (lease_token IS NULL OR lease_expires_at<CURRENT_TIMESTAMP) ORDER BY updated_at LIMIT 10",
+  ).all<{ id: string; status: string }>();
   for (const task of tasks.results) {
     try {
-      if (task.upload_mode === "direct") await abortDirectUpload(env, task.object_key, task.multipart_upload_id);
-      else await env.FILES.resumeMultipartUpload(task.object_key, task.multipart_upload_id).abort();
-      if (task.preview_filename) await env.FILES.delete(task.preview_filename);
-      await env.DB.prepare(
-        "UPDATE upload_task SET status='expired',updated_at=CURRENT_TIMESTAMP WHERE id=? AND status IN ('uploading','completing')",
-      )
-        .bind(task.id)
-        .run();
-    } catch (error) {
-      console.error("清理过期上传任务失败", task.id, error);
+      if (task.status === "completing") await completeUpload(env, task.id);
+      else await cancelUpload(env, task.id, true);
+    } catch {
+      console.error(JSON.stringify({ event: "upload_recovery_retry", taskId: task.id }));
+      await env.DB.prepare("UPDATE upload_task SET updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(task.id).run();
     }
   }
+  await drainFileCleanup(env);
+  // A crash between reserving space and recording an upload has no R2 parts yet.
+  await env.DB.prepare(
+    "DELETE FROM storage_reservation WHERE id IN (SELECT s.id FROM storage_reservation s WHERE s.expires_at<CURRENT_TIMESTAMP AND NOT EXISTS(SELECT 1 FROM upload_task t WHERE 'upload:'||t.id=s.id) AND NOT EXISTS(SELECT 1 FROM file_cleanup_task f WHERE f.reservation_id=s.id) LIMIT 20)",
+  ).run();
 }
