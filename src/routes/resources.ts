@@ -37,7 +37,11 @@ resourceRoutes.use("*", async (c, next) => {
     !c.req.path.startsWith("/admin/resources")
   )
     return next();
-  if (!c.get("user")) return c.redirect(`/login?next=${encodeURIComponent(c.req.path)}`);
+  if (
+    !c.get("user") &&
+    !((c.req.method === "GET" || c.req.method === "HEAD") && /^\/resources(?:\/\d+(?:\/preview)?)?$/.test(c.req.path))
+  )
+    return c.redirect(`/login?next=${encodeURIComponent(c.req.path)}`);
   await next();
 });
 const adminDenied = (c: any) => (c.get("user")?.role === "admin" ? null : c.text("没有管理员权限。", 403));
@@ -70,7 +74,6 @@ resourceRoutes.get("/my-resources", async (c) => {
 });
 resourceRoutes.get("/resources/submit", async (c) => {
   const u = c.get("user")!;
-  if (u.role === "user") return c.html(resourcePermissionPage(), 403);
   const productions = await c.env.DB.prepare("SELECT id,title FROM production ORDER BY year DESC,id DESC").all<{
     id: number;
     title: string;
@@ -83,7 +86,6 @@ resourceRoutes.get("/resources/submit", async (c) => {
 });
 resourceRoutes.post("/resources/submit", async (c) => {
   const u = c.get("user")!;
-  if (u.role === "user") return c.text("认证队员或管理员才能提交资料。", 403);
   const f = await c.req.formData();
   if (!csrfValid(c, f.get("csrf"))) return c.text("请求已失效。", 400);
   return c.text("请启用浏览器 JavaScript 后使用分片上传。", 400);
@@ -116,7 +118,9 @@ for (const mode of ["download", "media", "preview"] as const) {
     if (!row || (mode === "download" && row.status !== "approved")) return c.text("文件不存在或尚未通过审核。", 404);
     if (!canViewResource(row, c.get("user")!)) return c.text("没有权限查看这份资料。", 403);
     const key =
-      mode === "preview" ? row.preview_filename || (row.res_type === "photo" ? row.filename : "") : row.filename;
+      mode === "preview"
+        ? row.preview_filename || (c.get("user") && row.res_type === "photo" ? row.filename : "")
+        : row.filename;
     if (!key) return c.text("这份资料还没有缩略图。", 404);
     return serveResourceFile(c.req.raw, c.env.FILES, {
       key,
@@ -214,4 +218,24 @@ resourceRoutes.post("/admin/resources/:id/delete", async (c) => {
   ]);
   await drainFileCleanup(c.env);
   return c.redirect("/admin/resources", 303);
+});
+
+resourceRoutes.post("/admin/resources/:id/revoke", async (c) => {
+  const denied = adminDenied(c);
+  if (denied) return denied;
+  const form = await c.req.formData();
+  if (!csrfValid(c, form.get("csrf"))) return c.text("请求已失效。", 400);
+  const id = Number(c.req.param("id")),
+    note = String(form.get("admin_note") || "管理员撤销公开，重新人工审核")
+      .trim()
+      .slice(0, 1000);
+  await c.env.DB.batch([
+    c.env.DB.prepare(
+      "INSERT INTO review_history(entity_type,entity_id,actor_id,decision,note) SELECT 'resource',id,?,'rejected',? FROM resource WHERE id=? AND status='approved'",
+    ).bind(c.get("user")!.id, note, id),
+    c.env.DB.prepare(
+      "UPDATE resource SET status='pending',admin_note=?,reviewed_by=NULL,reviewed_at=NULL WHERE id=? AND status='approved'",
+    ).bind(note, id),
+  ]);
+  return c.redirect("/admin/resources/" + id + "/edit", 303);
 });

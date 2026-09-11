@@ -148,7 +148,7 @@ if (form) {
       });
       task.hasPreview = true;
     } catch (error) {
-      console.warn("预览图生成失败，继续上传原文件。", error);
+      throw new Error("预览图生成或保存失败，请重试；如仍失败，请将图片另存为 JPEG 后上传。已上传的分片会保留。");
     }
   };
   const videoNotice = "测试阶段不支持视频";
@@ -311,7 +311,7 @@ if (form) {
         await uploadOne(files[index], index + 1, files.length, bytesBefore, totalBytes);
         bytesBefore += files[index].size;
       }
-      show(`${files.length} 个文件已提交，等待管理员分别审核。`);
+      show(`${files.length} 个文件已提交，请在我的资料查看入库或待审核状态。`);
       uploading = false;
       await releaseScreen();
       location.href = "/my-resources";
@@ -335,7 +335,7 @@ if (form) {
         }),
       );
       localStorage.removeItem(storageKey);
-      show("当前文件上传已取消。已完成的其他剧照仍会保留并等待审核。");
+      show("当前文件上传已取消。已完成的其他剧照仍会保留，可在我的资料查看状态。");
       activeTask = "";
       uploading = false;
       await releaseScreen();

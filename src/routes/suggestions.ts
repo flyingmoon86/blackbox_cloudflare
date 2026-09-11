@@ -20,13 +20,14 @@ export const suggestionRoutes = new Hono<AppEnv>();
 
 suggestionRoutes.use("*", async (c, next) => {
   if (!c.req.path.startsWith("/suggestions") && !c.req.path.startsWith("/admin/suggestions")) return next();
+  if (c.req.path === "/suggestions" && c.req.method === "GET" && c.req.query("type") !== "production")
+    return c.redirect("/feedback");
   if (!c.get("user")) return c.redirect(`/login?next=${encodeURIComponent(c.req.path)}`);
   await next();
 });
 
 suggestionRoutes.get("/suggestions", async (c) => {
   const user = c.get("user")!;
-  if (user.role === "user") return c.html(suggestionPermissionPage(false), 403);
   const category = c.req.query("type") === "production" ? "production" : "website";
   const source = c.req.query("source") === "productions" ? "productions" : "upload";
   return c.html(
@@ -36,7 +37,6 @@ suggestionRoutes.get("/suggestions", async (c) => {
 
 suggestionRoutes.post("/suggestions", async (c) => {
   const user = c.get("user")!;
-  if (user.role === "user") return c.html(suggestionPermissionPage(false), 403);
   const form = await c.req.formData();
   if (!csrfValid(c, form.get("csrf"))) return c.text("请求已失效，请刷新页面后重试。", 400);
   const category = form.get("category") === "production" ? "production" : "website";
@@ -46,7 +46,11 @@ suggestionRoutes.post("/suggestions", async (c) => {
   const productionYearText = String(form.get("production_year") ?? "").trim();
   const productionYear = productionYearText ? Number(productionYearText) : null;
   if (content.length > 3000) return c.text("补充说明不能超过 3000 字。", 400);
-  if (category === "website" && !content) return c.text("请填写 1–3000 字的建议。", 400);
+  if (category === "website")
+    return c.text(
+      "网站建议入口已更新，请到 /feedback 提交，保存成功后会记录网站贡献。当前内容尚未保存，请复制后再前往。",
+      409,
+    );
   if (
     category === "production" &&
     (!productionTitle ||

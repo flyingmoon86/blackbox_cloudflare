@@ -63,7 +63,8 @@ export const productionRoutes = new Hono<AppEnv>();
 
 productionRoutes.use("*", async (c, next) => {
   if (!c.req.path.startsWith("/productions") && !c.req.path.startsWith("/admin/production")) return next();
-  if (!c.get("user")) return c.redirect(`/login?next=${encodeURIComponent(c.req.path)}`);
+  if (!c.get("user") && !(c.req.method === "GET" && /^\/productions(?:\/\d+)?$/.test(c.req.path)))
+    return c.redirect(`/login?next=${encodeURIComponent(c.req.path)}`);
   await next();
 });
 
@@ -117,8 +118,8 @@ productionRoutes.get("/productions/:id", async (c) => {
     .bind(id)
     .all<ProductionResourceRow>();
   const user = c.get("user")!;
-  const admin = user.role === "admin";
-  const myRequests = user.member_id
+  const admin = user?.role === "admin";
+  const myRequests = user?.member_id
     ? await c.env.DB.prepare(
         "SELECT status,kind,role_name,admin_note FROM production_join_request WHERE user_id=? AND production_id=? AND status IN ('pending','rejected') ORDER BY id DESC LIMIT 8",
       )

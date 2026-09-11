@@ -13,18 +13,63 @@ export function escapeHtml(value: unknown): string {
 }
 
 export function layout(title: string, content: string, signedIn = false, admin = false): string {
-  const nav = signedIn
-    ? `<a href="/">首页</a><a href="/productions">作品与资料</a><a href="/members">队员名录</a><a href="/profile">个人中心</a><a href="/help">网站使用指南</a>${admin ? '<a href="/admin">管理员工作台</a>' : ""}`
-    : '<a href="/">首页</a><a href="/login">登录</a><a href="/register">注册</a>';
-  const mobileMore = signedIn
-    ? `<details class="mobile-more"><summary>更多</summary><nav><a href="/help">网站使用指南</a>${admin ? '<a href="/admin">管理员工作台</a>' : ""}<a href="/announcements">剧团公告</a></nav></details>`
-    : "";
-  const mobileNav = signedIn
-    ? `<nav class="mobile-nav" aria-label="手机主导航"><a href="/" data-section="home"><span aria-hidden="true">⌂</span>首页</a><a href="/productions" data-section="archive"><span aria-hidden="true">幕</span>作品资料</a><a href="/members" data-section="members"><span aria-hidden="true">人</span>队员</a><a href="/profile" data-section="profile"><span aria-hidden="true">我</span>我的</a></nav>`
-    : "";
-  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>${escapeHtml(title)} · 黑匣子</title><link rel="stylesheet" href="/app.css"><script src="/app.js" defer></script></head>
-  <body class="${signedIn ? "signed-in" : "signed-out"}"><header class="top"><a href="/" class="brand">黑匣子</a><nav class="desktop-nav">${nav}</nav>${admin ? '<div class="admin-notification-host" data-admin-notifications aria-live="polite"></div>' : ""}${mobileMore}</header><main>${content}</main>${mobileNav}</body></html>`;
+  const link = (href: string, label: string) => '<a href="' + href + '">' + label + "</a>";
+  const menu = (label: string, items: string) =>
+    '<details class="nav-menu"><summary>' + label + '</summary><div class="nav-panel">' + items + "</div></details>";
+  const nav =
+    link("/", "首页") +
+    menu(
+      "作品与资料",
+      link("/productions", "作品档案") +
+        link("/resources", "资料库") +
+        link("/resources/submit", "我要补充资料") +
+        link("/suggestions?type=production&source=productions", "申请创建作品"),
+    ) +
+    menu(
+      "队员与剧团",
+      link("/members", "队员名录") +
+        link("/profile/member", "修改我的信息") +
+        link("/profile/member-application", "申请队员认证") +
+        link("/#about", "剧团介绍"),
+    ) +
+    menu(
+      "指南与鸣谢",
+      link("/help", "网站使用指南") +
+        link("/thanks", "鸣谢 · 网站贡献者") +
+        link("/feedback", "提交网站建议") +
+        (admin ? link("/help#captain-guide", "管理员指南") : ""),
+    ) +
+    menu("了解黑匣子", link("/announcements", "公告") + link("/#contact", "联系我们")) +
+    menu(
+      signedIn ? "我的账号" : "登录 / 注册",
+      signedIn
+        ? link("/profile", "个人中心") +
+            link("/my-resources", "我的提交") +
+            (admin ? link("/admin", "管理员工作台") + link("/admin/community", "贡献者与建议") : "")
+        : link("/login", "登录") + link("/register", "注册"),
+    );
+  const mobile =
+    '<nav class="mobile-nav" aria-label="手机主导航">' +
+    link("/", "⌂ 首页") +
+    link("/productions", "作品资料") +
+    link("/members", "队员") +
+    link(signedIn ? "/profile" : "/login", signedIn ? "我的" : "登录") +
+    "</nav>";
+  return (
+    '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' +
+    escapeHtml(title) +
+    ' · 黑匣子</title><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/experience.css?v=1"><script src="/app.js" defer></script><script src="/experience.js?v=1" defer></script></head><body class="' +
+    (signedIn ? "signed-in" : "signed-out") +
+    '"><a class="skip-link" href="#main-content">跳到内容</a><header class="top"><a href="/" class="brand">黑匣子<span>BLACK BOX THEATRE</span></a><button class="menu-toggle" aria-expanded="false" aria-controls="main-navigation">菜单 ＋</button><nav id="main-navigation" class="desktop-nav" aria-label="主导航">' +
+    nav +
+    "</nav>" +
+    (admin ? '<div class="admin-notification-host" data-admin-notifications aria-live="polite"></div>' : "") +
+    '</header><main id="main-content" tabindex="-1">' +
+    content +
+    "</main>" +
+    mobile +
+    "</body></html>"
+  );
 }
 
 function message(text: string, kind = "alert"): string {
@@ -34,7 +79,7 @@ function message(text: string, kind = "alert"): string {
 export function loginPage(csrf: string, error = "", next = "/", info = ""): string {
   return layout(
     "登录",
-    `<section class="auth-stage"><section class="card auth"><p class="eyebrow">BLACK BOX</p><h1>欢迎回来</h1><p class="muted">登录后查看剧团公告、作品与内部资料。</p>
+    `<section class="auth-stage"><section class="card auth"><p class="eyebrow">BLACK BOX</p><h1>欢迎回来</h1><p class="muted">欢迎浏览剧团档案。登录后可以提交资料、申请作品和下载原文件。</p>
   ${message(info, "notice")}${message(error)}<form method="post" action="/login"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><input type="hidden" name="next" value="${escapeHtml(next)}">
   <label>用户名<input name="username" autocomplete="username" maxlength="50" required></label><label>密码<input name="password" type="password" autocomplete="current-password" required></label>
   <button type="submit">登录</button></form><p><a href="/register">还没有账号？注册</a></p></section></section>`,
@@ -208,6 +253,7 @@ export function memberListPage(
   search: string,
   selectedYear: number | null,
   admin: boolean,
+  signedIn = true,
 ): string {
   const cards = members.length
     ? members
@@ -215,7 +261,7 @@ export function memberListPage(
           const portrait = member.photo
             ? `<img class="member-card-media" src="/members/${member.id}/avatar" alt="${escapeHtml(member.name)}的头像">`
             : `<span class="member-card-art" aria-hidden="true">${escapeHtml(member.name.slice(0, 1) || "剧")}</span>`;
-          return `<article class="member-card${member.photo ? "" : " member-card-empty"}"><a class="member-card-link" href="/members/${member.id}">${portrait}<span class="member-card-shade"></span><span class="member-card-copy"><span class="eyebrow">${escapeHtml(member.cohort || member.join_year || "剧团成员")}</span><strong>${escapeHtml(member.name)}</strong><span class="member-card-details"><span>${escapeHtml(member.bio || "点击查看队员档案与舞台经历")}</span><small>🌸 ${member.flower_count} · 查看档案 →</small></span></span></a></article>`;
+          return `<article class="member-card${member.photo ? "" : " member-card-empty"}"><a class="member-card-link" href="/members/${member.id}">${portrait}<span class="member-card-shade"></span><span class="member-card-copy"><span class="eyebrow">${escapeHtml(cohortLabel(member.cohort) || (member.join_year ? member.join_year + " 年入队" : "剧团成员"))}</span><strong>${escapeHtml(member.name)}</strong>${member.contributor ? '<span class="contributor-tag">网站贡献者</span>' : ""}<span class="member-card-details"><span>${escapeHtml(member.bio || "点击查看队员档案与舞台经历")}</span><small>🌸 ${member.flower_count} · 查看档案 →</small></span></span></a></article>`;
         })
         .join("")
     : '<p class="card">没有找到符合条件的队员。</p>';
@@ -224,8 +270,8 @@ export function memberListPage(
     .join("");
   return layout(
     "队员名录",
-    `<section class="page-heading"><p class="eyebrow">HALL OF FAME</p><h1>队员名录</h1>${admin ? '<p><a class="button" href="/admin/members/new">＋ 新建队员档案</a></p>' : ""}<form method="get" class="filters"><input name="q" value="${escapeHtml(search)}" placeholder="搜索姓名、届别或作品"><select name="year"><option value="">全部年份</option>${options}</select><button>查找</button></form></section><section class="card-grid">${cards}</section>`,
-    true,
+    `<section class="page-heading"><p class="eyebrow">HALL OF FAME</p><h1>队员名录</h1>${admin ? '<p><a class="button" href="/admin/members/new">＋ 新建队员档案</a></p>' : ""}<form method="get" class="filters"><input name="q" value="${escapeHtml(search)}" placeholder="搜索姓名、入学年级或作品"><select name="year"><option value="">全部年份</option>${options}</select><button>查找</button></form></section><section class="card-grid">${cards}</section>`,
+    signedIn,
     admin,
   );
 }
@@ -233,13 +279,20 @@ export function memberListPage(
 export function memberCreatePage(csrf: string, error = ""): string {
   return layout(
     "新建队员档案",
-    `<section class="card auth"><p class="eyebrow">NEW MEMBER</p><h1>新建队员档案</h1>${message(error)}<p class="muted">先建立没有账号的历史或现役队员档案。队员注册后，可以申请绑定到这份档案。</p><form method="post" action="/admin/members/new"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>姓名<input name="name" maxlength="50" required></label><label>入队年份<input name="join_year" type="number" min="1" max="9999" inputmode="numeric"></label><label>届别<input name="cohort" maxlength="20"></label><label>个人简介<textarea name="bio" maxlength="5000" rows="7"></textarea></label><label>代表作与经历<textarea name="works" maxlength="2000" rows="5"></textarea></label><button>建立档案</button></form><p><a href="/members">返回队员名录</a></p></section>`,
+    `<section class="card auth"><p class="eyebrow">NEW MEMBER</p><h1>新建队员档案</h1>${message(error)}<p class="muted">先建立没有账号的历史或现役队员档案。队员注册后，可以申请绑定到这份档案。</p><form method="post" action="/admin/members/new"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>姓名<input name="name" maxlength="50" required></label><label>入队年份<input name="join_year" type="number" min="1" max="9999" inputmode="numeric"></label><label>入学年级<input name="cohort" type="number" min="1900" max="2099" placeholder="如 2024"><span class="hint">填写入校年份，显示为 2024 级。</span></label><label>个人简介<textarea name="bio" maxlength="5000" rows="7"></textarea></label><label>代表作与经历<textarea name="works" maxlength="2000" rows="5"></textarea></label><button>建立档案</button></form><p><a href="/members">返回队员名录</a></p></section>`,
     true,
     true,
   );
 }
 
-export function memberDetailPage(member: MemberRow, csrf: string, flower: string, own = false, admin = false): string {
+export function memberDetailPage(
+  member: MemberRow,
+  csrf: string,
+  flower: string,
+  own = false,
+  admin = false,
+  signedIn = true,
+): string {
   const notice =
     flower === "sent"
       ? message("今天的花已送达。", "notice")
@@ -253,8 +306,8 @@ export function memberDetailPage(member: MemberRow, csrf: string, flower: string
       : "";
   return layout(
     member.name,
-    `<article class="card profile-detail">${member.photo ? `<img class="avatar avatar-large" src="/members/${member.id}/avatar" alt="${escapeHtml(member.name)}的头像">` : ""}<p class="eyebrow">${escapeHtml(member.cohort || member.join_year || "MEMBER")}</p><h1>${escapeHtml(member.name)}</h1>${edit}${notice}<p>${escapeHtml(member.bio || "暂无简介")}</p><h2>代表作</h2><p>${escapeHtml(member.works || "暂无记录")}</p><p>收到 ${member.flower_count} 朵花</p><form method="post" action="/members/${member.id}/flowers"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button>送一朵花</button></form><p><a href="/members">返回队员名录</a></p></article>`,
-    true,
+    `<article class="card profile-detail">${member.photo ? `<img class="avatar avatar-large" src="/members/${member.id}/avatar" alt="${escapeHtml(member.name)}的头像">` : ""}<p class="eyebrow">${escapeHtml(cohortLabel(member.cohort) || "剧团成员")}</p><h1>${escapeHtml(member.name)}</h1>${member.contributor ? '<span class="contributor-tag">网站贡献者</span>' : ""}<p>${member.join_year ? member.join_year + " 年入队" : "入队年份待补充"}</p>${edit}${notice}<p>${escapeHtml(member.bio || "暂无简介")}</p><h2>代表作</h2><p>${escapeHtml(member.works || "暂无记录")}</p><p>收到 ${member.flower_count} 朵花</p><form method="post" action="/members/${member.id}/flowers"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button>送一朵花</button></form><p><a href="/members">返回队员名录</a></p></article>`,
+    signedIn,
     admin,
   );
 }
@@ -262,8 +315,8 @@ export function memberDetailPage(member: MemberRow, csrf: string, flower: string
 export function memberEditPage(member: MemberRow, csrf: string, admin: boolean, saved: boolean): string {
   const action = admin ? `/admin/members/${member.id}/edit` : "/profile/member";
   const identity = admin
-    ? `<label>姓名<input name="name" maxlength="50" value="${escapeHtml(member.name)}" required></label><label>入队年份<input name="join_year" type="number" min="1" max="9999" value="${escapeHtml(member.join_year)}"></label><label>届别<input name="cohort" maxlength="20" value="${escapeHtml(member.cohort)}"></label>`
-    : `<p class="muted">姓名与届别需要修改时，请联系管理员。</p>`;
+    ? `<label>姓名<input name="name" maxlength="50" value="${escapeHtml(member.name)}" required></label><label>入队年份<input name="join_year" type="number" min="1" max="9999" value="${escapeHtml(member.join_year)}"></label><label>入学年级<input name="cohort" type="number" min="1900" max="2099" value="${/^[0-9]{4}$/.test(member.cohort) ? escapeHtml(member.cohort) : ""}" placeholder="如 2024"></label>`
+    : `<p class="muted">姓名需要修改时请联系管理员。</p><label>入队年份<input name="join_year" type="number" min="1900" max="2099" value="${escapeHtml(member.join_year)}"></label><label>入学年级<input name="cohort" type="number" min="1900" max="2099" value="${/^[0-9]{4}$/.test(member.cohort) ? escapeHtml(member.cohort) : ""}" placeholder="如 2024"><span class="hint">填入校年份，非毕业年份；留空保留原记录。</span></label>`;
   const avatarForm = admin
     ? member.photo
       ? `<form method="post" action="/admin/members/${member.id}/avatar/delete"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button class="secondary">移除当前头像</button></form>`
@@ -294,10 +347,15 @@ export function memberApplicationPage(
   const fields =
     mode === "bind"
       ? `<label>选择我的档案<select name="member_id" required><option value="">请选择</option>${members.map((member) => `<option value="${member.id}">${escapeHtml(member.name)}${member.cohort ? `（${escapeHtml(member.cohort)}）` : ""}</option>`).join("")}</select></label>`
-      : '<label>姓名<input name="name" maxlength="50" required></label><label>入队年份<input name="join_year" type="number" min="1" max="9999"></label><label>届别<input name="cohort" maxlength="20" placeholder="如 2015 届"></label><label>简介<textarea name="bio" rows="4"></textarea></label>';
+      : '<label>姓名<input name="name" maxlength="50" required></label><label>入队年份<input name="join_year" type="number" min="1" max="9999"></label><label>入学年级<input name="cohort" type="number" min="1900" max="2099" placeholder="如 2024"></label><label>简介<textarea name="bio" rows="4"></textarea></label>';
   return layout(
     "队员认证",
     `<section class="card auth"><p class="eyebrow">MEMBER APPLICATION</p><h1>申请队员认证</h1>${switcher}<form method="post" action="/profile/member-application">${common}${fields}<button>提交申请</button></form></section>`,
     true,
   );
+}
+
+export function cohortLabel(value: string): string {
+  const v = String(value || "").trim();
+  return /^[0-9]{4}$/.test(v) ? v + " 级" : v.includes("届") ? "入学年级待确认" : v;
 }

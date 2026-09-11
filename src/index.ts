@@ -1,8 +1,9 @@
+import { communityRoutes } from "./routes/community";
 import { Hono } from "hono";
 import { securityHeaders, noStore } from "./middleware/security";
 import { loadUser } from "./middleware/session";
 import { authRoutes } from "./routes/auth";
-import { featuredCoverImage, health, heroImage, homePage, pageBackgroundImage } from "./routes/home";
+import { mascotImage, featuredCoverImage, health, heroImage, homePage, pageBackgroundImage } from "./routes/home";
 import { memberRoutes } from "./routes/members";
 import { adminRoutes } from "./routes/admin";
 import { productionRoutes } from "./routes/productions";
@@ -26,6 +27,7 @@ app.use("*", loadUser);
 
 app.get("/", homePage);
 app.get("/site/hero", heroImage);
+app.get("/site/mascot", mascotImage);
 app.get("/site/background", pageBackgroundImage);
 app.get("/site/featured-cover", featuredCoverImage);
 app.get("/health", health);
@@ -38,6 +40,7 @@ app.route("/", resourceRoutes);
 app.route("/", helpRoutes);
 app.route("/", uploadRoutes);
 app.route("/", suggestionRoutes);
+app.route("/", communityRoutes);
 app.route("/", operationsRoutes);
 
 app.notFound((c) => c.env.ASSETS.fetch(c.req.raw));

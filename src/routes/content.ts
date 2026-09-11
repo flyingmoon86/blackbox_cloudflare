@@ -28,7 +28,8 @@ contentRoutes.use("*", async (c, next) => {
     c.req.path !== "/admin/site"
   )
     return next();
-  if (!c.get("user")) return c.redirect(`/login?next=${encodeURIComponent(c.req.path)}`);
+  if (!c.get("user") && !/^\/announcements(?:\/\d+)?$/.test(c.req.path))
+    return c.redirect(`/login?next=${encodeURIComponent(c.req.path)}`);
   await next();
 });
 
@@ -38,7 +39,9 @@ contentRoutes.get("/announcements", async (c) => {
   const result = await c.env.DB.prepare(
     "SELECT id,title,content,created_at FROM announcement ORDER BY created_at DESC,id DESC",
   ).all<AnnouncementRow>();
-  return c.html(announcementListPage(result.results, c.get("user")!.role === "admin", await csrfFor(c)));
+  return c.html(
+    announcementListPage(result.results, c.get("user")?.role === "admin", await csrfFor(c), Boolean(c.get("user"))),
+  );
 });
 
 contentRoutes.get("/announcements/:id", async (c) => {
@@ -46,7 +49,7 @@ contentRoutes.get("/announcements/:id", async (c) => {
     .bind(Number(c.req.param("id")))
     .first<AnnouncementRow>();
   return item
-    ? c.html(announcementDetailPage(item, c.get("user")!.role === "admin", await csrfFor(c)))
+    ? c.html(announcementDetailPage(item, c.get("user")?.role === "admin", await csrfFor(c), Boolean(c.get("user"))))
     : c.text("公告不存在。", 404);
 });
 
@@ -124,6 +127,15 @@ contentRoutes.post("/admin/site", async (c) => {
     texts[key] = String(form.get(key) ?? "")
       .trim()
       .slice(0, 10000);
+  const mascot = String(form.get("mascot_photo") || "");
+  if (
+    mascot &&
+    !(await c.env.DB.prepare("SELECT id FROM resource WHERE id=? AND status=\'approved\' AND res_type=\'photo\'")
+      .bind(Number(mascot))
+      .first())
+  )
+    return c.text("小象图片必须选择已审核剧照。", 400);
+  texts.mascot_photo = mascot;
   const featuredText = String(form.get("featured_production_id") ?? "");
   const featured = featuredText ? Number(featuredText) : null;
   if (featured !== null && !(await c.env.DB.prepare("SELECT id FROM production WHERE id=?").bind(featured).first()))
