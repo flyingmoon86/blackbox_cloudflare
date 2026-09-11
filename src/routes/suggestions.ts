@@ -1,3 +1,4 @@
+import { consumeAccountLimit } from "../middleware/request-limits";
 import { Hono } from "hono";
 import { csrfFor, csrfValid } from "../http/cookies";
 import type { AppEnv } from "../types";
@@ -53,6 +54,11 @@ suggestionRoutes.post("/suggestions", async (c) => {
       (productionYear !== null && (!Number.isInteger(productionYear) || productionYear < 1 || productionYear > 9999)))
   )
     return c.text("请填写作品名称，并检查演出年份。", 400);
+  const retry = await consumeAccountLimit(c, "suggestion-" + category, 12);
+  if (retry) {
+    c.header("Retry-After", String(retry));
+    return c.text("提交次数较多，请稍后重试。", 429);
+  }
   await c.env.DB.prepare(
     "INSERT INTO suggestion(user_id,content,category,production_title,production_year) VALUES(?,?,?,?,?)",
   )

@@ -11,16 +11,18 @@ import { resourceRoutes } from "./routes/resources";
 import { helpRoutes } from "./routes/help";
 import { uploadRoutes } from "./routes/uploads";
 import { suggestionRoutes } from "./routes/suggestions";
+import { operationsRoutes } from "./routes/operations";
 import type { AppEnv } from "./types";
 import { cleanExpiredUploads } from "./storage/cleanup";
+import { requestContext, handleError } from "./middleware/errors";
+import { cleanExpiredRequestLimits } from "./middleware/request-limits";
 
 const app = new Hono<AppEnv>();
 
+app.use("*", requestContext);
 app.use("*", securityHeaders);
+app.use("*", noStore);
 app.use("*", loadUser);
-app.use("/login", noStore);
-app.use("/register", noStore);
-app.use("/profile/*", noStore);
 
 app.get("/", homePage);
 app.get("/site/hero", heroImage);
@@ -36,16 +38,15 @@ app.route("/", resourceRoutes);
 app.route("/", helpRoutes);
 app.route("/", uploadRoutes);
 app.route("/", suggestionRoutes);
+app.route("/", operationsRoutes);
 
 app.notFound((c) => c.env.ASSETS.fetch(c.req.raw));
-app.onError((error, c) => {
-  console.error(error);
-  return c.text("服务暂时不可用，请稍后重试。", 500);
-});
+app.onError(handleError);
 
 export default {
   fetch: app.fetch,
   scheduled(_controller, env, context) {
     context.waitUntil(cleanExpiredUploads(env));
+    context.waitUntil(cleanExpiredRequestLimits(env));
   },
 } satisfies ExportedHandler<AppEnv["Bindings"]>;

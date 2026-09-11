@@ -3,13 +3,10 @@ import { clearSession, csrfFor, csrfValid, startSession } from "../http/cookies"
 import { hashPassword, verifyPassword } from "../auth/password";
 import type { AccountRow, AppEnv } from "../types";
 import { loginPage, profilePage, registerDonePage, registerPage } from "../views";
+import { authForm, formText, safeNext } from "../http/validation";
+import { consumeAuthLimit } from "../middleware/request-limits";
 
 export const authRoutes = new Hono<AppEnv>();
-
-function safeNext(value: FormDataEntryValue | string | null): string {
-  const next = typeof value === "string" ? value : "/";
-  return next.startsWith("/") && !next.startsWith("//") ? next : "/";
-}
 
 function normalizeEmail(value: string): string | null {
   const email = value.trim().toLowerCase();
@@ -33,10 +30,17 @@ authRoutes.get("/login", async (c) => {
 });
 
 authRoutes.post("/login", async (c) => {
-  const form = await c.req.formData();
+  const form = await authForm(c);
   if (!csrfValid(c, form.get("csrf"))) return c.text("请求已失效，请刷新页面后重试。", 400);
-  const username = String(form.get("username") ?? "").trim();
-  const password = String(form.get("password") ?? "");
+  const username = formText(form, "username").trim();
+  const password = formText(form, "password");
+  if (!username || username.length > 50 || !password || password.length > 128)
+    return c.html(loginPage(await csrfFor(c), "用户名或密码不正确。", safeNext(form.get("next"))), 401);
+  const retryAfter = await consumeAuthLimit(c, "login", username);
+  if (retryAfter) {
+    c.header("Retry-After", String(retryAfter));
+    return c.html(loginPage(await csrfFor(c), "尝试次数较多，请稍后再登录。", safeNext(form.get("next"))), 429);
+  }
   const user = (await c.env.DB.prepare(
     "SELECT id, username, password_hash, auth_version, role, status, email, pending_email, member_id FROM user WHERE username = ? COLLATE NOCASE",
   )
@@ -50,7 +54,7 @@ authRoutes.post("/login", async (c) => {
 });
 
 authRoutes.post("/logout", async (c) => {
-  const form = await c.req.formData();
+  const form = await authForm(c);
   if (!csrfValid(c, form.get("csrf"))) return c.text("请求已失效，请刷新页面后重试。", 400);
   clearSession(c);
   return c.redirect("/", 303);
@@ -63,18 +67,23 @@ authRoutes.get("/register", async (c) => {
 
 authRoutes.post("/register", async (c) => {
   if (c.get("user")) return c.redirect("/");
-  const form = await c.req.formData();
+  const form = await authForm(c);
   if (!csrfValid(c, form.get("csrf"))) return c.text("请求已失效，请刷新页面后重试。", 400);
-  const username = String(form.get("username") ?? "").trim();
-  const password = String(form.get("password") ?? "");
-  const confirmation = String(form.get("confirm_password") ?? "");
-  const email = normalizeEmail(String(form.get("email") ?? ""));
-  const values = { username, email: String(form.get("email") ?? "") };
+  const username = formText(form, "username").trim();
+  const password = formText(form, "password");
+  const confirmation = formText(form, "confirm_password");
+  const email = normalizeEmail(formText(form, "email"));
+  const values = { username, email: formText(form, "email") };
   if (!username || username.length > 50)
     return c.html(registerPage(await csrfFor(c), "用户名需为 1–50 个字符。", values), 400);
   if (!validPassword(password, confirmation))
     return c.html(registerPage(await csrfFor(c), "密码需为 8–128 位，且两次输入一致。", values), 400);
   if (email === null) return c.html(registerPage(await csrfFor(c), "请填写有效的邮箱地址。", values), 400);
+  const retryAfter = await consumeAuthLimit(c, "register");
+  if (retryAfter) {
+    c.header("Retry-After", String(retryAfter));
+    return c.html(registerPage(await csrfFor(c), "当前网络注册次数较多，请稍后重试。", values), 429);
+  }
   const exists = await c.env.DB.prepare("SELECT id FROM user WHERE username = ? COLLATE NOCASE").bind(username).first();
   if (exists) return c.html(registerPage(await csrfFor(c), "这个用户名已被使用。", values), 409);
   try {
@@ -83,8 +92,10 @@ authRoutes.post("/register", async (c) => {
     )
       .bind(username, hashPassword(password), email || null)
       .run();
-  } catch {
-    return c.html(registerPage(await csrfFor(c), "用户名或邮箱暂时无法使用，请检查后重试。", values), 409);
+  } catch (error) {
+    if (error instanceof Error && /UNIQUE constraint failed: user\.(?:username|email)\b/.test(error.message))
+      return c.html(registerPage(await csrfFor(c), "用户名或邮箱暂时无法使用，请检查后重试。", values), 409);
+    throw error;
   }
   return c.html(registerDonePage(username, Boolean(email)), 201);
 });
@@ -110,7 +121,7 @@ authRoutes.get("/profile", async (c) => {
 authRoutes.post("/profile/requests/:id/acknowledge", async (c) => {
   const user = c.get("user");
   if (!user) return c.redirect("/login?next=/profile");
-  const form = await c.req.formData();
+  const form = await authForm(c);
   if (!csrfValid(c, form.get("csrf"))) return c.text("请求已失效，请刷新页面后重试。", 400);
   await c.env.DB.prepare(
     "UPDATE join_request SET result_acknowledged=1 WHERE id=? AND user_id=? AND status IN ('approved','rejected')",
@@ -123,19 +134,24 @@ authRoutes.post("/profile/requests/:id/acknowledge", async (c) => {
 authRoutes.post("/profile/password", async (c) => {
   const user = c.get("user");
   if (!user) return c.redirect(`/login?next=${encodeURIComponent("/profile")}`);
-  const form = await c.req.formData();
+  const form = await authForm(c);
   if (!csrfValid(c, form.get("csrf"))) return c.text("请求已失效，请刷新页面后重试。", 400);
-  const current = String(form.get("current_password") ?? "");
-  const password = String(form.get("new_password") ?? "");
-  const confirmation = String(form.get("confirm_password") ?? "");
+  const current = formText(form, "current_password");
+  const password = formText(form, "new_password");
+  const confirmation = formText(form, "confirm_password");
+  if (!current || current.length > 128) return c.html(profilePage(user, await csrfFor(c), "当前密码不正确。"), 400);
+  if (!validPassword(password, confirmation))
+    return c.html(profilePage(user, await csrfFor(c), "新密码需为 8–128 位，且两次输入一致。"), 400);
+  const retryAfter = await consumeAuthLimit(c, "password");
+  if (retryAfter) {
+    c.header("Retry-After", String(retryAfter));
+    return c.html(profilePage(user, await csrfFor(c), "尝试次数较多，请稍后再修改密码。"), 429);
+  }
   const account = await c.env.DB.prepare("SELECT password_hash FROM user WHERE id = ? AND status = 'active'")
     .bind(user.id)
     .first<{ password_hash: string }>();
   if (!account || !verifyPassword(account.password_hash, current)) {
     return c.html(profilePage(user, await csrfFor(c), "当前密码不正确。"), 400);
-  }
-  if (!validPassword(password, confirmation)) {
-    return c.html(profilePage(user, await csrfFor(c), "新密码需为 8–128 位，且两次输入一致。"), 400);
   }
   const result = await c.env.DB.prepare(
     "UPDATE user SET password_hash = ?, auth_version = auth_version + 1 WHERE id = ? AND auth_version = ? AND status = 'active'",

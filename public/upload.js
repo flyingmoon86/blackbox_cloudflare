@@ -46,6 +46,8 @@ if (form) {
     if (!response.ok) throw new Error(body.error || `请求失败（${response.status}）`);
     return body;
   };
+  const policyPromise = fetch("/api/uploads/policy").then(readJson);
+  policyPromise.catch(() => {});
   const retry = async (action) => {
     let lastError;
     for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -176,6 +178,8 @@ if (form) {
   type.addEventListener("change", syncFileMode);
   syncFileMode();
 
+  const fetchComplete = (id) =>
+    fetch("/api/uploads/" + id + "/complete", { method: "POST", headers: { "x-csrf-token": csrf } });
   const createTask = async (file, title) =>
     readJson(
       await fetch("/api/uploads", {
@@ -203,7 +207,11 @@ if (form) {
       const response = await fetch(`/api/uploads/${savedId}`);
       if (response.ok) {
         const saved = await response.json();
-        if (saved.status === "uploading" && saved.originalName === file.name && saved.sizeBytes === file.size)
+        if (
+          ["uploading", "completing", "completed"].includes(saved.status) &&
+          saved.originalName === file.name &&
+          saved.sizeBytes === file.size
+        )
           task = saved;
       }
     }
@@ -214,6 +222,12 @@ if (form) {
     } else show(`继续第 ${index}/${total} 个文件：${file.name}`);
 
     activeTask = task.id;
+    if (task.status === "completed" || task.status === "completing") {
+      await retry(async () => readJson(await fetchComplete(task.id)));
+      localStorage.removeItem(storageKey);
+      activeTask = "";
+      return;
+    }
     await uploadThumbnail(task, file);
     const snapshot = task.parts ? task : await readJson(await fetch(`/api/uploads/${activeTask}`));
     const completedParts = new Set(snapshot.parts.map((part) => part.partNumber));
@@ -259,15 +273,10 @@ if (form) {
         updateProgress(bytesBefore + completedBytes, totalBytes);
       }
     };
-    const concurrency = matchMedia("(max-width: 700px)").matches ? 2 : 3;
+    const concurrency = 1;
     await Promise.all(Array.from({ length: Math.min(concurrency, pendingParts.length) }, uploadPart));
     show(`正在保存第 ${index}/${total} 个文件……`);
-    await readJson(
-      await fetch(`/api/uploads/${activeTask}/complete`, {
-        method: "POST",
-        headers: { "x-csrf-token": csrf },
-      }),
-    );
+    await retry(async () => readJson(await fetchComplete(activeTask)));
     localStorage.removeItem(storageKey);
     activeTask = "";
   };
@@ -282,6 +291,14 @@ if (form) {
     if (!files.length) return show("请选择文件。");
     if (files.length > 1 && type.value !== "photo") return show("只有剧照支持一次选择多个文件。");
     if (files.length === 1 && !form.elements.title.value.trim()) return show("上传单个文件时请填写资料标题。");
+    try {
+      const policy = await policyPromise;
+      const maximum = policy.limits[type.value];
+      if (!maximum || files.some((file) => file.size < 1 || file.size > maximum))
+        return show("此类资料单个文件上限为 " + maximum / 1024 / 1024 + "MB。");
+    } catch {
+      return show("暂时无法读取上传限制，请刷新后重试。");
+    }
     canceled = false;
     uploading = true;
     await keepScreenAwake();
