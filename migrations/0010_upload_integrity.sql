@@ -32,11 +32,11 @@ CREATE INDEX ix_storage_reservation_user ON storage_reservation(user_id,kind);
 CREATE TRIGGER storage_reservation_limit BEFORE INSERT ON storage_reservation
 WHEN (SELECT initialized FROM storage_budget WHERE id=1)=1
 BEGIN
-  SELECT CASE WHEN (SELECT used_bytes+reserved_bytes FROM storage_budget WHERE id=1)+NEW.size_bytes>9000000000
-    THEN RAISE(ABORT,'STORAGE_BUDGET_EXCEEDED') END;
-  SELECT CASE WHEN NEW.kind='upload' AND
+  SELECT (CASE WHEN (SELECT used_bytes+reserved_bytes FROM storage_budget WHERE id=1)+NEW.size_bytes>9000000000
+    THEN RAISE(ABORT,'STORAGE_BUDGET_EXCEEDED') END);
+  SELECT (CASE WHEN NEW.kind='upload' AND
     (SELECT COUNT(*) FROM storage_reservation WHERE user_id=NEW.user_id AND kind='upload')>=3
-    THEN RAISE(ABORT,'UPLOAD_CONCURRENCY_EXCEEDED') END;
+    THEN RAISE(ABORT,'UPLOAD_CONCURRENCY_EXCEEDED') END);
 END;
 CREATE TRIGGER storage_reservation_added AFTER INSERT ON storage_reservation BEGIN
   UPDATE storage_budget SET reserved_bytes=reserved_bytes+NEW.size_bytes,updated_at=CURRENT_TIMESTAMP WHERE id=1;
