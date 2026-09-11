@@ -45,7 +45,7 @@ export async function consumeAccountLimit(
   return consumeRules(c, [{ scope, subject: String(user.id), maximum, seconds }]);
 }
 
-async function consumeRules(c: Context<AppEnv>, rules: LimitRule[]): Promise<number> {
+export async function consumeRules(c: Context<AppEnv>, rules: LimitRule[]): Promise<number> {
   const now = Math.floor(Date.now() / 1000);
   for (const rule of rules) {
     const windowEnd = (Math.floor(now / rule.seconds) + 1) * rule.seconds;

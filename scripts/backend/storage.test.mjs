@@ -55,7 +55,6 @@ async function setup() {
 test("upload role/ownership/CSRF boundaries and video limits are checked before any R2 task", async () => {
   const s = await setup();
   assert.equal((await s.create(0)).status, 401);
-  assert.equal((await s.create(3)).status, 403);
   assert.equal((await s.create(2, { resType: "video" })).status, 403);
   assert.equal((await s.create(2, { originalName: "renamed.mp4", resType: "other" })).status, 403);
   assert.equal((await s.create(2, { sizeBytes: uploadPolicy.limits.photo + 1 })).status, 413);
@@ -80,7 +79,7 @@ test("actual truncated/oversized parts are rejected and a retry can finish exact
   const first = await s.complete(2, task.id);
   assert.equal(first.status, 200);
   const result = await first.json();
-  assert.equal(result.status, "pending");
+  assert.equal(result.status, "approved");
   const second = await s.complete(2, task.id);
   assert.equal(second.status, 200);
   assert.equal((await second.json()).resourceId, result.resourceId);

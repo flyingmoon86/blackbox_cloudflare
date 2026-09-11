@@ -14,12 +14,10 @@ function archiveTabs(active: "productions" | "resources"): string {
   return `<nav class="section-tabs" aria-label="作品与资料"><a href="/productions"${active === "productions" ? ' class="active" aria-current="page"' : ""}>作品档案</a><a href="/resources"${active === "resources" ? ' class="active" aria-current="page"' : ""}>资料库</a></nav>`;
 }
 
-export function productionListPage(items: ProductionRow[], user: UserSession, deleted = false): string {
-  const admin = user.role === "admin";
+export function productionListPage(items: ProductionRow[], user: UserSession | null, deleted = false): string {
+  const admin = user?.role === "admin";
   const contributionActions = (item: ProductionRow): string => {
-    if (user.role === "user")
-      return '<p class="contribution-note"><a href="/profile/member-application">认证为队员后，可以申请加入主创并补充资料</a></p>';
-    const joinLink = user.member_id
+    const joinLink = user?.member_id
       ? `<a class="button secondary" href="/productions/${item.id}#join-production">我是主创！</a>`
       : admin
         ? `<a class="button secondary" href="/productions/${item.id}#manage-credits">管理主创</a>`
@@ -38,8 +36,8 @@ export function productionListPage(items: ProductionRow[], user: UserSession, de
     : '<p class="card">还没有作品档案。</p>';
   return layout(
     "作品",
-    `${archiveTabs("productions")}<section class="page-heading"><p class="eyebrow">PRODUCTIONS</p><h1>作品档案</h1>${deleted ? '<p class="notice">作品已删除，原有资料已转入“其他资料”。</p>' : ""}<p>浏览剧团作品，进入作品可查看演职员与已经审核入库的相关资料。</p>${admin ? '<a class="button" href="/admin/productions/new">＋ 创建作品</a>' : user.role === "member" ? '<a class="button" href="/suggestions?type=production&source=productions">申请创建作品</a>' : ""}</section><section class="card-grid production-grid">${cards}</section>`,
-    true,
+    `${archiveTabs("productions")}<section class="page-heading"><p class="eyebrow">PRODUCTIONS</p><h1>作品档案</h1>${deleted ? '<p class="notice">作品已删除，原有资料已转入“其他资料”。</p>' : ""}<p>浏览剧团作品，进入作品可查看演职员与已经审核入库的相关资料。</p>${admin ? '<a class="button" href="/admin/productions/new">＋ 创建作品</a>' : !admin ? '<a class="button" href="/suggestions?type=production&source=productions">申请创建作品</a>' : ""}</section><section class="card-grid production-grid">${cards}</section>`,
+    Boolean(user),
     admin,
   );
 }
@@ -49,11 +47,11 @@ export function productionDetailPage(
   credits: CreditRow[],
   resources: ProductionResourceRow[],
   members: MemberChoice[],
-  user: UserSession,
+  user: UserSession | null,
   myRequests: Array<{ status: string; kind: string; role_name: string; admin_note: string }>,
   csrf: string,
 ): string {
-  const admin = user.role === "admin";
+  const admin = user?.role === "admin";
   const group = (kind: "cast" | "crew") => {
     const roles = new Map<string, CreditRow[]>();
     for (const credit of credits.filter((entry) => entry.kind === kind)) {
@@ -101,8 +99,8 @@ export function productionDetailPage(
   const archiveContent =
     gallery || archive ? `${gallery}${archive}` : '<p class="muted">这部作品还没有已入库资料。</p>';
   let join = "";
-  if (user.role === "member" || (admin && user.member_id)) {
-    const mine = user.member_id ? credits.filter((credit) => credit.member_id === user.member_id) : [];
+  if (user?.role === "member" || (admin && user?.member_id)) {
+    const mine = user?.member_id ? credits.filter((credit) => credit.member_id === user?.member_id) : [];
     const current = mine.length
       ? `<p class="notice">你已登记：${mine.map((credit) => `${credit.kind === "crew" ? "后台与创作" : "演员"} · ${escapeHtml(credit.role_name)}`).join("；")}。你仍可申请其他角色或分工。</p>`
       : "";
@@ -126,10 +124,10 @@ export function productionDetailPage(
     item.title,
     `${archiveTabs("productions")}<p class="back-links"><a href="/productions">← 返回作品档案</a><a href="/resources">查看资料库</a></p><article class="card production-detail ratio-${item.cover_ratio === "portrait" ? "portrait" : "landscape"}">${item.cover_id ? `<img class="production-cover" src="/resources/${item.cover_id}/preview" alt="${escapeHtml(item.title)}封面">` : ""}<p class="eyebrow">${escapeHtml(item.year || "PRODUCTION")}</p><h1>${escapeHtml(item.title)}</h1><p class="lead">${escapeHtml(item.promo)}</p><p>${escapeHtml(item.synopsis || "暂无剧情介绍")}</p>
     <div class="two-column"><section><h2>演员</h2><ul>${group("cast")}</ul></section><section><h2>后台与创作</h2><ul>${group("crew")}</ul></section></div>
-    <section class="production-archive"><h2>相关资料</h2><p class="muted">已由管理员审核入库的剧本、剧照、视频和其他档案。</p><div class="card-grid">${archiveContent}</div></section>
+    <section class="production-archive"><h2>相关资料</h2><p class="muted">已审核入库的剧本、剧照、视频和其他档案。</p><div class="card-grid">${archiveContent}</div></section>
     ${join}
     ${admin ? `<section id="manage-credits"><p><a href="/admin/productions/${item.id}/edit">编辑作品资料</a></p><form class="credit-form" method="post" action="/admin/productions/${item.id}/credits"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>选择队员<select name="member_id" required><option value="">请选择</option>${members.map((member) => `<option value="${member.id}">${escapeHtml(member.name)}${member.cohort ? `（${escapeHtml(member.cohort)}）` : ""}</option>`).join("")}</select></label><label>类别<select name="kind"><option value="cast">演员</option><option value="crew">后台与创作</option></select></label><label>角色或分工<input name="role_name" maxlength="80" required></label><button>添加演职员</button></form></section>` : ""}</article>`,
-    true,
+    Boolean(user),
     admin,
   );
 }

@@ -1,3 +1,4 @@
+import { visitorIdentity, publicLimit } from "../services/visitors";
 import { replaceAvatar, queueCurrentAvatar } from "../services/avatars";
 import { drainFileCleanup } from "../services/file-cleanup";
 import { serveResourceFile } from "../services/resource-files";
@@ -17,6 +18,7 @@ export type MemberRow = {
   works: string;
   photo: string;
   flower_count: number;
+  contributor?: number;
 };
 
 export const memberRoutes = new Hono<AppEnv>();
@@ -47,7 +49,8 @@ memberRoutes.use("*", async (c, next) => {
     !c.req.path.startsWith("/admin/members")
   )
     return next();
-  if (!c.get("user")) return c.redirect(`/login?next=${encodeURIComponent(c.req.path)}`);
+  if (!c.get("user") && !/^\/members(?:\/\d+(?:\/(?:avatar|flowers))?)?$/.test(c.req.path))
+    return c.redirect(`/login?next=${encodeURIComponent(c.req.path)}`);
   await next();
 });
 
@@ -68,8 +71,8 @@ memberRoutes.get("/members", async (c) => {
   }
   const condition = where.length ? `WHERE ${where.join(" AND ")}` : "";
   const result = await c.env.DB.prepare(
-    `SELECT m.id, m.name, m.bio, m.join_year, m.cohort, m.works, m.photo,
-    COUNT(f.id) AS flower_count FROM member m LEFT JOIN flower f ON f.member_id = m.id ${condition}
+    `SELECT m.id, m.name, m.bio, m.join_year, m.cohort, m.works, m.photo, EXISTS(SELECT 1 FROM site_contributor sc LEFT JOIN user cu ON cu.id=sc.user_id WHERE (sc.member_id=m.id OR cu.member_id=m.id) AND sc.revoked_at IS NULL AND sc.public_consent=1) contributor,
+    COUNT(f.id) + (SELECT COUNT(*) FROM visitor_flower vf WHERE vf.member_id=m.id) AS flower_count FROM member m LEFT JOIN flower f ON f.member_id = m.id ${condition}
     GROUP BY m.id ORDER BY m.join_year DESC, m.name COLLATE NOCASE LIMIT 200`,
   )
     .bind(...params)
@@ -83,7 +86,8 @@ memberRoutes.get("/members", async (c) => {
       years.results.map((item) => item.join_year),
       search,
       year,
-      c.get("user")!.role === "admin",
+      c.get("user")?.role === "admin",
+      Boolean(c.get("user")),
     ),
   );
 });
@@ -92,8 +96,8 @@ memberRoutes.get("/members/:id", async (c) => {
   const id = Number(c.req.param("id"));
   if (!Number.isInteger(id) || id < 1) return c.text("未找到队员档案。", 404);
   const member = await c.env.DB.prepare(
-    `SELECT m.id, m.name, m.bio, m.join_year, m.cohort, m.works, m.photo,
-    COUNT(f.id) AS flower_count FROM member m LEFT JOIN flower f ON f.member_id = m.id WHERE m.id = ? GROUP BY m.id`,
+    `SELECT m.id, m.name, m.bio, m.join_year, m.cohort, m.works, m.photo, EXISTS(SELECT 1 FROM site_contributor sc LEFT JOIN user cu ON cu.id=sc.user_id WHERE (sc.member_id=m.id OR cu.member_id=m.id) AND sc.revoked_at IS NULL AND sc.public_consent=1) contributor,
+    COUNT(f.id) + (SELECT COUNT(*) FROM visitor_flower vf WHERE vf.member_id=m.id) AS flower_count FROM member m LEFT JOIN flower f ON f.member_id = m.id WHERE m.id = ? GROUP BY m.id`,
   )
     .bind(id)
     .first<MemberRow>();
@@ -104,8 +108,9 @@ memberRoutes.get("/members/:id", async (c) => {
       member,
       await csrfFor(c),
       c.req.query("flower") ?? "",
-      user.member_id === id,
-      user.role === "admin",
+      user?.member_id === id,
+      user?.role === "admin",
+      Boolean(user),
     ),
   );
 });
@@ -131,7 +136,15 @@ memberRoutes.post("/profile/member", async (c) => {
   const bio = String(form.get("bio") ?? "").trim();
   const works = String(form.get("works") ?? "").trim();
   if (bio.length > 5000 || works.length > 2000) return c.text("简介或代表作内容过长。", 400);
-  await c.env.DB.prepare("UPDATE member SET bio=?,works=? WHERE id=?").bind(bio, works, user.member_id).run();
+  const year = String(form.get("join_year") || "").trim(),
+    cohort = String(form.get("cohort") || "").trim();
+  if ((year && !/^(19|20)[0-9]{2}$/.test(year)) || (cohort && !/^(19|20)[0-9]{2}$/.test(cohort)))
+    return c.text("入队年份和入学年级请填写四位年份，例如 2024。", 400);
+  await c.env.DB.prepare(
+    "UPDATE member SET bio=?,works=?,join_year=COALESCE(?,join_year),cohort=CASE WHEN ?=\'\' THEN cohort ELSE ? END WHERE id=?",
+  )
+    .bind(bio, works, year ? Number(year) : null, cohort, cohort, user.member_id)
+    .run();
   return c.redirect("/profile/member?saved=1", 303);
 });
 
@@ -182,7 +195,7 @@ memberRoutes.post("/admin/members/new", async (c) => {
   if (
     !name ||
     name.length > 50 ||
-    cohort.length > 20 ||
+    (cohort !== "" && !/^(19|20)[0-9]{2}$/.test(cohort)) ||
     bio.length > 5000 ||
     works.length > 2000 ||
     (year !== null && (!Number.isInteger(year) || year < 1 || year > 9999))
@@ -224,14 +237,16 @@ memberRoutes.post("/admin/members/:id/edit", async (c) => {
   if (
     !name ||
     name.length > 50 ||
-    cohort.length > 20 ||
+    (cohort !== "" && !/^(19|20)[0-9]{2}$/.test(cohort)) ||
     bio.length > 5000 ||
     works.length > 2000 ||
     (year !== null && (!Number.isInteger(year) || year < 1 || year > 9999))
   )
     return c.text("请检查队员档案内容。", 400);
-  const result = await c.env.DB.prepare("UPDATE member SET name=?,join_year=?,cohort=?,bio=?,works=? WHERE id=?")
-    .bind(name, year, cohort, bio, works, id)
+  const result = await c.env.DB.prepare(
+    "UPDATE member SET name=?,join_year=?,cohort=CASE WHEN ?='' THEN cohort ELSE ? END,bio=?,works=? WHERE id=?",
+  )
+    .bind(name, year, cohort, cohort, bio, works, id)
     .run();
   if (result.meta.changes !== 1) return c.text("未找到队员档案。", 404);
   return c.redirect(`/admin/members/${id}/edit?saved=1`, 303);
@@ -266,9 +281,18 @@ memberRoutes.post("/members/:id/flowers", async (c) => {
     month: "2-digit",
     day: "2-digit",
   }).format(new Date());
-  const result = await c.env.DB.prepare("INSERT OR IGNORE INTO flower (user_id, member_id, sent_on) VALUES (?, ?, ?)")
-    .bind(user.id, id, sentOn)
-    .run();
+  const retry = await publicLimit(c, "flower", 40);
+  if (retry) {
+    c.header("Retry-After", String(retry));
+    return c.text("送花次数较多，请稍后再来。", 429);
+  }
+  const result = user
+    ? await c.env.DB.prepare("INSERT OR IGNORE INTO flower(user_id,member_id,sent_on) VALUES(?,?,?)")
+        .bind(user.id, id, sentOn)
+        .run()
+    : await c.env.DB.prepare("INSERT OR IGNORE INTO visitor_flower(visitor_key,member_id,sent_on) VALUES(?,?,?)")
+        .bind(await visitorIdentity(c), id, sentOn)
+        .run();
   return c.redirect(`/members/${id}?flower=${result.meta.changes === 1 ? "sent" : "already"}`, 303);
 });
 
@@ -333,7 +357,12 @@ memberRoutes.post("/profile/member-application", async (c) => {
     const bio = String(form.get("bio") ?? "")
       .trim()
       .slice(0, 5000);
-    if (!name || name.length > 50 || (year !== null && (!Number.isInteger(year) || year < 1 || year > 9999)))
+    if (
+      (cohort && !/^(19|20)[0-9]{2}$/.test(cohort)) ||
+      !name ||
+      name.length > 50 ||
+      (year !== null && (!Number.isInteger(year) || year < 1 || year > 9999))
+    )
       return c.text("请检查姓名和入队年份。", 400);
     await c.env.DB.prepare(
       "INSERT INTO join_request (user_id, apply_type, identity_note, name, bio, join_year, cohort) VALUES (?, 'new', ?, ?, ?, ?, ?) ON CONFLICT(user_id) WHERE status='pending' DO NOTHING",

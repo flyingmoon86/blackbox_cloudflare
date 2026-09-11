@@ -32,13 +32,15 @@ export function resourceCardArtwork(item: PreviewResource): string {
   if (item.res_type === "video")
     return item.preview_filename
       ? `<img class="resource-card-media" src="/resources/${item.id}/preview" alt="${escapeHtml(item.title)}视频画面" loading="lazy">`
-      : `<video class="resource-card-media" src="/resources/${item.id}/media#t=0.2" muted playsinline preload="metadata" data-preview-frame aria-label="${escapeHtml(item.title)}视频画面"></video>`;
+      : fileArtwork(item);
   if (item.res_type === "script") return scriptArtwork(item);
   if (item.res_type === "audio") return audioArtwork(item);
   return fileArtwork(item);
 }
 
-export function resourceDetailPreview(item: PreviewResource): string {
+export function resourceDetailPreview(item: PreviewResource, signedIn = true): string {
+  if (!signedIn)
+    return `<section class="resource-detail-preview">${resourceCardArtwork(item)}<p><a href="/login?next=/resources/${item.id}">登录后查看原文件与完整预览</a></p></section>`;
   const poster = item.preview_filename ? ` poster="/resources/${item.id}/preview"` : "";
   if (item.res_type === "photo")
     return `<figure class="resource-detail-preview"><img src="/resources/${item.id}/media" alt="${escapeHtml(item.title)}"></figure>`;

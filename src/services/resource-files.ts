@@ -1,7 +1,10 @@
 import type { Bindings, UserSession } from "../types";
 
-export function canViewResource(resource: { status: string; uploader_id: number | null }, user: UserSession): boolean {
-  return resource.status === "approved" || resource.uploader_id === user.id || user.role === "admin";
+export function canViewResource(
+  resource: { status: string; uploader_id: number | null },
+  user: UserSession | null,
+): boolean {
+  return resource.status === "approved" || Boolean(user && (resource.uploader_id === user.id || user.role === "admin"));
 }
 
 const safeTypes: Record<string, string> = {
