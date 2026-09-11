@@ -1,3 +1,8 @@
+import { replaceAvatar, queueCurrentAvatar } from "../services/avatars";
+import { drainFileCleanup } from "../services/file-cleanup";
+import { serveResourceFile } from "../services/resource-files";
+import { consumeAccountLimit } from "../middleware/request-limits";
+import { readBoundedBody } from "../http/validation";
 import { Hono } from "hono";
 import { csrfFor, csrfValid } from "../http/cookies";
 import type { AppEnv } from "../types";
@@ -23,6 +28,7 @@ const IMAGE_TYPES: Record<string, string> = {
 };
 
 function validImage(bytes: Uint8Array, type: string): boolean {
+  if (bytes.length < 12) return false;
   if (type === "image/jpeg") return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
   if (type === "image/png")
     return bytes.slice(0, 8).every((v, i) => v === [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a][i]);
@@ -132,20 +138,21 @@ memberRoutes.post("/profile/member", async (c) => {
 memberRoutes.post("/profile/member/avatar", async (c) => {
   const user = c.get("user")!;
   if (user.role !== "member" || !user.member_id) return c.text("只有已认证队员能上传头像。", 403);
-  const form = await c.req.formData();
+  const form = await new Response(await readBoundedBody(c.req.raw, 16 * 1024 * 1024), {
+    headers: c.req.raw.headers,
+  }).formData();
   if (!csrfValid(c, form.get("csrf"))) return c.text("请求已失效，请刷新页面后重试。", 400);
   const file = form.get("avatar");
   if (!(file instanceof File) || !IMAGE_TYPES[file.type] || file.size < 1 || file.size > 15 * 1024 * 1024)
     return c.text("请选择 15MB 以内的 JPG、PNG、WebP 或 AVIF 图片。", 400);
   const data = new Uint8Array(await file.arrayBuffer());
   if (!validImage(data, file.type)) return c.text("图片内容与格式不一致。", 400);
-  const old = await c.env.DB.prepare("SELECT photo FROM member WHERE id=?")
-    .bind(user.member_id)
-    .first<{ photo: string }>();
-  const key = `member-avatars/${user.member_id}/${crypto.randomUUID()}.${IMAGE_TYPES[file.type]}`;
-  await c.env.FILES.put(key, data, { httpMetadata: { contentType: file.type, cacheControl: "private, max-age=3600" } });
-  await c.env.DB.prepare("UPDATE member SET photo=? WHERE id=?").bind(key, user.member_id).run();
-  if (old?.photo?.startsWith("member-avatars/")) await c.env.FILES.delete(old.photo);
+  const retry = await consumeAccountLimit(c, "avatar", 20);
+  if (retry) {
+    c.header("Retry-After", String(retry));
+    return c.text("更换头像次数较多，请稍后重试。", 429);
+  }
+  await replaceAvatar(c.env, user.id, user.member_id, IMAGE_TYPES[file.type], file.type, data);
   return c.redirect("/profile/member?saved=1", 303);
 });
 
@@ -154,13 +161,7 @@ memberRoutes.get("/members/:id/avatar", async (c) => {
     .bind(Number(c.req.param("id")))
     .first<{ photo: string }>();
   if (!row?.photo) return c.text("头像不存在。", 404);
-  const object = await c.env.FILES.get(row.photo);
-  if (!object) return c.text("头像文件不存在。", 404);
-  const headers = new Headers();
-  object.writeHttpMetadata(headers);
-  headers.set("etag", object.httpEtag);
-  headers.set("cache-control", "private, max-age=3600");
-  return new Response(object.body, { headers });
+  return serveResourceFile(c.req.raw, c.env.FILES, { key: row.photo });
 });
 
 memberRoutes.get("/admin/members/new", async (c) => {
@@ -244,8 +245,11 @@ memberRoutes.post("/admin/members/:id/avatar/delete", async (c) => {
   const id = Number(c.req.param("id"));
   const row = await c.env.DB.prepare("SELECT photo FROM member WHERE id=?").bind(id).first<{ photo: string }>();
   if (!row) return c.text("未找到队员档案。", 404);
-  await c.env.DB.prepare("UPDATE member SET photo='' WHERE id=?").bind(id).run();
-  if (row.photo.startsWith("member-avatars/")) await c.env.FILES.delete(row.photo);
+  await c.env.DB.batch([
+    queueCurrentAvatar(c.env, id),
+    c.env.DB.prepare("UPDATE member SET photo='' WHERE id=?").bind(id),
+  ]);
+  await drainFileCleanup(c.env);
   return c.redirect(`/admin/members/${id}/edit?saved=1`, 303);
 });
 
@@ -296,6 +300,11 @@ memberRoutes.post("/profile/member-application", async (c) => {
     await c.env.DB.prepare("SELECT id FROM join_request WHERE user_id = ? AND status = 'pending'").bind(user.id).first()
   )
     return c.text("你已有待审核申请。", 409);
+  const retry = await consumeAccountLimit(c, "member-request", 6);
+  if (retry) {
+    c.header("Retry-After", String(retry));
+    return c.text("申请次数较多，请稍后重试。", 429);
+  }
   const mode = form.get("apply_type") === "new" ? "new" : "bind";
   const identity = String(form.get("identity_note") ?? "").trim();
   if (identity.length < 1 || identity.length > 1000) return c.text("请填写 1–1000 字的参与经历。", 400);
@@ -310,7 +319,7 @@ memberRoutes.post("/profile/member-application", async (c) => {
         .first());
     if (!available) return c.text("请选择尚未绑定账号的队员档案。", 400);
     await c.env.DB.prepare(
-      "INSERT INTO join_request (user_id, apply_type, identity_note, member_id) VALUES (?, 'bind', ?, ?)",
+      "INSERT INTO join_request (user_id, apply_type, identity_note, member_id) VALUES (?, 'bind', ?, ?) ON CONFLICT(user_id) WHERE status='pending' DO NOTHING",
     )
       .bind(user.id, identity, memberId)
       .run();
@@ -327,7 +336,7 @@ memberRoutes.post("/profile/member-application", async (c) => {
     if (!name || name.length > 50 || (year !== null && (!Number.isInteger(year) || year < 1 || year > 9999)))
       return c.text("请检查姓名和入队年份。", 400);
     await c.env.DB.prepare(
-      "INSERT INTO join_request (user_id, apply_type, identity_note, name, bio, join_year, cohort) VALUES (?, 'new', ?, ?, ?, ?, ?)",
+      "INSERT INTO join_request (user_id, apply_type, identity_note, name, bio, join_year, cohort) VALUES (?, 'new', ?, ?, ?, ?, ?) ON CONFLICT(user_id) WHERE status='pending' DO NOTHING",
     )
       .bind(user.id, identity, name, bio, year, cohort)
       .run();

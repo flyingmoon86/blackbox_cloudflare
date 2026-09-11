@@ -1,3 +1,4 @@
+import { reviewRequest } from "../services/reviews";
 import { Hono } from "hono";
 import { csrfFor, csrfValid } from "../http/cookies";
 import type { AppEnv } from "../types";
@@ -146,52 +147,7 @@ adminRoutes.post("/admin/notifications/dismiss", async (c) => {
 adminRoutes.post("/admin/requests/:id/approve", async (c) => {
   const form = await c.req.formData();
   if (!csrfValid(c, form.get("csrf"))) return c.text("请求已失效，请刷新页面后重试。", 400);
-  const id = Number(c.req.param("id"));
-  const request = await c.env.DB.prepare("SELECT * FROM join_request WHERE id=? AND status='pending'")
-    .bind(id)
-    .first<JoinReview>();
-  if (!request) return c.text("申请不存在或已处理。", 404);
-  const applicant = await c.env.DB.prepare("SELECT role,status FROM user WHERE id=?")
-    .bind(request.user_id)
-    .first<{ role: string; status: string }>();
-  if (!applicant || applicant.role !== "user" || applicant.status !== "active")
-    return c.text("申请账号状态不允许通过。", 409);
-  try {
-    if (request.apply_type === "bind") {
-      if (
-        !request.member_id ||
-        (await c.env.DB.prepare("SELECT id FROM user WHERE member_id=?").bind(request.member_id).first())
-      )
-        return c.text("该档案已经绑定其他账号。", 409);
-      await c.env.DB.batch([
-        c.env.DB.prepare(
-          "UPDATE user SET role='member',member_id=?,auth_version=auth_version+1 WHERE id=? AND role='user' AND status='active'",
-        ).bind(request.member_id, request.user_id),
-        c.env.DB.prepare(
-          "UPDATE join_request SET status='approved',admin_note='' WHERE id=? AND status='pending'",
-        ).bind(id),
-      ]);
-    } else {
-      const memberId = 1_000_000_000 + crypto.getRandomValues(new Uint32Array(1))[0];
-      await c.env.DB.batch([
-        c.env.DB.prepare("INSERT INTO member(id,name,bio,join_year,cohort) VALUES(?,?,?,?,?)").bind(
-          memberId,
-          request.name,
-          request.bio,
-          request.join_year,
-          request.cohort,
-        ),
-        c.env.DB.prepare(
-          "UPDATE user SET role='member',member_id=?,auth_version=auth_version+1 WHERE id=? AND role='user' AND status='active'",
-        ).bind(memberId, request.user_id),
-        c.env.DB.prepare(
-          "UPDATE join_request SET status='approved',admin_note='' WHERE id=? AND status='pending'",
-        ).bind(id),
-      ]);
-    }
-  } catch {
-    return c.text("审核失败，档案可能已被其他账号绑定，请刷新后重试。", 409);
-  }
+  await reviewRequest(c.env.DB, "member", Number(c.req.param("id")), c.get("user")!.id, "approved");
   return c.redirect("/admin?message=approved", 303);
 });
 
@@ -200,12 +156,7 @@ adminRoutes.post("/admin/requests/:id/reject", async (c) => {
   if (!csrfValid(c, form.get("csrf"))) return c.text("请求已失效，请刷新页面后重试。", 400);
   const note = String(form.get("admin_note") ?? "").trim();
   if (note.length < 1 || note.length > 1000) return c.text("请填写 1–1000 字的驳回理由。", 400);
-  const result = await c.env.DB.prepare(
-    "UPDATE join_request SET status='rejected',admin_note=? WHERE id=? AND status='pending'",
-  )
-    .bind(note, Number(c.req.param("id")))
-    .run();
-  if (result.meta.changes !== 1) return c.text("申请不存在或已处理。", 404);
+  await reviewRequest(c.env.DB, "member", Number(c.req.param("id")), c.get("user")!.id, "rejected", note);
   return c.redirect("/admin?message=rejected", 303);
 });
 

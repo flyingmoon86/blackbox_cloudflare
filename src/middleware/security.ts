@@ -17,5 +17,12 @@ export const securityHeaders: MiddlewareHandler<AppEnv> = async (c, next) => {
 
 export const noStore: MiddlewareHandler<AppEnv> = async (c, next) => {
   await next();
-  c.header("Cache-Control", "no-store");
+  const contentType = c.res.headers.get("Content-Type") || "";
+  if (
+    /(?:text\/html|application\/(?:json|[^;]+\+json))/.test(contentType) ||
+    c.res.headers.has("Set-Cookie") ||
+    (c.res.status >= 300 && c.res.status < 400 && c.res.status !== 304) ||
+    c.res.status >= 400
+  )
+    c.header("Cache-Control", "private, no-store");
 };

@@ -1,3 +1,6 @@
+import { reviewRequest } from "../services/reviews";
+import { canViewResource, serveResourceFile } from "../services/resource-files";
+import { fileCleanupStatements, drainFileCleanup } from "../services/file-cleanup";
 import { Hono } from "hono";
 import { csrfFor, csrfValid } from "../http/cookies";
 import type { AppEnv } from "../types";
@@ -93,87 +96,35 @@ resourceRoutes.get("/resources/:id", async (c) => {
     .bind(Number(c.req.param("id")))
     .first<ResourceRow>();
   if (!row) return c.text("资料不存在。", 404);
-  if (row.status !== "approved" && row.uploader_id !== u.id && u.role !== "admin")
-    return c.text("没有权限查看这份资料。", 403);
+  if (!canViewResource(row, u)) return c.text("没有权限查看这份资料。", 403);
   return c.html(resourceDetailPage(row, u));
 });
-resourceRoutes.get("/resources/:id/download", async (c) => {
-  const row = await c.env.DB.prepare("SELECT id,status,filename,original_name,res_type FROM resource WHERE id=?")
-    .bind(Number(c.req.param("id")))
-    .first<{ id: number; status: string; filename: string; original_name: string; res_type: string }>();
-  if (!row || row.status !== "approved") return c.text("文件不存在或尚未通过审核。", 404);
-  const requestedRange = c.req.header("range");
-  const object = await c.env.FILES.get(
-    row.filename,
-    requestedRange ? { range: new Headers({ range: requestedRange }) } : {},
-  );
-  if (!object) return c.text("文件尚未迁入存储，请联系管理员。", 404);
-  const headers = new Headers();
-  object.writeHttpMetadata(headers);
-  headers.set("etag", object.httpEtag);
-  headers.set("accept-ranges", "bytes");
-  headers.set("content-disposition", `attachment; filename*=UTF-8''${encodeURIComponent(row.original_name)}`);
-  if (requestedRange && object.range) {
-    const range = object.range as { offset: number; length: number };
-    headers.set("content-range", `bytes ${range.offset}-${range.offset + range.length - 1}/${object.size}`);
-  }
-  await c.env.DB.prepare("UPDATE resource SET download_count=download_count+1 WHERE id=?").bind(row.id).run();
-  return new Response(object.body, { status: requestedRange ? 206 : 200, headers });
-});
-resourceRoutes.get("/resources/:id/media", async (c) => {
-  const user = c.get("user")!;
-  const row = await c.env.DB.prepare("SELECT filename,original_name,status,uploader_id FROM resource WHERE id=?")
-    .bind(Number(c.req.param("id")))
-    .first<{ filename: string; original_name: string; status: string; uploader_id: number | null }>();
-  if (!row) return c.text("资料不存在。", 404);
-  if (row.status !== "approved" && row.uploader_id !== user.id && user.role !== "admin")
-    return c.text("没有权限预览这份资料。", 403);
-  const requestedRange = c.req.header("range");
-  const object = await c.env.FILES.get(
-    row.filename,
-    requestedRange ? { range: new Headers({ range: requestedRange }) } : {},
-  );
-  if (!object) return c.text("资料文件尚未迁入存储。", 404);
-  const headers = new Headers();
-  object.writeHttpMetadata(headers);
-  headers.set("etag", object.httpEtag);
-  headers.set("accept-ranges", "bytes");
-  headers.set("cache-control", "private, max-age=600");
-  headers.set("content-disposition", "inline");
-  if (requestedRange && object.range) {
-    const range = object.range as { offset: number; length: number };
-    headers.set("content-range", `bytes ${range.offset}-${range.offset + range.length - 1}/${object.size}`);
-  }
-  return new Response(object.body, { status: requestedRange ? 206 : 200, headers });
-});
-resourceRoutes.get("/resources/:id/preview", async (c) => {
-  const user = c.get("user")!;
-  const row = await c.env.DB.prepare(
-    "SELECT filename,preview_filename,res_type,status,uploader_id FROM resource WHERE id=?",
-  )
-    .bind(Number(c.req.param("id")))
-    .first<{
-      filename: string;
-      preview_filename: string;
-      res_type: string;
-      status: string;
-      uploader_id: number | null;
-    }>();
-  if (!row) return c.text("预览不存在。", 404);
-  if (row.status !== "approved" && row.uploader_id !== user.id && user.role !== "admin")
-    return c.text("没有权限预览这份资料。", 403);
-  const key = row.preview_filename || (row.res_type === "photo" ? row.filename : "");
-  if (!key) return c.text("这份资料还没有缩略图。", 404);
-  const object = await c.env.FILES.get(key);
-  if (!object) return c.text("预览文件不存在。", 404);
-  const headers = new Headers();
-  object.writeHttpMetadata(headers);
-  if (row.preview_filename) headers.set("content-type", "image/jpeg");
-  headers.set("etag", object.httpEtag);
-  headers.set("cache-control", "private, max-age=3600");
-  headers.set("content-disposition", "inline");
-  return new Response(object.body, { headers });
-});
+for (const mode of ["download", "media", "preview"] as const) {
+  resourceRoutes.on(["GET", "HEAD"], "/resources/:id/" + mode, async (c) => {
+    const row = await c.env.DB.prepare(
+      "SELECT filename,original_name,preview_filename,res_type,status,uploader_id FROM resource WHERE id=?",
+    )
+      .bind(Number(c.req.param("id")))
+      .first<{
+        filename: string;
+        original_name: string;
+        preview_filename: string;
+        res_type: string;
+        status: string;
+        uploader_id: number | null;
+      }>();
+    if (!row || (mode === "download" && row.status !== "approved")) return c.text("文件不存在或尚未通过审核。", 404);
+    if (!canViewResource(row, c.get("user")!)) return c.text("没有权限查看这份资料。", 403);
+    const key =
+      mode === "preview" ? row.preview_filename || (row.res_type === "photo" ? row.filename : "") : row.filename;
+    if (!key) return c.text("这份资料还没有缩略图。", 404);
+    return serveResourceFile(c.req.raw, c.env.FILES, {
+      key,
+      filename: mode === "preview" && row.preview_filename ? "preview.jpg" : row.original_name || row.filename,
+      download: mode === "download",
+    });
+  });
+}
 resourceRoutes.get("/admin/resources/reviews", async (c) => {
   const denied = adminDenied(c);
   if (denied) return denied;
@@ -190,10 +141,7 @@ resourceRoutes.post("/admin/resources/:id/review", async (c) => {
   const decision = f.get("decision") === "approve" ? "approved" : "rejected";
   const note = String(f.get("admin_note") ?? "").trim();
   if (decision === "rejected" && !note) return c.text("驳回时必须填写理由。", 400);
-  const result = await c.env.DB.prepare("UPDATE resource SET status=?,admin_note=? WHERE id=? AND status='pending'")
-    .bind(decision, note, Number(c.req.param("id")))
-    .run();
-  if (result.meta.changes !== 1) return c.text("资料不存在或已处理。", 404);
+  await reviewRequest(c.env.DB, "resource", Number(c.req.param("id")), c.get("user")!.id, decision, note);
   return c.redirect("/admin/resources/reviews", 303);
 });
 resourceRoutes.get("/admin/resources", async (c) => {
@@ -257,13 +205,13 @@ resourceRoutes.post("/admin/resources/:id/delete", async (c) => {
     .bind(id)
     .first<{ filename: string; preview_filename: string }>();
   if (!row) return c.text("资料不存在。", 404);
-  await c.env.FILES.delete(row.filename);
-  if (row.preview_filename) await c.env.FILES.delete(row.preview_filename);
   await c.env.DB.batch([
     c.env.DB.prepare("UPDATE production SET cover_id=NULL WHERE cover_id=?").bind(id),
     c.env.DB.prepare("UPDATE site_profile SET hero_photo='' WHERE hero_photo=?").bind(String(id)),
     c.env.DB.prepare("UPDATE site_profile SET page_background_photo='' WHERE page_background_photo=?").bind(String(id)),
     c.env.DB.prepare("DELETE FROM resource WHERE id=?").bind(id),
+    ...fileCleanupStatements(c.env, [row.filename, row.preview_filename]),
   ]);
+  await drainFileCleanup(c.env);
   return c.redirect("/admin/resources", 303);
 });

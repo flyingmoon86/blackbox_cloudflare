@@ -1,3 +1,4 @@
+import { serveResourceFile } from "../services/resource-files";
 import type { Context } from "hono";
 import { csrfFor } from "../http/cookies";
 import type { AppEnv } from "../types";
@@ -31,18 +32,16 @@ export async function heroImage(c: Context<AppEnv>) {
   const id = Number(profile?.hero_photo);
   if (!Number.isInteger(id) || id < 1) return c.text("首页背景不存在。", 404);
   const row = await c.env.DB.prepare(
-    "SELECT filename FROM resource WHERE id=? AND status='approved' AND res_type='photo'",
+    "SELECT filename,original_name FROM resource WHERE id=? AND status='approved' AND res_type='photo'",
   )
     .bind(id)
-    .first<{ filename: string }>();
+    .first<{ filename: string; original_name: string }>();
   if (!row) return c.text("首页背景不存在。", 404);
-  const object = await c.env.FILES.get(row.filename);
-  if (!object) return c.text("首页背景文件不存在。", 404);
-  const headers = new Headers();
-  object.writeHttpMetadata(headers);
-  headers.set("etag", object.httpEtag);
-  headers.set("cache-control", "public, max-age=3600");
-  return new Response(object.body, { headers });
+  return serveResourceFile(c.req.raw, c.env.FILES, {
+    key: row.filename,
+    filename: row.original_name || row.filename,
+    publicImage: true,
+  });
 }
 
 export async function pageBackgroundImage(c: Context<AppEnv>) {
@@ -52,34 +51,28 @@ export async function pageBackgroundImage(c: Context<AppEnv>) {
   const id = Number(profile?.page_background_photo);
   if (!Number.isInteger(id) || id < 1) return c.text("全站背景不存在。", 404);
   const row = await c.env.DB.prepare(
-    "SELECT filename FROM resource WHERE id=? AND status='approved' AND res_type='photo'",
+    "SELECT filename,original_name FROM resource WHERE id=? AND status='approved' AND res_type='photo'",
   )
     .bind(id)
-    .first<{ filename: string }>();
+    .first<{ filename: string; original_name: string }>();
   if (!row) return c.text("全站背景不存在。", 404);
-  const object = await c.env.FILES.get(row.filename);
-  if (!object) return c.text("全站背景文件不存在。", 404);
-  const headers = new Headers();
-  object.writeHttpMetadata(headers);
-  headers.set("etag", object.httpEtag);
-  headers.set("cache-control", "public, max-age=3600");
-  headers.set("content-disposition", "inline");
-  return new Response(object.body, { headers });
+  return serveResourceFile(c.req.raw, c.env.FILES, {
+    key: row.filename,
+    filename: row.original_name || row.filename,
+    publicImage: true,
+  });
 }
 
 export async function featuredCoverImage(c: Context<AppEnv>) {
   const row = await c.env.DB.prepare(
-    `SELECT r.filename FROM site_profile s JOIN production p ON p.id=s.featured_production_id JOIN resource r ON r.id=p.cover_id WHERE s.id=1 AND r.status='approved' AND r.res_type='photo'`,
-  ).first<{ filename: string }>();
+    `SELECT r.filename,r.original_name FROM site_profile s JOIN production p ON p.id=s.featured_production_id JOIN resource r ON r.id=p.cover_id WHERE s.id=1 AND r.status='approved' AND r.res_type='photo'`,
+  ).first<{ filename: string; original_name: string }>();
   if (!row) return c.text("精选作品展示图不存在。", 404);
-  const object = await c.env.FILES.get(row.filename);
-  if (!object) return c.text("精选作品展示图文件不存在。", 404);
-  const headers = new Headers();
-  object.writeHttpMetadata(headers);
-  headers.set("etag", object.httpEtag);
-  headers.set("cache-control", "public, max-age=3600");
-  headers.set("content-disposition", "inline");
-  return new Response(object.body, { headers });
+  return serveResourceFile(c.req.raw, c.env.FILES, {
+    key: row.filename,
+    filename: row.original_name || row.filename,
+    publicImage: true,
+  });
 }
 
 export function health(c: Context<AppEnv>) {
