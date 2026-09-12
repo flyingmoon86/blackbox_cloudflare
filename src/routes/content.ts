@@ -1,3 +1,4 @@
+import { DEFAULT_ACCENT, validAccent, themeCss } from "../services/theme";
 import { Hono } from "hono";
 import { csrfFor, csrfValid } from "../http/cookies";
 import type { AppEnv } from "../types";
@@ -33,6 +34,22 @@ contentRoutes.use("*", async (c, next) => {
   await next();
 });
 
+contentRoutes.get("/site/theme.css", async (c) => {
+  let accent = DEFAULT_ACCENT;
+  const preview = c.req.query("accent");
+  if (preview && validAccent(preview) && c.get("user")?.role === "admin") accent = preview;
+  else {
+    const row = await c.env.DB.prepare("SELECT page_texts FROM site_profile WHERE id=1").first<{
+      page_texts: string;
+    }>();
+    try {
+      accent = JSON.parse(row?.page_texts || "{}").brand_accent || DEFAULT_ACCENT;
+    } catch {}
+  }
+  c.header("Content-Type", "text/css; charset=utf-8");
+  c.header("Cache-Control", "private, no-cache");
+  return c.body(themeCss(accent));
+});
 const adminDenied = (c: any) => (c.get("user")?.role === "admin" ? null : c.text("没有管理员权限。", 403));
 
 contentRoutes.get("/announcements", async (c) => {
@@ -127,6 +144,30 @@ contentRoutes.post("/admin/site", async (c) => {
     texts[key] = String(form.get(key) ?? "")
       .trim()
       .slice(0, 10000);
+  if (form.has("brand_accent")) {
+    const value = String(form.get("brand_accent") || "").trim();
+    if (!validAccent(value)) return c.text("主题色请填写 #RRGGBB 格式。", 400);
+    texts.brand_accent = value.toLowerCase();
+  }
+  for (const key of ["recruitment_poster", "recruitment_poster_mobile"]) {
+    if (!form.has(key)) continue;
+    const value = String(form.get(key) || "");
+    if (
+      value &&
+      (!/^[1-9]\d*$/.test(value) ||
+        !(await c.env.DB.prepare(
+          "SELECT id FROM resource WHERE id=? AND status='approved' AND res_type='photo' AND preview_filename IS NOT NULL AND preview_filename<>''",
+        )
+          .bind(Number(value))
+          .first()))
+    )
+      return c.text("招新海报必须选择有展示图的已审核照片。", 400);
+    texts[key] = value;
+  }
+  if (form.has("recruitment_poster_alt"))
+    texts.recruitment_poster_alt = String(form.get("recruitment_poster_alt") || "")
+      .trim()
+      .slice(0, 200);
   const mascot = String(form.get("mascot_photo") || "");
   if (
     mascot &&

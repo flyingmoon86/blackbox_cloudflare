@@ -187,3 +187,23 @@ test("uncertain formats and duplicate fingerprints go to manual review", async (
     assert.equal(s.db.prepare("SELECT COUNT(*) n FROM review_history WHERE entity_id=?").get(result.resourceId).n, 0);
   }
 });
+
+test("appearance saves only valid admin settings and preserves existing page metadata", async () => {
+  const s = await setup();
+  s.db.prepare("UPDATE site_profile SET page_texts=? WHERE id=1").run(JSON.stringify({ future_key: "keep" }));
+  assert.equal((await s.post(3, "/admin/site", { brand_accent: "#ff0000" })).status, 403);
+  assert.equal((await s.post(1, "/admin/site", { brand_accent: "red;body{display:none}" })).status, 400);
+  assert.equal((await s.post(1, "/admin/site", { brand_accent: "#336699", recruitment_poster: "2" })).status, 400);
+  assert.equal((await s.post(1, "/admin/site", { brand_accent: "#336699", recruitment_poster: "1" })).status, 303);
+  const saved = JSON.parse(s.db.prepare("SELECT page_texts FROM site_profile WHERE id=1").get().page_texts);
+  assert.equal(saved.future_key, "keep");
+  assert.equal(saved.brand_accent, "#336699");
+  const css = await s.req(0, "/site/theme.css?accent=%23ff0000");
+  assert.match(css.headers.get("content-type"), /text\/css/);
+  assert.match(await css.text(), /--brand:#336699/);
+  const html = await (await s.req(0, "/")).text();
+  assert.match(html, /recruitment-poster/);
+  s.db.exec("UPDATE resource SET status='pending' WHERE id=1");
+  assert.ok(!(await (await s.req(0, "/")).text()).includes('class="recruitment-poster"'));
+  s.db.close();
+});

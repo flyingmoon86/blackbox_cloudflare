@@ -83,3 +83,13 @@ body:has(.theatre-stage) .nav-menu>summary,body:has(.theatre-stage) .desktop-nav
 .nav-scrim{display:none}.nav-menu>summary{font-size:18px;padding:14px 0}
 .theatre-stage .stage-scene{min-height:calc(100svh - 56px)}
 }
+
+/* Recruitment artwork and a visible stage cue. */
+.stage-explore{font-size:17px;min-height:44px;display:flex;align-items:center;border-bottom:1px solid #ffffff66}
+.scene-nav a{min-height:44px;display:flex;align-items:center;white-space:nowrap}
+.recruitment-poster{margin:16px 0 0;max-width:100%}.recruitment-poster a{display:block;text-decoration:none}.recruitment-poster img{display:block;max-width:100%;width:auto;max-height:30vh;object-fit:contain}.recruitment-poster figcaption{font-size:12px;margin-top:6px}
+.poster-settings-preview{display:flex;gap:24px;flex-wrap:wrap}.poster-settings-preview figure{margin:0;max-width:45%}.poster-settings-preview img{display:block;max-width:100%;max-height:240px;object-fit:contain}
+.poster-dialog{max-width:95vw;width:900px}.poster-dialog>button{position:sticky;top:0;z-index:1}.poster-zoom{overflow:auto;max-height:65vh}.poster-zoom img{display:block;width:100%;height:auto;object-fit:contain;cursor:zoom-in}.poster-zoom.is-zoomed img{width:1500px;max-width:none;cursor:zoom-out}
+@media(max-width:900px){.recruitment-poster img{width:100%;max-height:none}.scene-nav{display:none}.stage-explore{font-size:16px!important;min-height:44px}.poster-settings-preview figure{max-width:100%}}
+@media(prefers-reduced-motion:no-preference){.stage-explore span{animation:explore-cue 1s ease-in-out 3}}
+@keyframes explore-cue{50%{transform:translateY(4px)}}

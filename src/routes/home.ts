@@ -23,6 +23,24 @@ export async function homePage(c: Context<AppEnv>) {
   const announcements = await c.env.DB.prepare(
     "SELECT id,title,content,created_at FROM announcement ORDER BY created_at DESC,id DESC LIMIT 1",
   ).all<AnnouncementRow>();
+  let texts: Record<string, string> = {};
+  try {
+    texts = JSON.parse(profile.page_texts || "{}");
+  } catch {}
+  for (const key of ["recruitment_poster", "recruitment_poster_mobile"]) {
+    const id = Number(texts[key]);
+    if (
+      !Number.isSafeInteger(id) ||
+      id <= 0 ||
+      !(await c.env.DB.prepare(
+        "SELECT id FROM resource WHERE id=? AND status='approved' AND res_type='photo' AND preview_filename IS NOT NULL AND preview_filename<>''",
+      )
+        .bind(id)
+        .first())
+    )
+      texts[key] = "";
+  }
+  profile.page_texts = JSON.stringify(texts);
   const hero = await selectHero(c);
   return c.html(theatreHome(profile, featured, announcements.results, c.get("user"), hero?.id ?? null));
 }
