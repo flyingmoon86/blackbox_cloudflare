@@ -293,7 +293,7 @@ export function memberEditPage(member: MemberRow, csrf: string, admin: boolean, 
 export function memberApplicationPage(
   csrf: string,
   mode: "bind" | "new",
-  members: Array<{ id: number; name: string; cohort: string }>,
+  members: Array<{ id: number; name: string; cohort: string; join_year?: number | null }>,
   pending: unknown,
 ): string {
   if (pending)
@@ -307,9 +307,21 @@ export function memberApplicationPage(
       ? "<p>先在已有队员档案中找到自己，再提交认证。</p>"
       : '<p>确认没有自己的档案后，再填写以下信息。<a href="?type=bind">返回查找已有档案</a></p>';
   const common = `<input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><input type="hidden" name="apply_type" value="${mode}"><label>一句台词或参与经历<textarea name="identity_note" maxlength="1000" rows="4" required></textarea><span class="hint">也可以填写后台分工或排练经历，仅管理员可见。</span></label>`;
+  const grouped = new Map<number, typeof members>();
+  for (const member of members) {
+    const year = /^\d{4}$/.test(member.cohort) ? Number(member.cohort) : member.join_year || 0;
+    grouped.set(year, [...(grouped.get(year) || []), member]);
+  }
+  const choices = [...grouped]
+    .sort(([a], [b]) => b - a)
+    .map(
+      ([year, rows]) =>
+        `<optgroup label="${year ? year + " 年" : "年份待补充"}">${rows.map((member) => `<option value="${member.id}">${escapeHtml(member.name)}${member.cohort ? "（" + escapeHtml(member.cohort) + "级）" : ""}</option>`).join("")}</optgroup>`,
+    )
+    .join("");
   const fields =
     mode === "bind"
-      ? `<label>选择我的档案<select name="member_id" required><option value="">请选择</option>${members.map((member) => `<option value="${member.id}">${escapeHtml(member.name)}${member.cohort ? `（${escapeHtml(member.cohort)}）` : ""}</option>`).join("")}</select></label>`
+      ? `<label>选择我的档案<select name="member_id" required><option value="">请选择</option>${choices}</select><span class="hint">按入学年份从新到旧排列，未填年级时使用入队年份。</span></label>`
       : `<label>姓名<input name="name" maxlength="50" required></label><label>入队年份${yearSelect("join_year", "")}</label><label>入学年级${yearSelect("cohort", "")}</label><label>简介<textarea name="bio" rows="4"></textarea></label>`;
   return layout(
     "队员认证",
