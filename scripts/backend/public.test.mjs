@@ -99,6 +99,15 @@ test("feedback is idempotent, private text stays private and opting out hides th
 });
 test("admin grant and revoke are protected; repeated suggestions cannot undo a revocation", async () => {
   const s = await setup();
+  s.db.exec("INSERT INTO member(id,name) VALUES(2,'未绑定队员');");
+  const adminPage = await (await s.req(1, "/admin/community")).text();
+  assert.equal((adminPage.match(/value="user:2"/g) || []).length, 1);
+  assert.ok(!adminPage.includes('value="member:1"'));
+  assert.ok(adminPage.includes('value="member:2"'));
+  assert.ok(adminPage.includes("测试队员（账号：队员账号）"));
+  assert.ok(adminPage.includes('<a href="/admin">管理</a>'));
+  assert.ok(!adminPage.includes("了解黑匣子"));
+  assert.ok(!(await (await s.req(0, "/")).text()).includes('<a href="/admin">管理</a>'));
   assert.equal((await s.post(3, "/admin/community", { action: "grant", target: "user:2" })).status, 403);
   assert.equal((await s.post(1, "/admin/community", { action: "grant", target: "user:2" })).status, 303);
   let html = await (await s.req(0, "/members/1")).text();

@@ -111,11 +111,16 @@ communityRoutes.get("/admin/community", async (c) => {
   const contributors = await c.env.DB.prepare(
     "SELECT id,display_name,revoked_at,public_consent FROM site_contributor ORDER BY id DESC",
   ).all<{ id: number; display_name: string; revoked_at: string | null; public_consent: number }>();
-  const users = await c.env.DB.prepare("SELECT id,username FROM user WHERE status='active' ORDER BY username").all<{
+  const users = await c.env.DB.prepare(
+    "SELECT u.id,u.username,m.name member_name FROM user u LEFT JOIN member m ON m.id=u.member_id WHERE u.status='active' ORDER BY u.username",
+  ).all<{
     id: number;
     username: string;
+    member_name: string | null;
   }>();
-  const members = await c.env.DB.prepare("SELECT id,name FROM member ORDER BY name").all<{
+  const members = await c.env.DB.prepare(
+    "SELECT m.id,m.name FROM member m WHERE NOT EXISTS(SELECT 1 FROM user u WHERE u.member_id=m.id) ORDER BY m.name",
+  ).all<{
     id: number;
     name: string;
   }>();
@@ -157,7 +162,16 @@ communityRoutes.get("/admin/community", async (c) => {
     )
     .join("");
   const choices =
-    users.results.map((u) => '<option value="user:' + u.id + '">账号 · ' + e(u.username) + "</option>").join("") +
+    users.results
+      .map(
+        (u) =>
+          '<option value="user:' +
+          u.id +
+          '">' +
+          (u.member_name ? e(u.member_name) + "（账号：" + e(u.username) + "）" : "账号 · " + e(u.username)) +
+          "</option>",
+      )
+      .join("") +
     members.results.map((m) => '<option value="member:' + m.id + '">档案 · ' + e(m.name) + "</option>").join("");
   return c.html(
     layout(
