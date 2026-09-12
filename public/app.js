@@ -149,19 +149,107 @@ if (themeEditor) {
   themeEditor.querySelector("[data-theme-reset]").addEventListener("click", () => update("#536c57"));
   themeEditor.querySelector("[data-theme-cancel]").addEventListener("click", () => update(initial));
 }
-const posterSelectors = document.querySelectorAll("[data-poster-select]");
-function updatePosterPreviews() {
-  const general = document.querySelector('[name="recruitment_poster"]')?.value;
-  for (const img of document.querySelectorAll("[data-poster-preview]")) {
-    const own = document.querySelector('[name="' + img.dataset.posterPreview + '"]')?.value;
-    const id = own || general;
-    img.hidden = !id;
-    if (id) img.src = "/resources/" + encodeURIComponent(id) + "/preview";
-    else img.removeAttribute("src");
-  }
+// Keep native selects usable, and offer a thumbnail chooser on desktop and touch screens.
+const imageFields = {
+  hero_photo: "首页背景",
+  page_background_photo: "全站背景",
+  mascot_photo: "小象图片",
+  cover_id: "作品封面",
+  recruitment_poster: "通用海报",
+  recruitment_poster_mobile: "手机海报",
+};
+for (const [name, label] of Object.entries(imageFields)) {
+  const select = document.querySelector(`select[name="${name}"]`);
+  if (!(select instanceof HTMLSelectElement)) continue;
+  const host = document.createElement("div");
+  host.className = "image-select-preview";
+  const preview = document.createElement("img");
+  preview.alt = label + "当前选择";
+  preview.decoding = "async";
+  const status = document.createElement("span");
+  status.className = "hint";
+  status.setAttribute("role", "status");
+  const open = document.createElement("button");
+  open.type = "button";
+  open.className = "secondary";
+  open.textContent = "看图选择";
+  host.append(preview, status, open);
+  select.closest("label").insertAdjacentElement("afterend", host);
+  const urlFor = (value) => (/^[1-9]\d*$/.test(value) ? "/resources/" + value + "/preview" : "");
+  const update = () => {
+    let url = urlFor(select.value);
+    let title = select.selectedOptions[0]?.textContent || "未选择图片";
+    if (!url && name === "mascot_photo") url = "/images/elephant-mascot-360-v1.webp";
+    if (!url && name === "recruitment_poster_mobile") {
+      url = urlFor(document.querySelector('[name="recruitment_poster"]')?.value || "");
+      if (url) title = "沿用通用海报";
+    }
+    preview.hidden = !url;
+    status.textContent = title;
+    if (url) preview.src = url;
+    else preview.removeAttribute("src");
+  };
+  preview.addEventListener("error", () => {
+    preview.hidden = true;
+    status.textContent = "展示图暂不可用，请选择其他图片或稍后重试。";
+  });
+  select.addEventListener("change", update);
+  if (name === "recruitment_poster_mobile")
+    document.querySelector('[name="recruitment_poster"]')?.addEventListener("change", update);
+  update();
+  open.addEventListener("click", () => {
+    const dialog = document.createElement("dialog");
+    dialog.className = "image-choice-dialog";
+    dialog.setAttribute("aria-label", "选择" + label);
+    const heading = document.createElement("h2");
+    heading.textContent = "选择" + label;
+    const close = document.createElement("button");
+    close.type = "button";
+    close.textContent = "取消选择 ×";
+    close.addEventListener("click", () => dialog.close());
+    const grid = document.createElement("div");
+    grid.className = "image-choice-grid";
+    for (const option of select.options) {
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className = "image-choice-item";
+      item.disabled = option.disabled;
+      item.setAttribute("aria-pressed", String(option.selected));
+      const url = urlFor(option.value);
+      if (url) {
+        const image = document.createElement("img");
+        image.src = url;
+        image.alt = "";
+        image.loading = "lazy";
+        image.decoding = "async";
+        image.addEventListener("error", () => {
+          image.hidden = true;
+        });
+        item.append(image);
+      }
+      const caption = document.createElement("span");
+      caption.textContent = option.textContent;
+      item.append(caption);
+      item.addEventListener("click", () => {
+        select.value = option.value;
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+        dialog.close();
+      });
+      grid.append(item);
+    }
+    dialog.append(heading, close, grid);
+    document.body.append(dialog);
+    dialog.addEventListener(
+      "close",
+      () => {
+        dialog.remove();
+        open.focus();
+      },
+      { once: true },
+    );
+    dialog.showModal();
+  });
 }
-posterSelectors.forEach((select) => select.addEventListener("change", updatePosterPreviews));
-if (posterSelectors.length) updatePosterPreviews();
 const posterDialog = document.querySelector(".poster-dialog");
 const recruitmentImage = document.querySelector(".recruitment-poster img");
 if (recruitmentImage instanceof HTMLImageElement) {
