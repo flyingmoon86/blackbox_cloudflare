@@ -1,4 +1,5 @@
 import type { SuggestionRow } from "../routes/suggestions";
+import { yearSelect } from "./shared";
 import { escapeHtml, layout } from "../views";
 
 export function suggestionFormPage(
@@ -13,7 +14,7 @@ export function suggestionFormPage(
   const returnLabel = source === "productions" ? "作品档案" : "上传资料";
   return layout(
     productionRequest ? "申请新建作品档案" : "意见箱",
-    `<section class="card auth"><p class="eyebrow">${productionRequest ? "NEW PRODUCTION" : "SUGGESTION BOX"}</p><h1>${productionRequest ? "申请新建作品档案" : "网站意见箱"}</h1>${sent ? `<p class="notice">${productionRequest ? "建档申请" : "建议"}已经送到管理员收件箱。</p>` : ""}<p>${productionRequest ? "找不到要加入或补充资料的作品时，请先提交结构化建档申请。管理员建档后，你就能从作品卡片继续操作。" : "可以告诉我们哪里不好用、哪里看不懂，或希望增加什么。请不要在这里填写密码等敏感信息。"}</p><form method="post"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><input type="hidden" name="category" value="${category}"><input type="hidden" name="source" value="${source}">${productionRequest ? '<label>作品名称<input name="production_title" maxlength="100" required></label><label>演出年份（不确定可不填）<input name="production_year" type="number" min="1" max="9999" inputmode="numeric"></label><label>补充说明<textarea name="content" maxlength="3000" rows="6" placeholder="例如演出场次、你的参与经历，或希望补充的资料"></textarea></label>' : '<label>建议内容<textarea name="content" maxlength="3000" rows="8" required></textarea></label>'}<button>${productionRequest ? "提交建档申请" : "提交建议"}</button></form><p><a href="${productionRequest ? returnPath : "/"}">返回${productionRequest ? returnLabel : "首页"}</a></p></section>`,
+    `<section class="card auth"><p class="eyebrow">${productionRequest ? "NEW PRODUCTION" : "SUGGESTION BOX"}</p><h1>${productionRequest ? "申请新建作品档案" : "网站意见箱"}</h1>${sent ? `<p class="notice">${productionRequest ? "建档申请" : "建议"}已经送到管理员收件箱。</p>` : ""}<p>${productionRequest ? "找不到要加入或补充资料的作品时，请先提交结构化建档申请。管理员建档后，你就能从作品卡片继续操作。" : "可以告诉我们哪里不好用、哪里看不懂，或希望增加什么。请不要在这里填写密码等敏感信息。"}</p><form method="post"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><input type="hidden" name="category" value="${category}"><input type="hidden" name="source" value="${source}">${productionRequest ? `<label>作品名称<input name="production_title" maxlength="100" required></label><label>演出年份（不确定可不填）${yearSelect("production_year")}</label><label>补充说明<textarea name="content" maxlength="3000" rows="6" placeholder="例如演出场次、你的参与经历，或希望补充的资料"></textarea></label>` : '<label>建议内容<textarea name="content" maxlength="3000" rows="8" required></textarea></label>'}<button>${productionRequest ? "提交建档申请" : "提交建议"}</button></form><p><a href="${productionRequest ? returnPath : "/"}">返回${productionRequest ? returnLabel : "首页"}</a></p></section>`,
     true,
     admin,
   );

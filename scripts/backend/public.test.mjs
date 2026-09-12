@@ -216,3 +216,78 @@ test("appearance saves only valid admin settings and preserves existing page met
   assert.ok(!(await (await s.req(0, "/")).text()).includes('class="recruitment-poster"'));
   s.db.close();
 });
+
+test("archive pages paginate all approved photos with stable groups and search", async () => {
+  const s = await setup();
+  for (let id = 10; id < 40; id++)
+    s.db
+      .prepare(
+        "INSERT INTO resource(id,title,res_type,status,filename,production_id) VALUES(?,?,'photo','approved','fixture.jpg',1)",
+      )
+      .run(id, "演出图片" + id);
+  const first = await (await s.req(0, "/resources?q=测试作品")).text();
+  assert.match(first, /第 1 \/ 2 页/);
+  assert.equal((first.match(/title="演出图片/g) || []).length, 24);
+  assert.ok(!first.includes('title="演出图片10"'));
+  const last = await (await s.req(0, "/resources?q=测试作品&page=999")).text();
+  assert.match(last, /第 2 \/ 2 页/);
+  assert.match(last, /title="演出图片10"/);
+  assert.ok(!last.includes("待审图"));
+  const all = await (await s.req(0, "/resources?page=2")).text();
+  assert.ok(all.indexOf("演出图片10") < all.indexOf("其他资料"));
+  s.db.close();
+});
+
+test("work themes are admin-only and old years and profile works survive unrelated edits", async () => {
+  const s = await setup();
+  s.db.exec("UPDATE production SET year=2019 WHERE id=1; UPDATE member SET works='历史原文',join_year=2018 WHERE id=1");
+  assert.equal(
+    (await s.post(3, "/admin/productions/1/edit", { title: "测试作品", theme_color: "#335577" })).status,
+    403,
+  );
+  assert.equal(
+    (await s.post(1, "/admin/productions/1/edit", { title: "测试作品", theme_color: "red;bad" })).status,
+    400,
+  );
+  assert.equal(
+    (await s.post(1, "/admin/productions/1/edit", { title: "测试作品", theme_color: "#335577", year: "" })).status,
+    303,
+  );
+  assert.equal(s.db.prepare("SELECT year FROM production WHERE id=1").get().year, 2019);
+  assert.match(await (await s.req(0, "/site/theme.css?production=1")).text(), /--brand:#335577/);
+  assert.match(await (await s.req(0, "/productions/1")).text(), /theme.css\?production=1/);
+  assert.equal((await s.post(2, "/profile/member", { bio: "新简介", join_year: "", cohort: "" })).status, 303);
+  const row = s.db.prepare("SELECT works,join_year FROM member WHERE id=1").get();
+  assert.equal(row.works, "历史原文");
+  assert.equal(row.join_year, 2018);
+  s.db.exec("INSERT INTO production_credit(production_id,member_id,kind,role_name) VALUES(1,1,'cast','角色')");
+  const detail = await (await s.req(0, "/members/1")).text();
+  assert.match(detail, /参与作品/);
+  assert.match(detail, /测试作品/);
+  assert.ok(!detail.includes("历史原文"));
+  const edit = await (await s.req(2, "/profile/member")).text();
+  assert.ok(!edit.includes('name="works"'));
+  assert.ok(!edit.includes('value="2018"'));
+  assert.match(edit, /保留原年份（2018）/);
+  s.db.close();
+});
+
+test("avatar thumbnail is optional, accounted for, served and removed with original", async () => {
+  const s = await setup();
+  const { replaceAvatar } = await loadModule("src/services/avatars.ts");
+  const original = new Uint8Array([255, 216, 255, 224, 1, 2, 3, 255, 217]);
+  const preview = new Uint8Array([255, 216, 255, 224, 255, 217]);
+  await replaceAvatar(s.env, 2, 1, "jpg", "image/jpeg", original, preview);
+  const row = s.db.prepare("SELECT photo,avatar_preview FROM member WHERE id=1").get();
+  assert.ok(row.avatar_preview);
+  assert.ok(await s.env.FILES.head(row.photo));
+  assert.deepEqual(new Uint8Array(await (await s.req(0, "/members/1/avatar")).arrayBuffer()), preview);
+  assert.equal(
+    s.db.prepare("SELECT size_bytes FROM storage_object WHERE object_key=?").get(row.avatar_preview).size_bytes,
+    preview.length,
+  );
+  assert.equal((await s.post(1, "/admin/members/1/avatar/delete")).status, 303);
+  assert.equal(await s.env.FILES.head(row.avatar_preview), null);
+  assert.equal(await s.env.FILES.head(row.photo), null);
+  s.db.close();
+});

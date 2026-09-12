@@ -124,8 +124,69 @@ for (const mascot of document.querySelectorAll("[data-home-mascot]")) {
 }
 
 const themeEditor = document.querySelector("[data-theme-editor]");
+const productionColor = document.querySelector("[data-production-color]");
+const avatarForm = document.querySelector('form[action="/profile/member/avatar"]');
+if (avatarForm) {
+  let prepared = false,
+    preview;
+  const fileInput = avatarForm.querySelector('[name="avatar"]');
+  fileInput.addEventListener("change", () => {
+    prepared = false;
+    preview = undefined;
+    fileInput.setCustomValidity("");
+  });
+  avatarForm.addEventListener("formdata", (event) => {
+    if (preview) event.formData.set("avatar_preview", preview, "avatar-preview.jpg");
+  });
+  avatarForm.addEventListener("submit", async (event) => {
+    if (prepared) return;
+    event.preventDefault();
+    const file = fileInput.files[0];
+    if (!file || file.size > 15 * 1024 * 1024) {
+      fileInput.setCustomValidity("请选择 15MB 以内的图片。");
+      fileInput.reportValidity();
+      return;
+    }
+    fileInput.setCustomValidity("");
+    const button = avatarForm.querySelector("button");
+    button.disabled = true;
+    const url = URL.createObjectURL(file);
+    try {
+      const image = new Image();
+      image.src = url;
+      await image.decode();
+      if (image.naturalWidth * image.naturalHeight > 32000000) throw new Error("large image");
+      const ratio = Math.min(1, 640 / Math.max(image.naturalWidth, image.naturalHeight));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * ratio));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * ratio));
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#f0eee8";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+      preview = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.8));
+      if (preview?.size > 512 * 1024) preview = undefined;
+    } catch {
+      preview = undefined;
+    } finally {
+      URL.revokeObjectURL(url);
+      button.disabled = false;
+    }
+    prepared = true;
+    avatarForm.requestSubmit();
+  });
+}
+if (productionColor) {
+  const field = document.querySelector('[name="theme_color"]');
+  productionColor.addEventListener("input", () => {
+    field.value = productionColor.value;
+  });
+  field.addEventListener("input", () => {
+    if (/^#[0-9a-f]{6}$/i.test(field.value)) productionColor.value = field.value;
+  });
+}
 if (themeEditor) {
-  const hex = themeEditor.querySelector("[data-theme-hex]");
+  const hex = themeEditor.querySelector('[name="brand_accent"]');
   const picker = themeEditor.querySelector("[data-theme-picker]");
   const status = themeEditor.querySelector("[data-theme-status]");
   const sheet = document.querySelector("#site-theme");
@@ -149,7 +210,7 @@ if (themeEditor) {
   themeEditor.querySelector("[data-theme-reset]").addEventListener("click", () => update("#536c57"));
   themeEditor.querySelector("[data-theme-cancel]").addEventListener("click", () => update(initial));
 }
-// Keep native selects usable, and offer a thumbnail chooser on desktop and touch screens.
+// Native selects are the no-JS fallback; enhanced pages use one thumbnail chooser.
 const imageFields = {
   hero_photo: "首页背景",
   page_background_photo: "全站背景",
@@ -172,7 +233,8 @@ for (const [name, label] of Object.entries(imageFields)) {
   const open = document.createElement("button");
   open.type = "button";
   open.className = "secondary";
-  open.textContent = "看图选择";
+  open.textContent = "备选图片";
+  select.hidden = true;
   host.append(preview, status, open);
   select.closest("label").insertAdjacentElement("afterend", host);
   const urlFor = (value) => (/^[1-9]\d*$/.test(value) ? "/resources/" + value + "/preview" : "");

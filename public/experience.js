@@ -142,6 +142,7 @@
     document.querySelectorAll("[data-paginate],main>.card-grid,.production-grid,main>.review-grid,.photo-grid"),
   );
   lists.forEach((list) => {
+    if (list.closest("[data-server-paged]") || list.closest(".production-archive")) return;
     const items = [...list.children];
     const size =
       Number(list.dataset.paginate) ||

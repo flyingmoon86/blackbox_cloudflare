@@ -1,5 +1,7 @@
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { watch } from "node:fs";
+import { spawnSync } from "node:child_process";
 
 const environment = { ...process.env };
 const proxyNames = ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy"];
@@ -12,6 +14,14 @@ for (const name of proxyNames) {
 }
 
 const wrangler = fileURLToPath(new URL("../node_modules/wrangler/bin/wrangler.js", import.meta.url));
+let assetWatcher, assetTimer;
+if (process.argv[2] === "dev") {
+  assetWatcher = watch("public", { recursive: true }, (_, file) => {
+    if (!file || file.startsWith("assets")) return;
+    clearTimeout(assetTimer);
+    assetTimer = setTimeout(() => spawnSync(process.execPath, ["scripts/build-assets.mjs"], { stdio: "inherit" }), 150);
+  });
+}
 const child = spawn(process.execPath, [wrangler, ...process.argv.slice(2)], {
   env: environment,
   stdio: "inherit",
@@ -23,6 +33,8 @@ child.on("error", (error) => {
 });
 
 child.on("exit", (code, signal) => {
+  assetWatcher?.close();
+  clearTimeout(assetTimer);
   if (signal) process.kill(process.pid, signal);
   else process.exitCode = code ?? 1;
 });

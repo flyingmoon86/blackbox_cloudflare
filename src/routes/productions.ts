@@ -1,4 +1,6 @@
 import { consumeAccountLimit } from "../middleware/request-limits";
+import { validAccent } from "../services/theme";
+import { pageNumber } from "../views/shared";
 import { reviewRequest } from "../services/reviews";
 import { Hono, type Context } from "hono";
 import { csrfFor, csrfValid } from "../http/cookies";
@@ -11,6 +13,7 @@ import {
 } from "../views/productions";
 
 export type ProductionRow = {
+  theme_color?: string;
   id: number;
   title: string;
   synopsis: string;
@@ -91,16 +94,28 @@ async function resourceChoices(c: Context<AppEnv>, productionId: number | null):
 }
 
 productionRoutes.get("/productions", async (c) => {
+  const total = (await c.env.DB.prepare("SELECT COUNT(*) n FROM production").first<number>("n")) || 0;
+  const size = 12,
+    page = Math.min(pageNumber(c.req.query("page")), Math.max(1, Math.ceil(total / size)));
   const result = await c.env.DB.prepare(
-    "SELECT id,title,synopsis,promo,year,cover_id,cover_ratio,feature_layout FROM production ORDER BY year DESC,id DESC",
-  ).all<ProductionRow>();
-  return c.html(productionListPage(result.results, c.get("user")!, c.req.query("deleted") === "1"));
+    "SELECT id,title,synopsis,promo,year,cover_id,cover_ratio,feature_layout,theme_color FROM production ORDER BY year DESC,id DESC LIMIT ? OFFSET ?",
+  )
+    .bind(size, (page - 1) * size)
+    .all<ProductionRow>();
+  return c.html(
+    productionListPage(result.results, c.get("user")!, c.req.query("deleted") === "1", {
+      page,
+      total,
+      size,
+      path: "/productions",
+    }),
+  );
 });
 
 productionRoutes.get("/productions/:id", async (c) => {
   const id = Number(c.req.param("id"));
   const production = await c.env.DB.prepare(
-    "SELECT id,title,synopsis,promo,year,cover_id,cover_ratio,feature_layout FROM production WHERE id=?",
+    "SELECT id,title,synopsis,promo,year,cover_id,cover_ratio,feature_layout,theme_color FROM production WHERE id=?",
   )
     .bind(id)
     .first<ProductionRow>();
@@ -111,11 +126,17 @@ productionRoutes.get("/productions/:id", async (c) => {
   )
     .bind(id)
     .all<CreditRow>();
+  const total =
+    (await c.env.DB.prepare("SELECT COUNT(*) n FROM resource WHERE production_id=? AND status='approved'")
+      .bind(id)
+      .first<number>("n")) || 0;
+  const size = 24,
+    page = Math.min(pageNumber(c.req.query("page")), Math.max(1, Math.ceil(total / size)));
   const resources = await c.env.DB.prepare(
     `SELECT id,title,res_type,description,original_name,preview_filename FROM resource
-    WHERE production_id=? AND status='approved' ORDER BY created_at DESC,id DESC`,
+    WHERE production_id=? AND status='approved' ORDER BY created_at DESC,id DESC LIMIT ? OFFSET ?`,
   )
-    .bind(id)
+    .bind(id, size, (page - 1) * size)
     .all<ProductionResourceRow>();
   const user = c.get("user")!;
   const admin = user?.role === "admin";
@@ -140,6 +161,7 @@ productionRoutes.get("/productions/:id", async (c) => {
       user,
       myRequests.results,
       await csrfFor(c),
+      { page, total, size, path: `/productions/${id}` },
     ),
   );
 });
@@ -192,6 +214,8 @@ productionRoutes.post("/admin/productions/new", async (c) => {
   if (denied) return denied;
   const form = await c.req.formData();
   if (!csrfValid(c, form.get("csrf"))) return c.text("请求已失效，请刷新页面后重试。", 400);
+  const theme = String(form.get("theme_color") || "").trim();
+  if (theme && !validAccent(theme)) return c.text("作品颜色请填写 #RRGGBB 格式。", 400);
   const title = String(form.get("title") ?? "").trim();
   const yearText = String(form.get("year") ?? "").trim();
   const year = yearText ? Number(yearText) : null;
@@ -207,7 +231,7 @@ productionRoutes.post("/admin/productions/new", async (c) => {
   const allowedIds = new Set(allowed.map((resource) => resource.id));
   if (!resourceIds.every((id) => allowedIds.has(id))) return c.text("选择的资料已被其他作品使用。", 409);
   const result = await c.env.DB.prepare(
-    "INSERT INTO production(title,synopsis,promo,year,cover_ratio,feature_layout) VALUES(?,?,?,?,?,?)",
+    "INSERT INTO production(title,synopsis,promo,year,cover_ratio,feature_layout,theme_color) VALUES(?,?,?,?,?,?,?)",
   )
     .bind(
       title,
@@ -218,6 +242,7 @@ productionRoutes.post("/admin/productions/new", async (c) => {
       year,
       form.get("cover_ratio") === "portrait" ? "portrait" : "landscape",
       form.get("feature_layout") === "overlay" ? "overlay" : "split",
+      theme,
     )
     .run();
   const productionId = Number(result.meta.last_row_id);
@@ -237,7 +262,7 @@ productionRoutes.get("/admin/productions/:id/edit", async (c) => {
   if (denied) return denied;
   const id = Number(c.req.param("id"));
   const production = await c.env.DB.prepare(
-    "SELECT id,title,synopsis,promo,year,cover_id,cover_ratio,feature_layout FROM production WHERE id=?",
+    "SELECT id,title,synopsis,promo,year,cover_id,cover_ratio,feature_layout,theme_color FROM production WHERE id=?",
   )
     .bind(id)
     .first<ProductionRow>();
@@ -255,6 +280,8 @@ productionRoutes.post("/admin/productions/:id/edit", async (c) => {
   if (denied) return denied;
   const form = await c.req.formData();
   if (!csrfValid(c, form.get("csrf"))) return c.text("请求已失效，请刷新页面后重试。", 400);
+  const theme = form.has("theme_color") ? String(form.get("theme_color") || "").trim() : null;
+  if (theme && !validAccent(theme)) return c.text("作品颜色请填写 #RRGGBB 格式。", 400);
   const id = Number(c.req.param("id"));
   const title = String(form.get("title") ?? "").trim();
   const yearText = String(form.get("year") ?? "").trim();
@@ -284,7 +311,7 @@ productionRoutes.post("/admin/productions/:id/edit", async (c) => {
   )
     return c.text("封面必须选择该作品已审核的剧照。", 400);
   const result = await c.env.DB.prepare(
-    "UPDATE production SET title=?,synopsis=?,promo=?,year=?,cover_ratio=?,feature_layout=?,cover_id=? WHERE id=?",
+    "UPDATE production SET title=?,synopsis=?,promo=?,year=COALESCE(?,year),cover_ratio=?,feature_layout=?,cover_id=?,theme_color=COALESCE(?,theme_color) WHERE id=?",
   )
     .bind(
       title,
@@ -296,6 +323,7 @@ productionRoutes.post("/admin/productions/:id/edit", async (c) => {
       form.get("cover_ratio") === "portrait" ? "portrait" : "landscape",
       form.get("feature_layout") === "overlay" ? "overlay" : "split",
       cover,
+      theme,
       id,
     )
     .run();

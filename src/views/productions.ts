@@ -1,3 +1,4 @@
+import { archiveTabs, pagination, type PageInfo, yearSelect } from "./shared";
 import type {
   CreditRow,
   MemberChoice,
@@ -10,11 +11,12 @@ import type { UserSession } from "../types";
 import { escapeHtml, layout } from "../views";
 import { resourceCardArtwork } from "./resource-preview";
 
-function archiveTabs(active: "productions" | "resources"): string {
-  return `<nav class="section-tabs" aria-label="作品与资料"><a href="/productions"${active === "productions" ? ' class="active" aria-current="page"' : ""}>作品档案</a><a href="/resources"${active === "resources" ? ' class="active" aria-current="page"' : ""}>资料库</a></nav>`;
-}
-
-export function productionListPage(items: ProductionRow[], user: UserSession | null, deleted = false): string {
+export function productionListPage(
+  items: ProductionRow[],
+  user: UserSession | null,
+  deleted = false,
+  page?: PageInfo,
+): string {
   const admin = user?.role === "admin";
   const contributionActions = (item: ProductionRow): string => {
     const joinLink = user?.member_id
@@ -36,7 +38,7 @@ export function productionListPage(items: ProductionRow[], user: UserSession | n
     : '<p class="card">还没有作品档案。</p>';
   return layout(
     "作品",
-    `${archiveTabs("productions")}<section class="page-heading"><p class="eyebrow">PRODUCTIONS</p><h1>作品档案</h1>${deleted ? '<p class="notice">作品已删除，原有资料已转入“其他资料”。</p>' : ""}<p>浏览剧团作品，进入作品可查看演职员与已经审核入库的相关资料。</p>${admin ? '<a class="button" href="/admin/productions/new">＋ 创建作品</a>' : !admin ? '<a class="button" href="/suggestions?type=production&source=productions">申请创建作品</a>' : ""}</section><section class="card-grid production-grid">${cards}</section>`,
+    `${archiveTabs("productions")}<section class="page-heading"><p class="eyebrow">PRODUCTIONS</p><h1>作品档案</h1>${deleted ? '<p class="notice">作品已删除，原有资料已转入“其他资料”。</p>' : ""}<p>浏览剧团作品，进入作品可查看演职员与已经审核入库的相关资料。</p>${admin ? '<a class="button" href="/admin/productions/new">＋ 创建作品</a>' : !admin ? '<a class="button" href="/suggestions?type=production&source=productions">申请创建作品</a>' : ""}</section><section class="card-grid production-grid" data-server-paged>${cards}</section>${pagination(page)}`,
     Boolean(user),
     admin,
   );
@@ -50,6 +52,7 @@ export function productionDetailPage(
   user: UserSession | null,
   myRequests: Array<{ status: string; kind: string; role_name: string; admin_note: string }>,
   csrf: string,
+  resourcePage?: PageInfo,
 ): string {
   const admin = user?.role === "admin";
   const group = (kind: "cast" | "crew") => {
@@ -124,11 +127,12 @@ export function productionDetailPage(
     item.title,
     `${archiveTabs("productions")}<p class="back-links"><a href="/productions">← 返回作品档案</a><a href="/resources">查看资料库</a></p><article class="card production-detail ratio-${item.cover_ratio === "portrait" ? "portrait" : "landscape"}">${item.cover_id ? `<img class="production-cover" src="/resources/${item.cover_id}/preview" alt="${escapeHtml(item.title)}封面">` : ""}<p class="eyebrow">${escapeHtml(item.year || "PRODUCTION")}</p><h1>${escapeHtml(item.title)}</h1><p class="lead">${escapeHtml(item.promo)}</p><p>${escapeHtml(item.synopsis || "暂无剧情介绍")}</p>
     <div class="two-column"><section><h2>演员</h2><ul>${group("cast")}</ul></section><section><h2>后台与创作</h2><ul>${group("crew")}</ul></section></div>
-    <section class="production-archive"><h2>相关资料</h2><p class="muted">已审核入库的剧本、剧照、视频和其他档案。</p><div class="card-grid">${archiveContent}</div></section>
+    <section class="production-archive"><h2>相关资料</h2><p class="muted">已审核入库的剧本、剧照、视频和其他档案。</p><div class="card-grid">${archiveContent}</div>${pagination(resourcePage)}</section>
     ${join}
     ${admin ? `<section id="manage-credits"><p><a href="/admin/productions/${item.id}/edit">编辑作品资料</a></p><form class="credit-form" method="post" action="/admin/productions/${item.id}/credits"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>选择队员<select name="member_id" required><option value="">请选择</option>${members.map((member) => `<option value="${member.id}">${escapeHtml(member.name)}${member.cohort ? `（${escapeHtml(member.cohort)}）` : ""}</option>`).join("")}</select></label><label>类别<select name="kind"><option value="cast">演员</option><option value="crew">后台与创作</option></select></label><label>角色或分工<input name="role_name" maxlength="80" required></label><button>添加演职员</button></form></section>` : ""}</article>`,
     Boolean(user),
     admin,
+    item.id,
   );
 }
 
@@ -148,7 +152,7 @@ export function productionFormPage(
     : '<p class="muted">当前没有可导入的已审核资料。</p>';
   return layout(
     item ? "编辑作品" : "创建作品",
-    `<section class="card auth wide"><p class="eyebrow">PRODUCTION EDITOR</p><h1>${item ? "编辑作品" : "创建作品"}</h1><form method="post" action="${action}"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>作品名称<input name="title" maxlength="100" value="${escapeHtml(item?.title)}" required></label><label>年份<input name="year" type="number" min="1" max="9999" value="${escapeHtml(item?.year)}"></label><label>首页短介绍<input name="promo" maxlength="300" value="${escapeHtml(item?.promo)}"></label><label>剧情与作品介绍<textarea name="synopsis" rows="8">${escapeHtml(item?.synopsis)}</textarea></label>${coverSelect}${resourceImport}<label>封面比例<select name="cover_ratio"><option value="landscape"${item?.cover_ratio !== "portrait" ? " selected" : ""}>横版</option><option value="portrait"${item?.cover_ratio === "portrait" ? " selected" : ""}>竖版</option></select></label><label>作品卡片布局<select name="feature_layout"><option value="split"${item?.feature_layout !== "overlay" ? " selected" : ""}>图文并列</option><option value="overlay"${item?.feature_layout === "overlay" ? " selected" : ""}>文字叠加</option></select><span class="hint">同时用于作品档案列表和首页精选区。图文并列保持现有排版；文字叠加使用剧照卡片，悬停展开简介和操作，手机直接显示。需要先选择展示图。</span></label><button>保存作品</button></form>${item ? `<aside class="danger-zone"><p class="eyebrow">DANGER ZONE</p><h2>删除作品</h2><p>演职员和待审核加入申请会一并移除；已上传资料不会删除，而会转入“其他资料”。</p><form method="post" action="/admin/productions/${item.id}/delete"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>输入作品名“${escapeHtml(item.title)}”确认<input name="confirm_title" autocomplete="off" required></label><button class="danger">删除这部作品</button></form></aside>` : ""}</section>`,
+    `<section class="card auth wide"><p class="eyebrow">PRODUCTION EDITOR</p><h1>${item ? "编辑作品" : "创建作品"}</h1><form method="post" action="${action}"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>作品名称<input name="title" maxlength="100" value="${escapeHtml(item?.title)}" required></label><label>年份${yearSelect("year", item?.year)}</label><label>首页短介绍<input name="promo" maxlength="300" value="${escapeHtml(item?.promo)}"></label><label>剧情与作品介绍<textarea name="synopsis" rows="8">${escapeHtml(item?.synopsis)}</textarea></label>${coverSelect}${resourceImport}<label>作品主题色<input name="theme_color" value="${escapeHtml(item?.theme_color || "")}" pattern="#[0-9a-fA-F]{6}" maxlength="7" placeholder="留空沿用全站"><span class="hint">仅作用于该作品详情页，留空沿用网站颜色。</span></label><label>选择作品颜色<input type="color" data-production-color value="${escapeHtml(item?.theme_color || "#536c57")}"></label><label>封面比例<select name="cover_ratio"><option value="landscape"${item?.cover_ratio !== "portrait" ? " selected" : ""}>横版</option><option value="portrait"${item?.cover_ratio === "portrait" ? " selected" : ""}>竖版</option></select></label><label>作品卡片布局<select name="feature_layout"><option value="split"${item?.feature_layout !== "overlay" ? " selected" : ""}>图文并列</option><option value="overlay"${item?.feature_layout === "overlay" ? " selected" : ""}>文字叠加</option></select><span class="hint">同时用于作品档案列表和首页精选区。图文并列保持现有排版；文字叠加使用剧照卡片，悬停展开简介和操作，手机直接显示。需要先选择展示图。</span></label><button>保存作品</button></form>${item ? `<aside class="danger-zone"><p class="eyebrow">DANGER ZONE</p><h2>删除作品</h2><p>演职员和待审核加入申请会一并移除；已上传资料不会删除，而会转入“其他资料”。</p><form method="post" action="/admin/productions/${item.id}/delete"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>输入作品名“${escapeHtml(item.title)}”确认<input name="confirm_title" autocomplete="off" required></label><button class="danger">删除这部作品</button></form></aside>` : ""}</section>`,
     true,
     true,
   );

@@ -37,6 +37,9 @@ contentRoutes.use("*", async (c, next) => {
 contentRoutes.get("/site/theme.css", async (c) => {
   let accent = DEFAULT_ACCENT;
   const preview = c.req.query("accent");
+  const background = await c.env.DB.prepare(
+    "SELECT r.id FROM site_profile s JOIN resource r ON CAST(r.id AS TEXT)=s.page_background_photo WHERE s.id=1 AND r.status='approved' AND r.res_type='photo' AND r.preview_filename<>''",
+  ).first();
   if (preview && validAccent(preview) && c.get("user")?.role === "admin") accent = preview;
   else {
     const row = await c.env.DB.prepare("SELECT page_texts FROM site_profile WHERE id=1").first<{
@@ -45,10 +48,17 @@ contentRoutes.get("/site/theme.css", async (c) => {
     try {
       accent = JSON.parse(row?.page_texts || "{}").brand_accent || DEFAULT_ACCENT;
     } catch {}
+    const productionId = Number(c.req.query("production"));
+    if (Number.isSafeInteger(productionId) && productionId > 0) {
+      const color = await c.env.DB.prepare("SELECT theme_color FROM production WHERE id=?")
+        .bind(productionId)
+        .first<string>("theme_color");
+      if (color && validAccent(color)) accent = color;
+    }
   }
   c.header("Content-Type", "text/css; charset=utf-8");
   c.header("Cache-Control", "private, no-cache");
-  return c.body(themeCss(accent));
+  return c.body(themeCss(accent) + (background ? "" : "body::before{background-image:none}"));
 });
 const adminDenied = (c: any) => (c.get("user")?.role === "admin" ? null : c.text("没有管理员权限。", 403));
 
@@ -132,18 +142,11 @@ contentRoutes.post("/admin/site", async (c) => {
   try {
     texts = JSON.parse(current?.page_texts || "{}");
   } catch {}
-  for (const key of [
-    "home_welcome",
-    "visitor_welcome",
-    "test_notice",
-    "about_text",
-    "contact_intro",
-    "member_guide",
-    "admin_guide",
-  ])
-    texts[key] = String(form.get(key) ?? "")
-      .trim()
-      .slice(0, 10000);
+  for (const key of ["about_heading", "test_notice", "about_text", "member_guide", "admin_guide"])
+    if (form.has(key))
+      texts[key] = String(form.get(key) ?? "")
+        .trim()
+        .slice(0, 10000);
   if (form.has("brand_accent")) {
     const value = String(form.get("brand_accent") || "").trim();
     if (!validAccent(value)) return c.text("主题色请填写 #RRGGBB 格式。", 400);
@@ -200,21 +203,16 @@ contentRoutes.post("/admin/site", async (c) => {
   )
     return c.text("全站背景必须选择已审核的剧照。", 400);
   await c.env.DB.prepare(
-    `UPDATE site_profile SET troupe_name=?,introduction=?,contact_email=?,contact_wechat=?,qq_group=?,public_account=?,recruitment=?,requirements=?,hero_photo=?,page_background_photo=?,featured_production_id=?,page_texts=? WHERE id=1`,
+    `UPDATE site_profile SET troupe_name=?,contact_email=?,qq_group=?,recruitment=?,requirements=?,hero_photo=?,page_background_photo=?,featured_production_id=?,page_texts=? WHERE id=1`,
   )
     .bind(
       String(form.get("troupe_name") ?? "")
         .trim()
         .slice(0, 100) || "话剧队",
-      String(form.get("introduction") ?? "").trim() || null,
       String(form.get("contact_email") ?? "").trim() || null,
-      String(form.get("contact_wechat") ?? "").trim() || null,
       String(form.get("qq_group") ?? "")
         .trim()
         .slice(0, 50),
-      String(form.get("public_account") ?? "")
-        .trim()
-        .slice(0, 100),
       String(form.get("recruitment") ?? "").trim(),
       String(form.get("requirements") ?? "").trim(),
       hero === null ? "" : String(hero),
