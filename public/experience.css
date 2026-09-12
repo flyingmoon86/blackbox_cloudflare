@@ -93,3 +93,4 @@ body:has(.theatre-stage) .nav-menu>summary,body:has(.theatre-stage) .desktop-nav
 @media(max-width:900px){.recruitment-poster img{width:100%;max-height:none}.scene-nav{display:none}.stage-explore{font-size:16px!important;min-height:44px}.poster-settings-preview figure{max-width:100%}}
 @media(prefers-reduced-motion:no-preference){.stage-explore span{animation:explore-cue 1s ease-in-out 3}}
 @keyframes explore-cue{50%{transform:translateY(4px)}}
+@media(min-width:901px){.about-columns:has(.poster-portrait){grid-template-columns:.85fr 1.35fr;gap:3vw}.about-columns article:has(.poster-portrait){display:grid;grid-template-columns:minmax(0,1fr) minmax(140px,.8fr);column-gap:20px;align-content:start}.about-columns article:has(.poster-portrait)>:not(figure){grid-column:1}.about-columns .poster-portrait{grid-column:2;grid-row:1/6;margin:0}.recruitment-poster.poster-portrait img{max-height:43vh;width:100%;object-position:top}.stage-about{align-items:safe center}}
