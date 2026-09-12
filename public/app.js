@@ -163,6 +163,15 @@ function updatePosterPreviews() {
 posterSelectors.forEach((select) => select.addEventListener("change", updatePosterPreviews));
 if (posterSelectors.length) updatePosterPreviews();
 const posterDialog = document.querySelector(".poster-dialog");
+const recruitmentImage = document.querySelector(".recruitment-poster img");
+if (recruitmentImage instanceof HTMLImageElement) {
+  const updateRatio = () =>
+    recruitmentImage
+      .closest("figure")
+      .classList.toggle("poster-portrait", recruitmentImage.naturalHeight > recruitmentImage.naturalWidth);
+  recruitmentImage.addEventListener("load", updateRatio);
+  if (recruitmentImage.complete) updateRatio();
+}
 if (posterDialog instanceof HTMLDialogElement) {
   const image = posterDialog.querySelector("img");
   const zoom = posterDialog.querySelector(".poster-zoom");

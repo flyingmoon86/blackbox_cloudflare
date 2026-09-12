@@ -54,8 +54,7 @@ export function layout(title: string, content: string, signedIn = false, admin =
       group("从这里开始", "/help", "网站使用指南", admin ? child("/help#captain-guide", "管理员指南") : "") +
         group("一起完善黑匣子", "/thanks", "网站贡献者", child("/feedback", "提交网站建议")),
     ) +
-    menu("了解黑匣子", group("最新消息", "/announcements", "剧团公告", child("/#contact", "联系我们"))) +
-    (admin ? menu("管理", group("剧团事务", "/admin", "管理员工作台", child("/admin/community", "贡献者与建议"))) : "");
+    (admin ? link("/admin", "管理") : "");
   const account =
     '<a class="account-link" href="' +
     (signedIn ? "/profile" : "/login") +
