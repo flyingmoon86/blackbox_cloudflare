@@ -1,3 +1,9 @@
+document.addEventListener("submit", (event) => {
+  const form = event.target;
+  if (form instanceof HTMLFormElement && form.dataset.confirm && !window.confirm(form.dataset.confirm))
+    event.preventDefault();
+});
+
 const notice = document.querySelector("[data-test-notice]");
 if (notice instanceof HTMLDialogElement) {
   const key = `blackbox-test-notice-${notice.dataset.testNotice}`;
@@ -115,4 +121,70 @@ for (const mascot of document.querySelectorAll("[data-home-mascot]")) {
   mascot.addEventListener("load", ready, { once: true });
   mascot.addEventListener("error", missing, { once: true });
   if (mascot.complete) (mascot.naturalWidth ? ready : missing)();
+}
+
+const themeEditor = document.querySelector("[data-theme-editor]");
+if (themeEditor) {
+  const hex = themeEditor.querySelector("[data-theme-hex]");
+  const picker = themeEditor.querySelector("[data-theme-picker]");
+  const status = themeEditor.querySelector("[data-theme-status]");
+  const sheet = document.querySelector("#site-theme");
+  const initial = hex.value;
+  let timer;
+  const update = (value) => {
+    hex.value = value;
+    const valid = /^#[0-9a-f]{6}$/i.test(value);
+    hex.setCustomValidity(valid ? "" : "请填写 #RRGGBB 格式");
+    status.textContent = valid ? "预览仅你可见，保存页面内容后生效。" : "请填写完整的六位颜色编号。";
+    clearTimeout(timer);
+    if (valid) {
+      picker.value = value;
+      timer = setTimeout(() => {
+        sheet.href = "/site/theme.css?accent=" + encodeURIComponent(value);
+      }, 180);
+    }
+  };
+  hex.addEventListener("input", () => update(hex.value));
+  picker.addEventListener("input", () => update(picker.value));
+  themeEditor.querySelector("[data-theme-reset]").addEventListener("click", () => update("#536c57"));
+  themeEditor.querySelector("[data-theme-cancel]").addEventListener("click", () => update(initial));
+}
+const posterSelectors = document.querySelectorAll("[data-poster-select]");
+function updatePosterPreviews() {
+  const general = document.querySelector('[name="recruitment_poster"]')?.value;
+  for (const img of document.querySelectorAll("[data-poster-preview]")) {
+    const own = document.querySelector('[name="' + img.dataset.posterPreview + '"]')?.value;
+    const id = own || general;
+    img.hidden = !id;
+    if (id) img.src = "/resources/" + encodeURIComponent(id) + "/preview";
+    else img.removeAttribute("src");
+  }
+}
+posterSelectors.forEach((select) => select.addEventListener("change", updatePosterPreviews));
+if (posterSelectors.length) updatePosterPreviews();
+const posterDialog = document.querySelector(".poster-dialog");
+if (posterDialog instanceof HTMLDialogElement) {
+  const image = posterDialog.querySelector("img");
+  const zoom = posterDialog.querySelector(".poster-zoom");
+  document.querySelector("[data-poster-open]")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    image.src = event.currentTarget.querySelector("img").currentSrc;
+    zoom.classList.remove("is-zoomed");
+    posterDialog.showModal();
+  });
+  posterDialog.querySelector("[data-poster-close]").addEventListener("click", () => posterDialog.close());
+  image.tabIndex = 0;
+  image.setAttribute("role", "button");
+  image.setAttribute("aria-label", "切换海报放大");
+  const toggle = () => {
+    zoom.classList.toggle("is-zoomed");
+    image.setAttribute("aria-pressed", String(zoom.classList.contains("is-zoomed")));
+  };
+  image.addEventListener("click", toggle);
+  image.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      toggle();
+    }
+  });
 }

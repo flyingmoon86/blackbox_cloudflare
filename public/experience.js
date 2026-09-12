@@ -1,52 +1,69 @@
 (() => {
   const nav = document.querySelector("#main-navigation"),
-    toggle = document.querySelector(".menu-toggle");
+    toggle = document.querySelector(".menu-toggle"),
+    header = document.querySelector(".top");
   const menus = [...document.querySelectorAll(".nav-menu")];
-  let closeTimer;
-  const close = () =>
-    menus.forEach((m) => {
-      m.open = false;
-      m.querySelector("summary").setAttribute("aria-expanded", "false");
-    });
+  let closeTimer,
+    restoringFocus = false;
+  const sync = () => {
+    menus.forEach((m) => m.querySelector("summary").setAttribute("aria-expanded", String(m.open)));
+    document.body.classList.toggle(
+      "navigation-open",
+      menus.some((m) => m.open),
+    );
+  };
+  const close = () => {
+    clearTimeout(closeTimer);
+    menus.forEach((m) => (m.open = false));
+    sync();
+  };
+  const open = (m) => {
+    clearTimeout(closeTimer);
+    menus.forEach((other) => (other.open = other === m));
+    sync();
+  };
   menus.forEach((m) => {
     const summary = m.querySelector("summary");
     summary.setAttribute("aria-expanded", "false");
-    m.addEventListener("toggle", () => summary.setAttribute("aria-expanded", String(m.open)));
-    m.addEventListener("pointerenter", () => {
-      if (!matchMedia("(min-width:901px)").matches) return;
-      clearTimeout(closeTimer);
-      menus.forEach((other) => {
-        if (other !== m) other.open = false;
-      });
-      m.open = true;
-    });
-    m.addEventListener("pointerleave", () => {
-      if (matchMedia("(min-width:901px)").matches)
-        closeTimer = setTimeout(() => {
-          if (!m.contains(document.activeElement)) m.open = false;
-        }, 180);
+    m.addEventListener("toggle", sync);
+    m.addEventListener("pointerenter", (event) => {
+      if (event.pointerType !== "touch" && matchMedia("(min-width:901px)").matches) open(m);
     });
     m.addEventListener("focusin", () => {
-      if (!desktop.matches || !summary.matches(":focus-visible")) return;
-      clearTimeout(closeTimer);
-      menus.forEach((other) => {
-        if (other !== m) other.open = false;
-      });
-      m.open = true;
+      if (!restoringFocus && matchMedia("(min-width:901px)").matches && summary.matches(":focus-visible")) open(m);
+    });
+    summary.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        open(m);
+        m.querySelector(".nav-panel a")?.focus();
+      }
     });
   });
+  header?.addEventListener("pointerleave", () => {
+    if (matchMedia("(min-width:901px)").matches) closeTimer = setTimeout(close, 160);
+  });
+  header?.addEventListener("pointerenter", () => clearTimeout(closeTimer));
+  header?.addEventListener("focusout", (event) => {
+    if (!header.contains(event.relatedTarget)) close();
+  });
+  header
+    ?.querySelectorAll(".desktop-nav>a,.account-link,.brand")
+    .forEach((a) => a.addEventListener("pointerenter", close));
   toggle?.addEventListener("click", () => {
-    const open = nav.classList.toggle("is-open");
-    toggle.setAttribute("aria-expanded", String(open));
+    const expanded = nav.classList.toggle("is-open");
+    toggle.setAttribute("aria-expanded", String(expanded));
+    if (!expanded) close();
   });
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") {
-      const current = menus.find((m) => m.open);
-      close();
-      nav?.classList.remove("is-open");
-      toggle?.setAttribute("aria-expanded", "false");
-      current?.querySelector("summary").focus();
-    }
+    if (event.key !== "Escape") return;
+    const current = menus.find((m) => m.open);
+    close();
+    nav?.classList.remove("is-open");
+    toggle?.setAttribute("aria-expanded", "false");
+    restoringFocus = true;
+    current?.querySelector("summary").focus();
+    restoringFocus = false;
   });
   document.addEventListener("click", (event) => {
     if (!event.target.closest(".top")) close();
