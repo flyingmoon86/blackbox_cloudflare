@@ -1,3 +1,5 @@
+import { YEARS, yearSelect, icon, pagination, type PageInfo } from "./views/shared";
+import { assetUrl } from "./views/assets";
 import type { UserSession } from "./types";
 import type { MemberRow } from "./routes/members";
 
@@ -10,10 +12,39 @@ export function escapeHtml(value: unknown): string {
     .replaceAll("'", "&#39;");
 }
 
-export function layout(title: string, content: string, signedIn = false, admin = false): string {
-  const link = (href: string, label: string) => '<a href="' + href + '">' + label + "</a>";
+export function layout(title: string, content: string, signedIn = false, admin = false, themeId?: number): string {
+  const link = (href: string, label: string) =>
+    '<a href="' +
+    href +
+    '">' +
+    (href === "/"
+      ? icon("home")
+      : href === "/productions"
+        ? icon("productions")
+        : href === "/resources"
+          ? icon("resources")
+          : href === "/members"
+            ? icon("members")
+            : href === "/help"
+              ? icon("help")
+              : href === "/thanks"
+                ? icon("thanks")
+                : "") +
+    label +
+    "</a>";
   const menu = (label: string, items: string) =>
-    '<details class="nav-menu"><summary>' + label + '</summary><div class="nav-panel">' + items + "</div></details>";
+    '<details class="nav-menu"><summary>' +
+    (label === "作品与资料"
+      ? icon("productions")
+      : label === "队员与剧团"
+        ? icon("members")
+        : label === "指南与鸣谢"
+          ? icon("help")
+          : "") +
+    label +
+    '</summary><div class="nav-panel">' +
+    items +
+    "</div></details>";
   const group = (caption: string, href: string, label: string, children: string) =>
     '<section class="nav-group"><p class="nav-caption">' +
     caption +
@@ -65,7 +96,7 @@ export function layout(title: string, content: string, signedIn = false, admin =
     '"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="8" r="3.25"/><path d="M5.5 20v-1.5a6.5 6.5 0 0 1 13 0V20"/><circle cx="12" cy="12" r="10"/></svg></a>';
   const mobile =
     '<nav class="mobile-nav" aria-label="手机主导航">' +
-    link("/", "⌂ 首页") +
+    link("/", "首页") +
     link("/productions", "作品资料") +
     link("/members", "队员") +
     link(signedIn ? "/profile" : "/login", signedIn ? "我的" : "登录") +
@@ -73,8 +104,19 @@ export function layout(title: string, content: string, signedIn = false, admin =
   return (
     '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' +
     escapeHtml(title) +
-    ' · 黑匣子</title><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/experience.css?v=2"><link id="site-theme" rel="stylesheet" href="/site/theme.css"><script src="/app.js" defer></script><script src="/experience.js?v=2" defer></script></head><body class="' +
+    ' · 黑匣子</title><link rel="stylesheet" href="' +
+    assetUrl("/app.css") +
+    '"><link rel="stylesheet" href="' +
+    assetUrl("/experience.css") +
+    '"><link id="site-theme" rel="stylesheet" href="/site/theme.css' +
+    (themeId ? "?production=" + themeId : "") +
+    '"><script src="' +
+    assetUrl("/app.js") +
+    '" defer></script><script src="' +
+    assetUrl("/experience.js") +
+    '" defer></script></head><body class="' +
     (signedIn ? "signed-in" : "signed-out") +
+    (content.includes('class="section-tabs"') ? " archive-page" : "") +
     '"><a class="skip-link" href="#main-content">跳到内容</a><header class="top"><a href="/" class="brand">黑匣子<span>BLACK BOX THEATRE</span></a><button class="menu-toggle" aria-expanded="false" aria-controls="main-navigation">菜单 ＋</button><nav id="main-navigation" class="desktop-nav" aria-label="主导航">' +
     nav +
     "</nav>" +
@@ -171,6 +213,7 @@ export function memberListPage(
   selectedYear: number | null,
   admin: boolean,
   signedIn = true,
+  page?: PageInfo,
 ): string {
   const cards = members.length
     ? members
@@ -182,12 +225,12 @@ export function memberListPage(
         })
         .join("")
     : '<p class="card">没有找到符合条件的队员。</p>';
-  const options = years
-    .map((year) => `<option value="${year}"${selectedYear === year ? " selected" : ""}>${year}</option>`)
-    .join("");
+  const options = YEARS.map(
+    (year) => `<option value="${year}"${selectedYear === year ? " selected" : ""}>${year}</option>`,
+  ).join("");
   return layout(
     "队员名录",
-    `<section class="page-heading"><p class="eyebrow">HALL OF FAME</p><h1>队员名录</h1>${admin ? '<p><a class="button" href="/admin/members/new">＋ 新建队员档案</a></p>' : ""}<form method="get" class="filters"><input name="q" value="${escapeHtml(search)}" placeholder="搜索姓名、入学年级或作品"><select name="year"><option value="">全部年份</option>${options}</select><button>查找</button></form></section><section class="card-grid">${cards}</section>`,
+    `<section class="page-heading"><p class="eyebrow">HALL OF FAME</p><h1>队员名录</h1>${admin ? '<p><a class="button" href="/admin/members/new">＋ 新建队员档案</a></p>' : ""}<form method="get" class="filters"><input name="q" value="${escapeHtml(search)}" placeholder="搜索姓名、入学年级或作品"><select name="year"><option value="">全部年份</option>${options}</select><button>查找</button></form></section><section class="card-grid" data-server-paged>${cards}</section>${pagination(page)}`,
     signedIn,
     admin,
   );
@@ -196,7 +239,7 @@ export function memberListPage(
 export function memberCreatePage(csrf: string, error = ""): string {
   return layout(
     "新建队员档案",
-    `<section class="card auth"><p class="eyebrow">NEW MEMBER</p><h1>新建队员档案</h1>${message(error)}<p class="muted">先建立没有账号的历史或现役队员档案。队员注册后，可以申请绑定到这份档案。</p><form method="post" action="/admin/members/new"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>姓名<input name="name" maxlength="50" required></label><label>入队年份<input name="join_year" type="number" min="1" max="9999" inputmode="numeric"></label><label>入学年级<input name="cohort" type="number" min="1900" max="2099" placeholder="如 2024"><span class="hint">填写入校年份，显示为 2024 级。</span></label><label>个人简介<textarea name="bio" maxlength="5000" rows="7"></textarea></label><label>代表作与经历<textarea name="works" maxlength="2000" rows="5"></textarea></label><button>建立档案</button></form><p><a href="/members">返回队员名录</a></p></section>`,
+    `<section class="card auth"><p class="eyebrow">NEW MEMBER</p><h1>新建队员档案</h1>${message(error)}<p class="muted">先建立没有账号的历史或现役队员档案。队员注册后，可以申请绑定到这份档案。</p><form method="post" action="/admin/members/new"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>姓名<input name="name" maxlength="50" required></label><label>入队年份${yearSelect("join_year", "")}</label><label>入学年级${yearSelect("cohort", "")}<span class="hint">填写入校年份，显示为 2024 级。</span></label><label>个人简介<textarea name="bio" maxlength="5000" rows="7"></textarea></label><button>建立档案</button></form><p><a href="/members">返回队员名录</a></p></section>`,
     true,
     true,
   );
@@ -219,11 +262,11 @@ export function memberDetailPage(
   const edit = admin
     ? `<a class="edit-link" href="/admin/members/${member.id}/edit">编辑队员档案</a>`
     : own
-      ? '<a class="edit-link" href="/profile/member">编辑我的简介与代表作</a>'
+      ? '<a class="edit-link" href="/profile/member">修改我的信息</a>'
       : "";
   return layout(
     member.name,
-    `<article class="card profile-detail">${member.photo ? `<img class="avatar avatar-large" src="/members/${member.id}/avatar" alt="${escapeHtml(member.name)}的头像">` : ""}<p class="eyebrow">${escapeHtml(cohortLabel(member.cohort) || "剧团成员")}</p><h1>${escapeHtml(member.name)}</h1>${member.contributor ? '<span class="contributor-tag">网站贡献者</span>' : ""}<p>${member.join_year ? member.join_year + " 年入队" : "入队年份待补充"}</p>${edit}${notice}<p>${escapeHtml(member.bio || "暂无简介")}</p><h2>代表作</h2><p>${escapeHtml(member.works || "暂无记录")}</p><p>收到 ${member.flower_count} 朵花</p><form method="post" action="/members/${member.id}/flowers"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button>送一朵花</button></form><p><a href="/members">返回队员名录</a></p></article>`,
+    `<article class="card profile-detail">${member.photo ? `<img class="avatar avatar-large" src="/members/${member.id}/avatar" alt="${escapeHtml(member.name)}的头像">` : ""}<p class="eyebrow">${escapeHtml(cohortLabel(member.cohort) || "剧团成员")}</p><h1>${escapeHtml(member.name)}</h1>${member.contributor ? '<span class="contributor-tag">网站贡献者</span>' : ""}<p>${member.join_year ? member.join_year + " 年入队" : "入队年份待补充"}</p>${edit}${notice}<p>${escapeHtml(member.bio || "暂无简介")}</p><h2>参与作品</h2>${member.productions?.length ? `<ul>${member.productions.map((p) => `<li><a href="/productions/${p.id}">${escapeHtml(p.title)}</a></li>`).join("")}</ul>` : "<p>暂无已关联作品。</p>"}<p>收到 ${member.flower_count} 朵花</p><form method="post" action="/members/${member.id}/flowers"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button>送一朵花</button></form><p><a href="/members">返回队员名录</a></p></article>`,
     signedIn,
     admin,
   );
@@ -232,8 +275,8 @@ export function memberDetailPage(
 export function memberEditPage(member: MemberRow, csrf: string, admin: boolean, saved: boolean): string {
   const action = admin ? `/admin/members/${member.id}/edit` : "/profile/member";
   const identity = admin
-    ? `<label>姓名<input name="name" maxlength="50" value="${escapeHtml(member.name)}" required></label><label>入队年份<input name="join_year" type="number" min="1" max="9999" value="${escapeHtml(member.join_year)}"></label><label>入学年级<input name="cohort" type="number" min="1900" max="2099" value="${/^[0-9]{4}$/.test(member.cohort) ? escapeHtml(member.cohort) : ""}" placeholder="如 2024"></label>`
-    : `<p class="muted">姓名需要修改时请联系管理员。</p><label>入队年份<input name="join_year" type="number" min="1900" max="2099" value="${escapeHtml(member.join_year)}"></label><label>入学年级<input name="cohort" type="number" min="1900" max="2099" value="${/^[0-9]{4}$/.test(member.cohort) ? escapeHtml(member.cohort) : ""}" placeholder="如 2024"><span class="hint">填入校年份，非毕业年份；留空保留原记录。</span></label>`;
+    ? `<label>姓名<input name="name" maxlength="50" value="${escapeHtml(member.name)}" required></label><label>入队年份${yearSelect("join_year", member.join_year)}</label><label>入学年级${yearSelect("cohort", member.cohort)}</label>`
+    : `<p class="muted">姓名需要修改时请联系管理员。</p><label>入队年份${yearSelect("join_year", member.join_year)}</label><label>入学年级${yearSelect("cohort", member.cohort)}<span class="hint">填入校年份，非毕业年份；留空保留原记录。</span></label>`;
   const avatarForm = admin
     ? member.photo
       ? `<form method="post" action="/admin/members/${member.id}/avatar/delete"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button class="secondary">移除当前头像</button></form>`
@@ -241,7 +284,7 @@ export function memberEditPage(member: MemberRow, csrf: string, admin: boolean, 
     : `<form method="post" action="/profile/member/avatar" enctype="multipart/form-data"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>更换头像<input type="file" name="avatar" accept="image/jpeg,image/png,image/webp,image/avif" required></label><span class="hint">支持 JPG、PNG、WebP、AVIF，最大 15MB。</span><button class="secondary">上传头像</button></form>`;
   return layout(
     admin ? "编辑队员档案" : "修改我的信息",
-    `<section class="card auth"><p class="eyebrow">MEMBER PROFILE</p><h1>${admin ? "编辑队员档案" : "修改我的信息"}</h1>${saved ? `<p class="notice">${admin ? "队员档案" : "个人信息"}已保存。</p>` : ""}${member.photo ? `<img class="avatar avatar-large" src="/members/${member.id}/avatar" alt="当前头像">` : ""}<form method="post" action="${action}"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}">${identity}<label>个人简介<textarea name="bio" maxlength="5000" rows="7">${escapeHtml(member.bio)}</textarea></label><label>代表作与经历<textarea name="works" maxlength="2000" rows="5">${escapeHtml(member.works)}</textarea></label><button>${admin ? "保存档案" : "保存信息"}</button></form><hr>${avatarForm}<p><a href="/members/${member.id}">返回队员档案</a></p></section>`,
+    `<section class="card auth"><p class="eyebrow">MEMBER PROFILE</p><h1>${admin ? "编辑队员档案" : "修改我的信息"}</h1>${saved ? `<p class="notice">${admin ? "队员档案" : "个人信息"}已保存。</p>` : ""}${member.photo ? `<img class="avatar avatar-large" src="/members/${member.id}/avatar" alt="当前头像">` : ""}<form method="post" action="${action}"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}">${identity}<label>个人简介<textarea name="bio" maxlength="5000" rows="7">${escapeHtml(member.bio)}</textarea></label><p class="hint">参与作品会根据已审核的演职员关系自动展示，无需重复填写。</p><button>${admin ? "保存档案" : "保存信息"}</button></form><hr>${avatarForm}<p><a href="/members/${member.id}">返回队员档案</a></p></section>`,
     true,
     admin,
   );
@@ -259,15 +302,18 @@ export function memberApplicationPage(
       '<section class="card auth"><h1>申请等待审核</h1><p>管理员审核后，结果会显示在个人中心。暂时不需要重复提交。</p><a href="/profile">返回个人中心</a></section>',
       true,
     );
-  const switcher = `<div class="choice-tabs"><a class="${mode === "bind" ? "active" : ""}" href="?type=bind">绑定已有档案</a><a class="${mode === "new" ? "active" : ""}" href="?type=new">申请新档案</a></div>`;
+  const switcher =
+    mode === "bind"
+      ? "<p>先在已有队员档案中找到自己，再提交认证。</p>"
+      : '<p>确认没有自己的档案后，再填写以下信息。<a href="?type=bind">返回查找已有档案</a></p>';
   const common = `<input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><input type="hidden" name="apply_type" value="${mode}"><label>一句台词或参与经历<textarea name="identity_note" maxlength="1000" rows="4" required></textarea><span class="hint">也可以填写后台分工或排练经历，仅管理员可见。</span></label>`;
   const fields =
     mode === "bind"
       ? `<label>选择我的档案<select name="member_id" required><option value="">请选择</option>${members.map((member) => `<option value="${member.id}">${escapeHtml(member.name)}${member.cohort ? `（${escapeHtml(member.cohort)}）` : ""}</option>`).join("")}</select></label>`
-      : '<label>姓名<input name="name" maxlength="50" required></label><label>入队年份<input name="join_year" type="number" min="1" max="9999"></label><label>入学年级<input name="cohort" type="number" min="1900" max="2099" placeholder="如 2024"></label><label>简介<textarea name="bio" rows="4"></textarea></label>';
+      : `<label>姓名<input name="name" maxlength="50" required></label><label>入队年份${yearSelect("join_year", "")}</label><label>入学年级${yearSelect("cohort", "")}</label><label>简介<textarea name="bio" rows="4"></textarea></label>`;
   return layout(
     "队员认证",
-    `<section class="card auth"><p class="eyebrow">MEMBER APPLICATION</p><h1>申请队员认证</h1>${switcher}<form method="post" action="/profile/member-application">${common}${fields}<button>提交申请</button></form></section>`,
+    `<section class="card auth"><p class="eyebrow">MEMBER APPLICATION</p><h1>申请队员认证</h1>${switcher}<form method="post" action="/profile/member-application">${fields}${common}<button>提交申请</button></form>${mode === "bind" ? '<p><a href="?type=new">找不到我的档案，申请新建</a></p>' : ""}</section>`,
     true,
   );
 }

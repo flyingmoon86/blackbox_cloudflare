@@ -1,4 +1,5 @@
 import { visitorIdentity, publicLimit } from "../services/visitors";
+import { pageNumber, YEARS } from "../views/shared";
 import { replaceAvatar, queueCurrentAvatar } from "../services/avatars";
 import { drainFileCleanup } from "../services/file-cleanup";
 import { serveResourceFile } from "../services/resource-files";
@@ -10,6 +11,7 @@ import type { AppEnv } from "../types";
 import { memberApplicationPage, memberCreatePage, memberDetailPage, memberEditPage, memberListPage } from "../views";
 
 export type MemberRow = {
+  productions?: Array<{ id: number; title: string }>;
   id: number;
   name: string;
   bio: string;
@@ -61,7 +63,9 @@ memberRoutes.get("/members", async (c) => {
   const where: string[] = [];
   const params: Array<string | number> = [];
   if (search) {
-    where.push("(m.name LIKE ? ESCAPE '\\' OR m.cohort LIKE ? ESCAPE '\\' OR m.works LIKE ? ESCAPE '\\')");
+    where.push(
+      "(m.name LIKE ? ESCAPE '\\' OR m.cohort LIKE ? ESCAPE '\\' OR EXISTS(SELECT 1 FROM production_credit pc JOIN production p ON p.id=pc.production_id WHERE pc.member_id=m.id AND p.title LIKE ? ESCAPE '\\'))",
+    );
     const escaped = `%${search.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_")}%`;
     params.push(escaped, escaped, escaped);
   }
@@ -70,25 +74,30 @@ memberRoutes.get("/members", async (c) => {
     params.push(year);
   }
   const condition = where.length ? `WHERE ${where.join(" AND ")}` : "";
+  const total =
+    (
+      await c.env.DB.prepare(`SELECT COUNT(*) n FROM member m ${condition}`)
+        .bind(...params)
+        .first<{ n: number }>()
+    )?.n || 0;
+  const size = 24,
+    page = Math.min(pageNumber(c.req.query("page")), Math.max(1, Math.ceil(total / size)));
   const result = await c.env.DB.prepare(
     `SELECT m.id, m.name, m.bio, m.join_year, m.cohort, m.works, m.photo, EXISTS(SELECT 1 FROM site_contributor sc LEFT JOIN user cu ON cu.id=sc.user_id WHERE (sc.member_id=m.id OR cu.member_id=m.id) AND sc.revoked_at IS NULL AND sc.public_consent=1) contributor,
     COUNT(f.id) + (SELECT COUNT(*) FROM visitor_flower vf WHERE vf.member_id=m.id) AS flower_count FROM member m LEFT JOIN flower f ON f.member_id = m.id ${condition}
-    GROUP BY m.id ORDER BY m.join_year DESC, m.name COLLATE NOCASE LIMIT 200`,
+    GROUP BY m.id ORDER BY m.join_year DESC, m.name COLLATE NOCASE,m.id LIMIT ? OFFSET ?`,
   )
-    .bind(...params)
+    .bind(...params, size, (page - 1) * size)
     .all<MemberRow>();
-  const years = await c.env.DB.prepare(
-    "SELECT DISTINCT join_year FROM member WHERE join_year IS NOT NULL ORDER BY join_year DESC",
-  ).all<{ join_year: number }>();
   return c.html(
-    memberListPage(
-      result.results,
-      years.results.map((item) => item.join_year),
-      search,
+    memberListPage(result.results, YEARS, search, year, c.get("user")?.role === "admin", Boolean(c.get("user")), {
+      page,
+      size,
+      total,
+      path: "/members",
+      query: search,
       year,
-      c.get("user")?.role === "admin",
-      Boolean(c.get("user")),
-    ),
+    }),
   );
 });
 
@@ -102,6 +111,13 @@ memberRoutes.get("/members/:id", async (c) => {
     .bind(id)
     .first<MemberRow>();
   if (!member) return c.text("未找到队员档案。", 404);
+  member.productions = (
+    await c.env.DB.prepare(
+      "SELECT DISTINCT p.id,p.title FROM production p JOIN production_credit pc ON pc.production_id=p.id WHERE pc.member_id=? ORDER BY p.year DESC,p.id DESC",
+    )
+      .bind(id)
+      .all<{ id: number; title: string }>()
+  ).results;
   const user = c.get("user")!;
   return c.html(
     memberDetailPage(
@@ -134,16 +150,15 @@ memberRoutes.post("/profile/member", async (c) => {
   const form = await c.req.formData();
   if (!csrfValid(c, form.get("csrf"))) return c.text("请求已失效，请刷新页面后重试。", 400);
   const bio = String(form.get("bio") ?? "").trim();
-  const works = String(form.get("works") ?? "").trim();
-  if (bio.length > 5000 || works.length > 2000) return c.text("简介或代表作内容过长。", 400);
+  if (bio.length > 5000) return c.text("简介内容过长。", 400);
   const year = String(form.get("join_year") || "").trim(),
     cohort = String(form.get("cohort") || "").trim();
   if ((year && !/^(19|20)[0-9]{2}$/.test(year)) || (cohort && !/^(19|20)[0-9]{2}$/.test(cohort)))
     return c.text("入队年份和入学年级请填写四位年份，例如 2024。", 400);
   await c.env.DB.prepare(
-    "UPDATE member SET bio=?,works=?,join_year=COALESCE(?,join_year),cohort=CASE WHEN ?=\'\' THEN cohort ELSE ? END WHERE id=?",
+    "UPDATE member SET bio=?,join_year=COALESCE(?,join_year),cohort=CASE WHEN ?=\'\' THEN cohort ELSE ? END WHERE id=?",
   )
-    .bind(bio, works, year ? Number(year) : null, cohort, cohort, user.member_id)
+    .bind(bio, year ? Number(year) : null, cohort, cohort, user.member_id)
     .run();
   return c.redirect("/profile/member?saved=1", 303);
 });
@@ -165,16 +180,24 @@ memberRoutes.post("/profile/member/avatar", async (c) => {
     c.header("Retry-After", String(retry));
     return c.text("更换头像次数较多，请稍后重试。", 429);
   }
-  await replaceAvatar(c.env, user.id, user.member_id, IMAGE_TYPES[file.type], file.type, data);
+  const previewFile = form.get("avatar_preview");
+  let preview: Uint8Array | undefined;
+  if (previewFile instanceof File && previewFile.size > 0) {
+    if (previewFile.type !== "image/jpeg" || previewFile.size > 512 * 1024)
+      return c.text("头像展示图格式或大小不正确。", 400);
+    preview = new Uint8Array(await previewFile.arrayBuffer());
+    if (!validImage(preview, "image/jpeg")) return c.text("头像展示图内容不正确。", 400);
+  }
+  await replaceAvatar(c.env, user.id, user.member_id, IMAGE_TYPES[file.type], file.type, data, preview);
   return c.redirect("/profile/member?saved=1", 303);
 });
 
 memberRoutes.get("/members/:id/avatar", async (c) => {
-  const row = await c.env.DB.prepare("SELECT photo FROM member WHERE id=?")
+  const row = await c.env.DB.prepare("SELECT photo,avatar_preview FROM member WHERE id=?")
     .bind(Number(c.req.param("id")))
-    .first<{ photo: string }>();
+    .first<{ photo: string; avatar_preview: string }>();
   if (!row?.photo) return c.text("头像不存在。", 404);
-  return serveResourceFile(c.req.raw, c.env.FILES, { key: row.photo });
+  return serveResourceFile(c.req.raw, c.env.FILES, { key: row.avatar_preview || row.photo });
 });
 
 memberRoutes.get("/admin/members/new", async (c) => {
@@ -191,18 +214,16 @@ memberRoutes.post("/admin/members/new", async (c) => {
   const year = yearText ? Number(yearText) : null;
   const cohort = String(form.get("cohort") ?? "").trim();
   const bio = String(form.get("bio") ?? "").trim();
-  const works = String(form.get("works") ?? "").trim();
   if (
     !name ||
     name.length > 50 ||
     (cohort !== "" && !/^(19|20)[0-9]{2}$/.test(cohort)) ||
     bio.length > 5000 ||
-    works.length > 2000 ||
     (year !== null && (!Number.isInteger(year) || year < 1 || year > 9999))
   )
     return c.html(memberCreatePage(await csrfFor(c), "请检查姓名、年份和文字长度。"), 400);
-  const result = await c.env.DB.prepare("INSERT INTO member(name,bio,join_year,cohort,works) VALUES(?,?,?,?,?)")
-    .bind(name, bio, year, cohort, works)
+  const result = await c.env.DB.prepare("INSERT INTO member(name,bio,join_year,cohort) VALUES(?,?,?,?)")
+    .bind(name, bio, year, cohort)
     .run();
   return c.redirect(`/admin/members/${Number(result.meta.last_row_id)}/edit?created=1`, 303);
 });
@@ -233,20 +254,18 @@ memberRoutes.post("/admin/members/:id/edit", async (c) => {
   const year = yearText ? Number(yearText) : null;
   const cohort = String(form.get("cohort") ?? "").trim();
   const bio = String(form.get("bio") ?? "").trim();
-  const works = String(form.get("works") ?? "").trim();
   if (
     !name ||
     name.length > 50 ||
     (cohort !== "" && !/^(19|20)[0-9]{2}$/.test(cohort)) ||
     bio.length > 5000 ||
-    works.length > 2000 ||
     (year !== null && (!Number.isInteger(year) || year < 1 || year > 9999))
   )
     return c.text("请检查队员档案内容。", 400);
   const result = await c.env.DB.prepare(
-    "UPDATE member SET name=?,join_year=?,cohort=CASE WHEN ?='' THEN cohort ELSE ? END,bio=?,works=? WHERE id=?",
+    "UPDATE member SET name=?,join_year=COALESCE(?,join_year),cohort=CASE WHEN ?='' THEN cohort ELSE ? END,bio=? WHERE id=?",
   )
-    .bind(name, year, cohort, cohort, bio, works, id)
+    .bind(name, year, cohort, cohort, bio, id)
     .run();
   if (result.meta.changes !== 1) return c.text("未找到队员档案。", 404);
   return c.redirect(`/admin/members/${id}/edit?saved=1`, 303);
@@ -262,7 +281,7 @@ memberRoutes.post("/admin/members/:id/avatar/delete", async (c) => {
   if (!row) return c.text("未找到队员档案。", 404);
   await c.env.DB.batch([
     queueCurrentAvatar(c.env, id),
-    c.env.DB.prepare("UPDATE member SET photo='' WHERE id=?").bind(id),
+    c.env.DB.prepare("UPDATE member SET photo='',avatar_preview='' WHERE id=?").bind(id),
   ]);
   await drainFileCleanup(c.env);
   return c.redirect(`/admin/members/${id}/edit?saved=1`, 303);
