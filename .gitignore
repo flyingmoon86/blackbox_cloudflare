@@ -1,5 +1,7 @@
 # TypeScript / Cloudflare
 node_modules/
+public/assets/
+src/generated/
 .wrangler/
 .dev.vars
 .dev.vars.*

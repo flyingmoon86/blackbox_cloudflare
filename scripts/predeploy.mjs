@@ -26,7 +26,7 @@ if (bucket && production?.vars?.R2_BUCKET_NAME !== bucket.bucket_name)
 
 if (problems.length) {
   console.error("正式部署检查未通过：\n- " + problems.join("\n- "));
-  console.error("请先按 docs/架构与部署.md 填好 Cloudflare 资源信息。没有通过检查时不会部署。 ");
+  console.error("请先按 README.md 的架构与部署说明填写 Cloudflare 资源信息。没有通过检查时不会部署。 ");
   process.exit(1);
 }
 

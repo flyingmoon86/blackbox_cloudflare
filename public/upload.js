@@ -46,8 +46,14 @@ if (form) {
     if (!response.ok) throw new Error(body.error || `请求失败（${response.status}）`);
     return body;
   };
-  const policyPromise = fetch("/api/uploads/policy").then(readJson);
-  policyPromise.catch(() => {});
+  let policyPromise;
+  const getPolicy = () =>
+    (policyPromise ??= fetch("/api/uploads/policy")
+      .then(readJson)
+      .catch((error) => {
+        policyPromise = undefined;
+        throw error;
+      }));
   const retry = async (action) => {
     let lastError;
     for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -292,7 +298,7 @@ if (form) {
     if (files.length > 1 && type.value !== "photo") return show("只有剧照支持一次选择多个文件。");
     if (files.length === 1 && !form.elements.title.value.trim()) return show("上传单个文件时请填写资料标题。");
     try {
-      const policy = await policyPromise;
+      const policy = await getPolicy();
       const maximum = policy.limits[type.value];
       if (!maximum || files.some((file) => file.size < 1 || file.size > maximum))
         return show("此类资料单个文件上限为 " + maximum / 1024 / 1024 + "MB。");

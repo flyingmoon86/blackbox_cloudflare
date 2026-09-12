@@ -1,3 +1,4 @@
+import { assetUrl } from "./assets";
 import { escapeHtml as e, layout } from "../views";
 import type { UserSession } from "../types";
 import type { SiteProfileRow, AnnouncementRow } from "../routes/content";
@@ -21,7 +22,7 @@ export function theatreHome(
     : "";
   const mascot = texts.mascot_photo
     ? "/site/mascot?v=" + encodeURIComponent(texts.mascot_photo)
-    : "/images/elephant-mascot-360-v1.webp";
+    : assetUrl("/images/elephant-mascot-360-v1.webp");
   const feature = featured
     ? '<aside class="stage-feature"><span class="eyebrow">ON STAGE / ' +
       e(featured.year || "精选大戏") +
@@ -36,7 +37,7 @@ export function theatreHome(
   const notice = news[0]
     ? '<a href="/announcements/' + news[0].id + '"><span>最新公告</span> ' + e(news[0].title) + " ↗</a>"
     : '<a href="/announcements">剧团公告 ↗</a>';
-  const welcome = user ? texts.home_welcome : texts.visitor_welcome;
+  const heading = (texts.about_heading || "在黑匣子\n一起成为故事").replace(/[\p{P}\p{S}]/gu, "");
   const posterId = texts.recruitment_poster || texts.recruitment_poster_mobile;
   const poster = posterId
     ? '<figure class="recruitment-poster"><a href="/resources/' +
@@ -59,11 +60,14 @@ export function theatreHome(
       '"></div><p>点击图片切换放大，放大后可滚动查看。</p></dialog>'
     : "";
   const about =
-    '<section class="stage-scene stage-about" id="about" aria-label="剧团介绍"><div class="about-copy"><span class="eyebrow">02 / OUR STORY</span><h2>在黑匣子，<br>一起成为故事。</h2>' +
+    '<section class="stage-scene stage-about" id="about" aria-label="剧团介绍"><div class="about-copy"><span class="eyebrow">02 / OUR STORY</span><h2 class="preline">' +
+    e(heading) +
+    "</h2>" +
+    edit("about_heading", "编辑标题") +
     edit("about_text", "编辑介绍") +
-    '<div class="about-columns"><article><h3>关于我们</h3><p class="preline">' +
-    e(texts.about_text || profile.introduction || "记录每一次排练、演出与相遇。") +
-    '</p></article><article><h3>加入舞台</h3><p class="preline">' +
+    '<div class="about-columns"><article><p class="preline">' +
+    e(texts.about_text || "我们是某大学生艺术团话剧队！祝大家晚安！") +
+    '</p></article><article><p class="preline">' +
     e(profile.recruitment || "欢迎喜欢舞台的你加入我们。") +
     "</p><p>" +
     e(profile.requirements) +
@@ -93,11 +97,7 @@ export function theatreHome(
       posterDialog +
       '<div class="theatre-stage">' +
       image +
-      '<div class="stage-shade"></div><section class="stage-scene" id="welcome" aria-label="黑匣子首页"><div class="welcome-copy"><p class="eyebrow">01 / BLACK BOX THEATRE</p><h1>黑匣子<br><span>永远是你家</span></h1><p class="stage-welcome">' +
-      e(welcome || "让每一次相遇，都有回响。") +
-      "</p>" +
-      edit("home_welcome", "编辑欢迎语") +
-      '</div><img class="stage-mascot" src="' +
+      '<div class="stage-shade"></div><section class="stage-scene" id="welcome" aria-label="黑匣子首页"><div class="welcome-copy"><p class="eyebrow">01 / BLACK BOX THEATRE</p><h1>黑匣子<br><span>永远是你家</span></h1></div><img class="stage-mascot" src="' +
       e(mascot) +
       '" alt="黑匣子毛绒小象" width="360" height="360" decoding="async">' +
       feature +

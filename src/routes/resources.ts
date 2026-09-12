@@ -1,4 +1,5 @@
 import { reviewRequest } from "../services/reviews";
+import { pageNumber } from "../views/shared";
 import { canViewResource, serveResourceFile } from "../services/resource-files";
 import { fileCleanupStatements, drainFileCleanup } from "../services/file-cleanup";
 import { Hono } from "hono";
@@ -53,24 +54,46 @@ resourceRoutes.get("/resources", async (c) => {
     WHERE r.status='approved'`;
   const order = ` ORDER BY CASE WHEN r.production_id IS NULL THEN 1 ELSE 0 END,
     COALESCE(p.year,0) DESC,p.id DESC,r.created_at DESC,r.id DESC`;
-  const rows = query
-    ? await c.env.DB.prepare(
-        `${base} AND (r.title LIKE ? ESCAPE '\\' COLLATE NOCASE OR r.description LIKE ? ESCAPE '\\' COLLATE NOCASE
-          OR r.original_name LIKE ? ESCAPE '\\' COLLATE NOCASE OR p.title LIKE ? ESCAPE '\\' COLLATE NOCASE)${order}`,
-      )
-        .bind(...Array(4).fill(`%${query.replace(/[\\%_]/g, "\\$&")}%`))
-        .all<ResourceRow>()
-    : await c.env.DB.prepare(`${base}${order}`).all<ResourceRow>();
-  return c.html(resourceListPage(rows.results, c.get("user")!, await csrfFor(c), false, query));
+  const filter = query
+    ? " AND (r.title LIKE ? ESCAPE '\\' COLLATE NOCASE OR r.description LIKE ? ESCAPE '\\' COLLATE NOCASE OR r.original_name LIKE ? ESCAPE '\\' COLLATE NOCASE OR p.title LIKE ? ESCAPE '\\' COLLATE NOCASE)"
+    : "";
+  const params = query ? Array(4).fill(`%${query.replace(/[\\%_]/g, "\\$&")}%`) : [];
+  const total =
+    (await c.env.DB.prepare(
+      "SELECT COUNT(*) n FROM resource r LEFT JOIN production p ON p.id=r.production_id WHERE r.status='approved'" +
+        filter,
+    )
+      .bind(...params)
+      .first<number>("n")) || 0;
+  const size = 24,
+    page = Math.min(pageNumber(c.req.query("page")), Math.max(1, Math.ceil(total / size)));
+  const rows = await c.env.DB.prepare(base + filter + order + " LIMIT ? OFFSET ?")
+    .bind(...params, size, (page - 1) * size)
+    .all<ResourceRow>();
+  return c.html(
+    resourceListPage(rows.results, c.get("user")!, await csrfFor(c), false, query, {
+      page,
+      total,
+      size,
+      path: "/resources",
+      query,
+    }),
+  );
 });
 resourceRoutes.get("/my-resources", async (c) => {
   const u = c.get("user")!;
+  const total =
+    (await c.env.DB.prepare("SELECT COUNT(*) n FROM resource WHERE uploader_id=?").bind(u.id).first<number>("n")) || 0;
+  const size = 24,
+    page = Math.min(pageNumber(c.req.query("page")), Math.max(1, Math.ceil(total / size)));
   const rows = await c.env.DB.prepare(
-    `SELECT r.id,r.title,r.res_type,r.description,r.original_name,r.preview_filename,r.status,r.admin_note,r.created_at,r.production_id,p.title production_title,r.uploader_id,u.username uploader_name FROM resource r LEFT JOIN production p ON p.id=r.production_id LEFT JOIN user u ON u.id=r.uploader_id WHERE r.uploader_id=? ORDER BY r.id DESC`,
+    `SELECT r.id,r.title,r.res_type,r.description,r.original_name,r.preview_filename,r.status,r.admin_note,r.created_at,r.production_id,p.title production_title,r.uploader_id,u.username uploader_name FROM resource r LEFT JOIN production p ON p.id=r.production_id LEFT JOIN user u ON u.id=r.uploader_id WHERE r.uploader_id=? ORDER BY r.id DESC LIMIT ? OFFSET ?`,
   )
-    .bind(u.id)
+    .bind(u.id, size, (page - 1) * size)
     .all<ResourceRow>();
-  return c.html(resourceListPage(rows.results, u, await csrfFor(c), true));
+  return c.html(
+    resourceListPage(rows.results, u, await csrfFor(c), true, "", { page, total, size, path: "/my-resources" }),
+  );
 });
 resourceRoutes.get("/resources/submit", async (c) => {
   const u = c.get("user")!;
