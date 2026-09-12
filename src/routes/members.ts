@@ -327,9 +327,9 @@ memberRoutes.get("/profile/member-application", async (c) => {
   const available =
     mode === "bind"
       ? await c.env.DB.prepare(
-          `SELECT m.id, m.name, m.cohort FROM member m LEFT JOIN user u ON u.member_id = m.id
-    WHERE u.id IS NULL ORDER BY m.join_year DESC, m.name COLLATE NOCASE`,
-        ).all<{ id: number; name: string; cohort: string }>()
+          `SELECT m.id, m.name, m.cohort,m.join_year FROM member m LEFT JOIN user u ON u.member_id = m.id
+    WHERE u.id IS NULL ORDER BY COALESCE(NULLIF(CAST(m.cohort AS INTEGER),0),m.join_year,0) DESC, m.name COLLATE NOCASE,m.id`,
+        ).all<{ id: number; name: string; cohort: string; join_year: number | null }>()
       : { results: [] };
   return c.html(memberApplicationPage(await csrfFor(c), mode, available.results, pending));
 });

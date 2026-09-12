@@ -71,6 +71,39 @@
   const stage = document.querySelector(".theatre-stage"),
     desktop = matchMedia("(min-width:901px)");
   if (stage) {
+    const about = stage.querySelector(".about-columns");
+    if (about) {
+      const more = document.createElement("button");
+      more.type = "button";
+      more.className = "about-read-more";
+      more.textContent = "阅读完整介绍";
+      more.hidden = true;
+      about.after(more);
+      const fit = () => {
+        more.hidden = !desktop.matches || about.scrollHeight <= about.clientHeight + 2;
+      };
+      new ResizeObserver(fit).observe(about);
+      more.addEventListener("click", () => {
+        const dialog = document.createElement("dialog");
+        dialog.className = "about-reading";
+        dialog.setAttribute("aria-label", "完整剧团介绍");
+        const close = document.createElement("button");
+        close.textContent = "关闭 ×";
+        close.addEventListener("click", () => dialog.close());
+        dialog.append(close);
+        about.querySelectorAll("p").forEach((p) => dialog.append(p.cloneNode(true)));
+        document.body.append(dialog);
+        dialog.addEventListener(
+          "close",
+          () => {
+            dialog.remove();
+            more.focus();
+          },
+          { once: true },
+        );
+        dialog.showModal();
+      });
+    }
     const scenes = [...stage.querySelectorAll(".stage-scene")],
       links = [...stage.querySelectorAll(".scene-nav a")];
     let index = location.hash === "#about" || location.hash === "#contact" ? 1 : 0,
@@ -104,8 +137,7 @@
       "wheel",
       (event) => {
         if (!desktop.matches || event.ctrlKey || event.target.closest("input,textarea,select,dialog,button")) return;
-        const scene = scenes[index];
-        if (scene.scrollHeight > scene.clientHeight + 2) return;
+        if (document.querySelector("dialog[open]") || document.body.classList.contains("navigation-open")) return;
         event.preventDefault();
         const now = performance.now();
         if (now - lastWheel > 180) accumulated = 0;
