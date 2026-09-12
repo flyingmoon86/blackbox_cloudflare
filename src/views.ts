@@ -1,7 +1,5 @@
 import type { UserSession } from "./types";
 import type { MemberRow } from "./routes/members";
-import type { AnnouncementRow, SiteProfileRow } from "./routes/content";
-import type { ProductionRow } from "./routes/productions";
 
 export function escapeHtml(value: unknown): string {
   return String(value ?? "")
@@ -16,38 +14,56 @@ export function layout(title: string, content: string, signedIn = false, admin =
   const link = (href: string, label: string) => '<a href="' + href + '">' + label + "</a>";
   const menu = (label: string, items: string) =>
     '<details class="nav-menu"><summary>' + label + '</summary><div class="nav-panel">' + items + "</div></details>";
+  const group = (caption: string, href: string, label: string, children: string) =>
+    '<section class="nav-group"><p class="nav-caption">' +
+    caption +
+    "</p><h2>" +
+    link(href, label) +
+    '</h2><ul class="nav-children">' +
+    children +
+    "</ul></section>";
+  const child = (href: string, label: string) => "<li>" + link(href, label) + "</li>";
   const nav =
     link("/", "首页") +
     menu(
       "作品与资料",
-      link("/productions", "作品档案") +
-        link("/resources", "资料库") +
-        link("/resources/submit", "我要补充资料") +
-        link("/suggestions?type=production&source=productions", "申请创建作品"),
+      group(
+        "走进舞台",
+        "/productions",
+        "作品档案",
+        child("/suggestions?type=production&source=productions", "申请创建作品"),
+      ) +
+        group(
+          "留存每一幕",
+          "/resources",
+          "资料库",
+          child("/resources/submit", "我要补充资料") + (signedIn ? child("/my-resources", "我的提交") : ""),
+        ),
     ) +
     menu(
       "队员与剧团",
-      link("/members", "队员名录") +
-        link("/profile/member", "修改我的信息") +
-        link("/profile/member-application", "申请队员认证") +
-        link("/#about", "剧团介绍"),
+      group(
+        "台前与幕后",
+        "/members",
+        "队员名录",
+        child("/profile/member", "修改我的信息") + child("/profile/member-application", "申请队员认证"),
+      ) + group("认识我们", "/#about", "剧团介绍", child("/#contact", "联系我们")),
     ) +
     menu(
       "指南与鸣谢",
-      link("/help", "网站使用指南") +
-        link("/thanks", "鸣谢 · 网站贡献者") +
-        link("/feedback", "提交网站建议") +
-        (admin ? link("/help#captain-guide", "管理员指南") : ""),
+      group("从这里开始", "/help", "网站使用指南", admin ? child("/help#captain-guide", "管理员指南") : "") +
+        group("一起完善黑匣子", "/thanks", "网站贡献者", child("/feedback", "提交网站建议")),
     ) +
-    menu("了解黑匣子", link("/announcements", "公告") + link("/#contact", "联系我们")) +
-    menu(
-      signedIn ? "我的账号" : "登录 / 注册",
-      signedIn
-        ? link("/profile", "个人中心") +
-            link("/my-resources", "我的提交") +
-            (admin ? link("/admin", "管理员工作台") + link("/admin/community", "贡献者与建议") : "")
-        : link("/login", "登录") + link("/register", "注册"),
-    );
+    menu("了解黑匣子", group("最新消息", "/announcements", "剧团公告", child("/#contact", "联系我们"))) +
+    (admin ? menu("管理", group("剧团事务", "/admin", "管理员工作台", child("/admin/community", "贡献者与建议"))) : "");
+  const account =
+    '<a class="account-link" href="' +
+    (signedIn ? "/profile" : "/login") +
+    '" aria-label="' +
+    (signedIn ? "个人中心" : "登录或注册") +
+    '" title="' +
+    (signedIn ? "个人中心" : "登录或注册") +
+    '"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="8" r="3.25"/><path d="M5.5 20v-1.5a6.5 6.5 0 0 1 13 0V20"/><circle cx="12" cy="12" r="10"/></svg></a>';
   const mobile =
     '<nav class="mobile-nav" aria-label="手机主导航">' +
     link("/", "⌂ 首页") +
@@ -58,13 +74,14 @@ export function layout(title: string, content: string, signedIn = false, admin =
   return (
     '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' +
     escapeHtml(title) +
-    ' · 黑匣子</title><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/experience.css?v=1"><script src="/app.js" defer></script><script src="/experience.js?v=1" defer></script></head><body class="' +
+    ' · 黑匣子</title><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/experience.css?v=2"><link id="site-theme" rel="stylesheet" href="/site/theme.css"><script src="/app.js" defer></script><script src="/experience.js?v=2" defer></script></head><body class="' +
     (signedIn ? "signed-in" : "signed-out") +
     '"><a class="skip-link" href="#main-content">跳到内容</a><header class="top"><a href="/" class="brand">黑匣子<span>BLACK BOX THEATRE</span></a><button class="menu-toggle" aria-expanded="false" aria-controls="main-navigation">菜单 ＋</button><nav id="main-navigation" class="desktop-nav" aria-label="主导航">' +
     nav +
     "</nav>" +
+    account +
     (admin ? '<div class="admin-notification-host" data-admin-notifications aria-live="polite"></div>' : "") +
-    '</header><main id="main-content" tabindex="-1">' +
+    '</header><div class="nav-scrim" aria-hidden="true"></div><main id="main-content" tabindex="-1">' +
     content +
     "</main>" +
     mobile +
@@ -106,105 +123,6 @@ export function registerDonePage(username: string, hasEmail: boolean): string {
   return layout(
     "注册成功",
     `<section class="card auth"><p class="eyebrow">WELCOME</p><h1>账号已创建</h1><p>${escapeHtml(username)}，${emailText}</p><a class="button" href="/login">现在登录</a></section>`,
-  );
-}
-
-function pageTexts(profile: SiteProfileRow): Record<string, string> {
-  try {
-    return JSON.parse(profile.page_texts || "{}");
-  } catch {
-    return {};
-  }
-}
-
-function homeTitle(value: string): string {
-  if (!value.startsWith("黑匣子") || value.length === 3) return escapeHtml(value);
-  return `<span>黑匣子</span><br><span>${escapeHtml(value.slice(3))}</span>`;
-}
-
-function homeMascot(): string {
-  return `<figure class="home-mascot" aria-label="黑匣子毛绒小象"><img src="/images/elephant-mascot.jpg" alt="戴眼镜的毛绒小象" data-home-mascot><span aria-hidden="true">🐘</span></figure>`;
-}
-
-function troupeFooter(profile: SiteProfileRow, texts: Record<string, string>): string {
-  const contactEmail = profile.contact_email || "moonflying56@gmail.com";
-  const qqContact = profile.qq_group ? `<span><b>QQ群</b> ${escapeHtml(profile.qq_group)}</span>` : "";
-  return `<footer class="troupe-footer">
-    <section><p class="eyebrow">JOIN US</p><h2>招新</h2><p class="preline">${escapeHtml(profile.recruitment || "欢迎喜欢舞台的你加入我们。")}</p><p class="muted preline">${escapeHtml(profile.requirements || "关注剧团通知，了解本学期招新安排。")}</p></section>
-    <section><p class="eyebrow">ABOUT</p><h2>关于我们</h2><p class="preline">${escapeHtml(texts.about_text || profile.introduction || "这里记录话剧队共同创作的作品和故事。")}</p></section>
-    <section class="troupe-contact"><p class="eyebrow">CONTACT</p><h2>联系剧团</h2><p class="preline">${escapeHtml(texts.contact_intro || "有问题或想加入我们，可以联系剧团。")}</p><p class="contact-line"><span><b>邮箱</b> <a href="mailto:${escapeHtml(contactEmail)}">${escapeHtml(contactEmail)}</a></span>${qqContact}</p></section>
-  </footer>`;
-}
-
-function featuredProduction(featured: ProductionRow | null, signedIn: boolean): string {
-  if (!featured) return "";
-  const ratio = featured.cover_ratio === "portrait" ? "portrait" : "landscape";
-  const mode = featured.feature_layout === "overlay" && featured.cover_id ? "overlay" : "split";
-  const href = signedIn ? `/productions/${featured.id}` : `/login?next=/productions/${featured.id}`;
-  const image = featured.cover_id
-    ? `<img class="feature-cover" src="/site/featured-cover" alt="${escapeHtml(featured.title)}展示图">`
-    : "";
-  if (mode === "overlay") {
-    return `<section class="card feature feature-overlay feature-ratio-${ratio} feature-stage-card"><a class="feature-stage-link" href="${href}">${image}<span class="feature-stage-shade" aria-hidden="true"></span><div class="feature-copy"><p class="eyebrow">${signedIn ? "精选大戏" : "即将演出"}</p><h2>${escapeHtml(featured.title)}</h2><div class="feature-stage-details"><div><p>${escapeHtml(featured.promo || featured.synopsis || "演出信息即将公布。")}</p><span class="feature-stage-action">${signedIn ? "查看作品" : "登录后查看"} <span aria-hidden="true">↗</span></span></div></div></div></a></section>`;
-  }
-  return `<section class="card feature feature-${mode} feature-ratio-${ratio}${image ? "" : " feature-without-cover"}">${image}<div class="feature-copy"><p class="eyebrow">${signedIn ? "精选大戏" : "即将演出"}</p><h2><a href="${href}">${escapeHtml(featured.title)}</a></h2><p>${escapeHtml(featured.promo || featured.synopsis || "演出信息即将公布。")}</p><a class="button" href="${href}">${signedIn ? "查看作品" : "登录后查看"}</a></div></section>`;
-}
-
-export function publicHome(profile: SiteProfileRow, featured: ProductionRow | null): string {
-  const texts = pageTexts(profile);
-  const notice =
-    texts.test_notice ||
-    "网站正在测试中。你可以浏览和试用功能；认证队员还可以通过首页意见箱提交建议。请勿上传敏感或无权分享的资料。";
-  let noticeKey = 2166136261;
-  for (const character of notice) noticeKey = Math.imul(noticeKey ^ character.charCodeAt(0), 16777619);
-  const feature = featuredProduction(featured, false);
-  const hero = profile.hero_photo
-    ? ' style="background-image:linear-gradient(90deg,rgba(10,8,8,.94),rgba(10,8,8,.25)),url(/site/hero)"'
-    : "";
-  return layout(
-    "首页",
-    `<dialog class="test-notice" data-test-notice="${noticeKey >>> 0}"><form method="dialog"><p class="eyebrow">TEST NOTICE</p><h2>测试须知</h2><p class="preline">${escapeHtml(notice)}</p><button value="understood">我已明白</button></form></dialog><div class="home-stage"><section class="hero"${hero}>${homeMascot()}<div><p class="eyebrow">BLACK BOX THEATRE</p><h1>${homeTitle(texts.visitor_welcome || "这里是黑匣子")}</h1><p>保存每一次排练、演出与相遇。</p><a class="button" href="/login">登录查看剧团档案</a></div></section>${feature}</div>${troupeFooter(profile, texts)}`,
-  );
-}
-
-export function memberHome(
-  user: UserSession,
-  csrf: string,
-  profile: SiteProfileRow,
-  featured: ProductionRow | null,
-  announcements: AnnouncementRow[],
-): string {
-  const texts = pageTexts(profile);
-  const edit = user.role === "admin" ? '<a class="edit-link" href="/admin/site#home_welcome">编辑首页文案</a>' : "";
-  const news = announcements.length
-    ? announcements
-        .map(
-          (x) =>
-            `<li><a href="/announcements/${x.id}">${escapeHtml(x.title)}</a><time datetime="${escapeHtml(x.created_at.slice(0, 10))}">${escapeHtml(x.created_at.slice(0, 10))}</time></li>`,
-        )
-        .join("")
-    : "<li>暂无公告</li>";
-  const hero = profile.hero_photo
-    ? ' style="background-image:linear-gradient(90deg,rgba(10,8,8,.94),rgba(10,8,8,.25)),url(/site/hero)"'
-    : "";
-  const suggestionLink =
-    user.role === "member" || user.role === "admin"
-      ? '<a class="button secondary" href="/suggestions">提交网站建议</a>'
-      : "";
-  const welcome =
-    user.role === "member" || user.role === "admin"
-      ? texts.home_welcome || "黑匣子永远是你的家"
-      : texts.visitor_welcome || "这里是黑匣子";
-  return layout(
-    "队员首页",
-    `<div class="home-stage"><section class="hero"${hero}>${homeMascot()}<div><p class="eyebrow">${escapeHtml(user.role)}</p><h1>${homeTitle(welcome)}</h1><p>${escapeHtml(user.username)}，欢迎回来。</p>${edit}</div></section>${featuredProduction(featured, true)}</div>
-    <section class="home-card-grid">
-      <article class="card home-card"><p class="eyebrow">NOTICE</p><h2>剧团公告</h2><ul class="announcement-list">${news}</ul><footer class="home-card-actions"><a class="button secondary" href="/announcements">查看全部公告</a></footer></article>
-      <article class="card home-card guide-invite"><p class="eyebrow">START HERE</p><h2>第一次使用网站？</h2><p>网站使用指南会带你找到作品、登记角色、上传资料和修改个人信息${user.role === "admin" ? "，也包含队长与管理员的审核步骤" : ""}。</p><footer class="home-card-actions"><a class="button" href="/help">查看网站使用指南</a>${suggestionLink}</footer></article>
-    </section>
-    ${troupeFooter(profile, texts)}`,
-    true,
-    user.role === "admin",
   );
 }
 
