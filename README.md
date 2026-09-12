@@ -1,4 +1,4 @@
-# 黑匣子网站
+# 黑匣子网站 · Version 1.0
 
 话剧队作品、队员和资料档案网站，正式地址：[npublackbox.online](https://npublackbox.online/)。
 
