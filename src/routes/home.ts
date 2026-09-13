@@ -7,7 +7,7 @@ import type { ProductionRow } from "./productions";
 type Photo = { id: number; filename: string; original_name: string; preview_filename: string };
 export async function selectHero(c: Context<AppEnv>): Promise<Photo | null> {
   return c.env.DB.prepare(
-    "SELECT r.id,r.filename,r.original_name,r.preview_filename FROM resource r CROSS JOIN site_profile s LEFT JOIN production p ON p.id=s.featured_production_id WHERE s.id=1 AND r.status='approved' AND r.res_type='photo' ORDER BY CASE WHEN CAST(r.id AS TEXT)=s.hero_photo THEN 0 WHEN r.id=p.cover_id THEN 1 ELSE 2 END,r.created_at DESC,r.id DESC LIMIT 1",
+    "SELECT r.id,r.filename,r.original_name,r.preview_filename FROM resource r CROSS JOIN site_profile s LEFT JOIN production p ON p.id=s.featured_production_id WHERE s.id=1 AND r.status='approved' AND r.res_type='photo' AND r.preview_filename IS NOT NULL AND r.preview_filename<>'' ORDER BY CASE WHEN CAST(r.id AS TEXT)=s.hero_photo THEN 0 WHEN r.id=p.cover_id THEN 1 ELSE 2 END,r.created_at DESC,r.id DESC LIMIT 1",
   ).first<Photo>();
 }
 export async function homePage(c: Context<AppEnv>) {

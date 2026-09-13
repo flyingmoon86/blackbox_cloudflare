@@ -1,6 +1,6 @@
 import { communityRoutes } from "./routes/community";
 import { Hono } from "hono";
-import { securityHeaders, noStore } from "./middleware/security";
+import { securityHeaders, noStore, sameOriginWrites } from "./middleware/security";
 import { loadUser } from "./middleware/session";
 import { authRoutes } from "./routes/auth";
 import { mascotImage, featuredCoverImage, health, heroImage, homePage, pageBackgroundImage } from "./routes/home";
@@ -23,6 +23,7 @@ const app = new Hono<AppEnv>();
 app.use("*", requestContext);
 app.use("*", securityHeaders);
 app.use("*", noStore);
+app.use("*", sameOriginWrites);
 app.use("*", loadUser);
 
 app.get("/", homePage);

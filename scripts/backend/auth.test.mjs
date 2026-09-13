@@ -33,6 +33,71 @@ function setup() {
   return { db, env, request, post };
 }
 
+test("temporary administrator password gates reads and writes, rotates sessions and cannot be reused", async () => {
+  const { db, env, post, request } = setup();
+  db.prepare(
+    "INSERT INTO user(id,username,password_hash,role,must_change_password) VALUES(1,'new-admin',?,'admin',1)",
+  ).run(historicHash);
+  const login = await post("/login", { username: "new-admin", password });
+  assert.equal(login.headers.get("Location"), "/profile");
+  const token = await createSession(
+    { uid: 1, version: 0, exp: Math.floor(Date.now() / 1000) + 3600 },
+    env.SESSION_SECRET,
+  );
+  const headers = { Cookie: "blackbox_session=" + token + "; blackbox_csrf=fixture-csrf" };
+  assert.equal((await request("/admin", { headers })).headers.get("Location"), "/profile");
+  assert.equal((await post("/admin/site", {}, headers)).status, 403);
+  assert.match(await (await request("/profile", { headers })).text(), /首次登录，请先修改临时密码/);
+  assert.equal(
+    (
+      await post(
+        "/profile/password",
+        { current_password: password, new_password: password, confirm_password: password },
+        headers,
+      )
+    ).status,
+    400,
+  );
+  assert.equal(
+    (
+      await post(
+        "/profile/password",
+        {
+          current_password: password,
+          new_password: "replacement-secret-123",
+          confirm_password: "replacement-secret-123",
+        },
+        headers,
+      )
+    ).status,
+    303,
+  );
+  const row = db.prepare("SELECT must_change_password,auth_version,password_hash FROM user WHERE id=1").get();
+  assert.equal(row.must_change_password, 0);
+  assert.equal(row.auth_version, 1);
+  assert.ok(verifyPassword(row.password_hash, "replacement-secret-123"));
+  assert.equal((await request("/profile", { headers })).headers.get("Location"), "/login?next=%2Fprofile");
+  db.close();
+});
+
+test("cross-site writes are rejected before database access while same-origin CSRF validation remains", async () => {
+  const { db, env, post } = setup();
+  const before = env.DB.calls;
+  assert.equal(
+    (
+      await post(
+        "/register",
+        { username: "blocked", password: "test-123456", confirm_password: "test-123456" },
+        { Origin: "https://evil.test" },
+      )
+    ).status,
+    403,
+  );
+  assert.equal(env.DB.calls, before);
+  assert.equal((await post("/logout", {}, { Origin: "https://blackbox.test" })).status, 303);
+  db.close();
+});
+
 test("safeNext keeps same-site paths and rejects origin/encoding tricks", () => {
   for (const value of [
     "https://evil.test",
@@ -144,6 +209,41 @@ test("successful legacy login cannot redirect off-site; account changes invalida
   assert.equal((await request("/profile", { headers: { Cookie: cookie } })).status, 302);
   db.prepare("UPDATE user SET status='active',member_id=NULL,role='user',auth_version=1 WHERE id=1").run();
   assert.equal((await request("/profile", { headers: { Cookie: cookie } })).status, 302);
+  db.close();
+});
+
+test("login offers certification to ordinary accounts, preserves next and skips pending or certified accounts", async () => {
+  const { db, env, post, request } = setup();
+  db.prepare("INSERT INTO user(id,username,password_hash,role) VALUES(1,'ordinary',?,'user')").run(historicHash);
+  let response = await post("/login", { username: "ordinary", password, next: "/resources?q=剧照" });
+  assert.equal(response.status, 303);
+  assert.equal(
+    response.headers.get("location"),
+    "/profile/certification?next=" + encodeURIComponent("/resources?q=" + encodeURIComponent("剧照")),
+  );
+  const cookie =
+    "blackbox_session=" +
+    (await createSession({ uid: 1, version: 0, exp: Math.floor(Date.now() / 1000) + 3600 }, env.SESSION_SECRET));
+  const html = await (
+    await request("/profile/certification?next=%2Fresources%3Fq%3D%E5%89%A7%E7%85%A7", { headers: { Cookie: cookie } })
+  ).text();
+  assert.match(html, /去认证队员/);
+  assert.ok(html.includes('href="/resources?q=' + encodeURIComponent("剧照") + '"'));
+  const unsafe = await (
+    await request("/profile/certification?next=https%3A%2F%2Fevil.test", { headers: { Cookie: cookie } })
+  ).text();
+  assert.ok(!unsafe.includes("evil.test"));
+  db.exec("INSERT INTO join_request(user_id,apply_type,name,status) VALUES(1,'new','申请人','pending')");
+  response = await post("/login", { username: "ordinary", password, next: "/resources" });
+  assert.equal(response.headers.get("location"), "/resources");
+  db.exec("DELETE FROM join_request; UPDATE user SET role='admin' WHERE id=1");
+  response = await post("/login", { username: "ordinary", password, next: "/resources" });
+  assert.equal(response.headers.get("location"), "/resources");
+  db.exec("UPDATE user SET role='member' WHERE id=1");
+  response = await post("/login", { username: "ordinary", password, next: "/resources" });
+  assert.equal(response.headers.get("location"), "/resources");
+  const { registerDonePage } = await loadModule("src/views.ts");
+  assert.match(registerDonePage("新用户", false), /登录并认证队员/);
   db.close();
 });
 

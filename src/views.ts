@@ -163,7 +163,15 @@ export function registerDonePage(username: string, hasEmail: boolean): string {
     : "你可以稍后在个人中心添加邮箱。";
   return layout(
     "注册成功",
-    `<section class="card auth"><p class="eyebrow">WELCOME</p><h1>账号已创建</h1><p>${escapeHtml(username)}，${emailText}</p><a class="button" href="/login">现在登录</a></section>`,
+    `<section class="card auth"><p class="eyebrow">WELCOME</p><h1>账号已创建</h1><p>${escapeHtml(username)}，${emailText}</p><h2>你是话剧队队员吗？</h2><p>登录后可以申请队员认证：先选择自己的已有档案，找不到时再申请新建。审核通过后，可修改个人信息、登记作品角色和分工。</p><p><a class="button" href="/login?next=%2Fprofile%2Fmember-application">登录并认证队员</a></p><a href="/login">先登录，暂不认证</a></section>`,
+  );
+}
+
+export function certificationPromptPage(next: string): string {
+  return layout(
+    "登录成功",
+    `<section class="auth-stage"><section class="card auth"><p class="eyebrow">WELCOME BACK</p><h1>登录成功</h1><h2>你是话剧队队员吗？</h2><p>认证后可以修改自己的队员信息、申请加入作品，登记角色或后台分工。</p><p>先在已有档案中找到自己；找不到时再申请新建。认证需要管理员审核。</p><p><a class="button" href="/profile/member-application">去认证队员</a></p><p><a class="button secondary" href="${escapeHtml(next)}">暂时跳过，继续访问</a></p><p class="hint">普通账号也可以浏览和提交资料。稍后可从个人中心申请认证。</p></section></section>`,
+    true,
   );
 }
 
@@ -195,7 +203,7 @@ export function profilePage(
       : "";
   return layout(
     "个人中心",
-    `${result}<section class="two-column"><article class="card"><p class="eyebrow">ACCOUNT</p><h1>个人中心</h1><p>用户名：${escapeHtml(user.username)}</p><p>身份：${escapeHtml(user.role)}</p><p>${email}</p>${application}</article>
+    `${user.must_change_password ? '<aside class="notice" role="alert"><strong>首次登录，请先修改临时密码</strong><p>完成修改并重新登录后，才能使用管理功能。</p></aside>' : ""}${result}<section class="two-column"><article class="card"><p class="eyebrow">ACCOUNT</p><h1>个人中心</h1><p>用户名：${escapeHtml(user.username)}</p><p>身份：${escapeHtml(user.role)}</p><p>${email}</p>${application}</article>
   <article class="card"><h2>账号管理</h2>${user.role === "member" && user.member_id ? '<p><a href="/profile/member">修改我的信息</a></p>' : ""}<h2>修改密码</h2>${message(error)}<form method="post" action="/profile/password"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}">
   <label>当前密码<input type="password" name="current_password" autocomplete="current-password" required></label>
   <label>新密码<input type="password" name="new_password" minlength="8" maxlength="128" autocomplete="new-password" required></label>

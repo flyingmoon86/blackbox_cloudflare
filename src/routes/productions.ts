@@ -98,7 +98,7 @@ productionRoutes.get("/productions", async (c) => {
   const size = 12,
     page = Math.min(pageNumber(c.req.query("page")), Math.max(1, Math.ceil(total / size)));
   const result = await c.env.DB.prepare(
-    "SELECT id,title,synopsis,promo,year,cover_id,cover_ratio,feature_layout,theme_color FROM production ORDER BY year DESC,id DESC LIMIT ? OFFSET ?",
+    "SELECT id,title,synopsis,promo,year,cover_id,cover_ratio,feature_layout,theme_color FROM production ORDER BY CASE WHEN id=(SELECT featured_production_id FROM site_profile WHERE id=1) THEN 0 ELSE 1 END,year DESC,id DESC LIMIT ? OFFSET ?",
   )
     .bind(size, (page - 1) * size)
     .all<ProductionRow>();

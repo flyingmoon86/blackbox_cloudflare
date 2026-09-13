@@ -37,14 +37,12 @@ contentRoutes.use("*", async (c, next) => {
 contentRoutes.get("/site/theme.css", async (c) => {
   let accent = DEFAULT_ACCENT;
   const preview = c.req.query("accent");
-  const background = await c.env.DB.prepare(
-    "SELECT r.id FROM site_profile s JOIN resource r ON CAST(r.id AS TEXT)=s.page_background_photo WHERE s.id=1 AND r.status='approved' AND r.res_type='photo' AND r.preview_filename<>''",
-  ).first();
+  const row = await c.env.DB.prepare(
+    "SELECT s.page_texts,EXISTS(SELECT 1 FROM resource r WHERE r.id=CAST(s.page_background_photo AS INTEGER) AND r.status='approved' AND r.res_type='photo' AND r.preview_filename<>'') AS has_background FROM site_profile s WHERE s.id=1",
+  ).first<{ page_texts: string; has_background: number }>();
+  const background = row?.has_background;
   if (preview && validAccent(preview) && c.get("user")?.role === "admin") accent = preview;
   else {
-    const row = await c.env.DB.prepare("SELECT page_texts FROM site_profile WHERE id=1").first<{
-      page_texts: string;
-    }>();
     try {
       accent = JSON.parse(row?.page_texts || "{}").brand_accent || DEFAULT_ACCENT;
     } catch {}
@@ -142,7 +140,7 @@ contentRoutes.post("/admin/site", async (c) => {
   try {
     texts = JSON.parse(current?.page_texts || "{}");
   } catch {}
-  for (const key of ["about_heading", "test_notice", "about_text", "member_guide", "admin_guide"])
+  for (const key of ["about_heading", "test_notice", "about_text", "member_guide", "admin_guide", "special_thanks"])
     if (form.has(key))
       texts[key] = String(form.get(key) ?? "")
         .trim()
