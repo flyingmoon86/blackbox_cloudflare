@@ -39,6 +39,53 @@ async function setup() {
   };
   return { db, env, req, post };
 }
+test("required resource edition migration preserves keys and assigns only unassigned work files", () => {
+  const db = createDatabase(15);
+  db.exec(
+    "INSERT INTO production(id,title) VALUES(1,'作品');INSERT INTO production_edition(id,production_id,name,year) VALUES(20,1,'新版',2026);INSERT INTO resource(id,title,filename,production_id,edition_id) VALUES(1,'旧图','keep.jpg',1,NULL),(2,'已分版','keep2.jpg',1,20),(3,'其他','other.pdf',NULL,NULL)",
+  );
+  db.exec(readFileSync("migrations/0016_required_resource_editions.sql", "utf8"));
+  assert.equal(db.prepare("SELECT edition_id FROM resource WHERE id=1").get().edition_id, 1);
+  assert.equal(db.prepare("SELECT edition_id FROM resource WHERE id=2").get().edition_id, 20);
+  assert.equal(db.prepare("SELECT edition_id FROM resource WHERE id=3").get().edition_id, null);
+  assert.equal(db.prepare("SELECT filename FROM resource WHERE id=1").get().filename, "keep.jpg");
+  db.exec("DELETE FROM production WHERE id=1");
+  assert.equal(db.prepare("SELECT COUNT(*) n FROM resource").get().n, 3);
+  assert.deepEqual(db.prepare("PRAGMA foreign_key_check").all(), []);
+  db.close();
+});
+
+test("batch cast keeps AB roles and is atomic on duplicates", async () => {
+  const s = await setup();
+  const path = "/admin/productions/10/credits";
+  const fields = { edition_id: "30", member_id: ["1", "2"], kind: ["cast", "cast"], role_name: ["主角", "主角"] };
+  assert.equal((await s.post(2, path, fields)).status, 403);
+  assert.equal((await s.post(1, path, fields)).status, 303);
+  assert.equal(s.db.prepare("SELECT COUNT(*) n FROM production_credit").get().n, 2);
+  assert.equal((await s.post(1, path, { ...fields, role_name: ["新角色", "主角"] })).status, 409);
+  assert.equal(s.db.prepare("SELECT COUNT(*) n FROM production_credit").get().n, 2);
+  assert.equal((await s.post(1, path, { ...fields, member_id: ["1", "999"] })).status, 400);
+  assert.equal(s.db.prepare("SELECT COUNT(*) n FROM production_credit").get().n, 2);
+});
+
+test("admin moves resources within work without changing status or files", async () => {
+  const s = await setup();
+  s.db.exec(
+    "INSERT INTO resource(id,title,filename,res_type,status,production_id) VALUES(1,'版本剧照','keep.jpg','photo','approved',10),(2,'别的作品','other.jpg','photo','pending',20)",
+  );
+  const path = "/admin/productions/10/move-resources";
+  assert.equal((await s.post(2, path, { edition_id: "30", resource_ids: ["1"] })).status, 403);
+  assert.equal((await s.post(1, path, { edition_id: "30", resource_ids: ["1", "2"] })).status, 409);
+  assert.equal(s.db.prepare("SELECT edition_id FROM resource WHERE id=1").get().edition_id, 1);
+  assert.equal((await s.post(1, path, { edition_id: "30", resource_ids: ["1"] })).status, 303);
+  const row = s.db.prepare("SELECT edition_id,filename,status FROM resource WHERE id=1").get();
+  assert.deepEqual({ ...row }, { edition_id: 30, filename: "keep.jpg", status: "approved" });
+  assert.ok(!(await (await s.req(0, "/resources")).text()).includes("版本剧照"));
+  const detail = await (await s.req(0, "/productions/10")).text();
+  assert.ok(detail.includes("版本剧照"));
+  assert.ok(!detail.includes("作品通用资料"));
+});
+
 test("edition upgrade preserves identities, pending review and files; deletion keeps resources", async () => {
   const db = createDatabase(14);
   db.exec(

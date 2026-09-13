@@ -13,6 +13,7 @@ async function setup() {
   db.exec(
     "INSERT INTO member(id,name) VALUES(20,'甲'),(40,'乙');INSERT INTO user(id,username,password_hash,role,member_id) VALUES(1,'admin','test','admin',NULL),(2,'member','test','member',20),(3,'visitor','test','user',NULL),(4,'other','test','member',40);",
   );
+  db.exec("INSERT INTO production(id,title) VALUES(1,'上传测试作品')");
   const env = {
     DB: d1(db),
     FILES: fakeBucket(),
@@ -41,6 +42,8 @@ async function setup() {
       body: JSON.stringify({
         title: "剧照",
         resType: "photo",
+        productionId: 1,
+        editionId: 1,
         originalName: "photo.jpg",
         contentType: "image/jpeg",
         sizeBytes: jpeg.length,

@@ -85,6 +85,8 @@ uploadRoutes.post("/api/uploads", async (c) => {
   )
     throw new HTTPException(400, { message: "作品不存在。" });
   const edition = body.editionId ? Number(body.editionId) : null;
+  if (production && edition === null) throw new HTTPException(400, { message: "请选择资料所属的演出版本。" });
+  if (resType === "photo" && !production) throw new HTTPException(400, { message: "剧照请先选择作品和演出版本。" });
   if (
     edition !== null &&
     (!production ||

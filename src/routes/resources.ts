@@ -54,7 +54,7 @@ resourceRoutes.get("/resources", async (c) => {
   const query = (c.req.query("q") || "").trim().slice(0, 100);
   const base = `SELECT r.edition_id,(SELECT COALESCE(year,'')||' · '||name FROM production_edition WHERE id=r.edition_id) edition_name,r.id,r.title,r.res_type,r.description,r.original_name,r.preview_filename,r.status,r.admin_note,r.created_at,r.production_id,p.title production_title,r.uploader_id,u.username uploader_name
     FROM resource r LEFT JOIN production p ON p.id=r.production_id LEFT JOIN user u ON u.id=r.uploader_id
-    WHERE r.status='approved'`;
+    WHERE r.status='approved' AND r.res_type<>'photo'`;
   const order = ` ORDER BY CASE WHEN r.production_id IS NULL THEN 1 ELSE 0 END,
     COALESCE(p.year,0) DESC,p.id DESC,r.created_at DESC,r.id DESC`;
   const filter = query
@@ -63,7 +63,7 @@ resourceRoutes.get("/resources", async (c) => {
   const params = query ? Array(4).fill(`%${query.replace(/[\\%_]/g, "\\$&")}%`) : [];
   const total =
     (await c.env.DB.prepare(
-      "SELECT COUNT(*) n FROM resource r LEFT JOIN production p ON p.id=r.production_id WHERE r.status='approved'" +
+      "SELECT COUNT(*) n FROM resource r LEFT JOIN production p ON p.id=r.production_id WHERE r.status='approved' AND r.res_type<>'photo'" +
         filter,
     )
       .bind(...params)

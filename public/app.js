@@ -1,3 +1,33 @@
+for (const form of document.querySelectorAll(".batch-credit-form")) {
+  const rows = form.querySelector("[data-credit-rows]");
+  const initialize = (row) => {
+    const select = row.querySelector('[name="member_id"]'),
+      input = row.querySelector("[data-member-search]");
+    const options = [...select.options].map((o) => o.cloneNode(true));
+    input.addEventListener("input", () => {
+      const value = select.value,
+        q = input.value.trim().toLocaleLowerCase();
+      select.replaceChildren(
+        ...options
+          .filter((o) => !o.value || o.textContent.toLocaleLowerCase().includes(q))
+          .map((o) => o.cloneNode(true)),
+      );
+      select.value = [...select.options].some((o) => o.value === value) ? value : "";
+    });
+    row.querySelector("[data-remove-credit]").addEventListener("click", () => {
+      if (rows.children.length > 1) row.remove();
+    });
+  };
+  rows.querySelectorAll("[data-credit-row]").forEach(initialize);
+  form.querySelector("[data-add-credit]").addEventListener("click", () => {
+    if (rows.children.length >= 50) return;
+    const row = form.querySelector("template").content.firstElementChild.cloneNode(true);
+    rows.append(row);
+    initialize(row);
+    row.querySelector("input").focus();
+  });
+}
+
 document.addEventListener("submit", (event) => {
   const form = event.target;
   if (form instanceof HTMLFormElement && form.dataset.confirm && !window.confirm(form.dataset.confirm))
@@ -99,6 +129,8 @@ for (const select of document.querySelectorAll("[data-resource-edition]")) {
   if (!production) continue;
   const options = [...select.options].map((option) => option.cloneNode(true));
   const update = () => {
+    select.required = Boolean(production.value);
+    select.disabled = !production.value;
     const previous = select.value;
     select.replaceChildren(
       ...options
@@ -395,3 +427,17 @@ document.querySelectorAll("[data-add-edition]").forEach((button) =>
     row.querySelector("input").focus();
   }),
 );
+document.querySelectorAll("[data-move-resources]").forEach((form) => {
+  const target = form.querySelector('[name="edition_id"]');
+  const update = () => {
+    form.querySelectorAll("[data-source-edition]").forEach((row) => {
+      const unavailable = !target.value || row.dataset.sourceEdition === target.value;
+      row.hidden = unavailable;
+      const checkbox = row.querySelector("input");
+      checkbox.disabled = unavailable;
+      if (unavailable) checkbox.checked = false;
+    });
+  };
+  target.addEventListener("change", update);
+  update();
+});

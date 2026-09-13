@@ -27,13 +27,26 @@ export function productionListPage(
         : "";
     return `<div class="production-actions">${joinLink}<a class="button" href="/resources/submit?production_id=${item.id}">我要补充资料！</a></div>`;
   };
+  let groupKey = "";
   const cards = items.length
     ? items
         .map((item) => {
+          const key = item.featured ? "精选作品" : String(item.year || "年份待补");
+          const heading =
+            key !== groupKey
+              ? `<h2 class="production-year-heading">${escapeHtml(key)}${item.featured || !item.year ? "" : " 年"}</h2>`
+              : "";
+          groupKey = key;
           if (item.feature_layout === "overlay" && item.cover_id) {
-            return `<article class="card production-card production-stage-card ratio-${item.cover_ratio === "portrait" ? "portrait" : "landscape"}"><img class="production-stage-image" src="/resources/${item.cover_id}/preview" alt="${escapeHtml(item.title)}封面"><span class="production-stage-shade" aria-hidden="true"></span><div class="production-stage-copy"><p class="eyebrow">${escapeHtml(item.year || "作品档案")} · ${item.edition_count || 1} 个版本</p><h2><a class="production-stage-title" href="/productions/${item.id}">${escapeHtml(item.title)}</a></h2><div class="production-stage-details"><div><p class="production-stage-intro">${escapeHtml(item.promo || item.synopsis || "暂无介绍")}</p>${contributionActions(item)}</div></div></div></article>`;
+            return (
+              heading +
+              `<article class="card production-card production-stage-card ratio-${item.cover_ratio === "portrait" ? "portrait" : "landscape"}"><img class="production-stage-image" src="/resources/${item.cover_id}/preview" alt="${escapeHtml(item.title)}封面"><span class="production-stage-shade" aria-hidden="true"></span><div class="production-stage-copy"><p class="eyebrow">${escapeHtml(item.year || "作品档案")} · ${item.edition_count || 1} 个版本</p><h2><a class="production-stage-title" href="/productions/${item.id}">${escapeHtml(item.title)}</a></h2><div class="production-stage-details"><div><p class="production-stage-intro">${escapeHtml(item.promo || item.synopsis || "暂无介绍")}</p>${contributionActions(item)}</div></div></div></article>`
+            );
           }
-          return `<article class="card production-card ratio-${item.cover_ratio === "portrait" ? "portrait" : "landscape"}">${item.cover_id ? `<img class="production-cover" src="/resources/${item.cover_id}/preview" alt="${escapeHtml(item.title)}封面">` : ""}<p class="eyebrow">${escapeHtml(item.year || "作品档案")} · ${item.edition_count || 1} 个版本</p><h2><a href="/productions/${item.id}">${escapeHtml(item.title)}</a></h2><p>${escapeHtml(item.promo || item.synopsis || "暂无介绍")}</p>${contributionActions(item)}</article>`;
+          return (
+            heading +
+            `<article class="card production-card ratio-${item.cover_ratio === "portrait" ? "portrait" : "landscape"}">${item.cover_id ? `<img class="production-cover" src="/resources/${item.cover_id}/preview" alt="${escapeHtml(item.title)}封面">` : ""}<p class="eyebrow">${escapeHtml(item.year || "作品档案")} · ${item.edition_count || 1} 个版本</p><h2><a href="/productions/${item.id}">${escapeHtml(item.title)}</a></h2><p>${escapeHtml(item.promo || item.synopsis || "暂无介绍")}</p>${contributionActions(item)}</article>`
+          );
         })
         .join("")
     : '<p class="card">还没有作品档案。</p>';
@@ -55,6 +68,7 @@ export function productionDetailPage(
   csrf: string,
   resourcePage?: PageInfo,
   editions: EditionRow[] = [],
+  movable: Array<{ id: number; title: string; edition_id: number; edition_name: string; year: number | null }> = [],
 ): string {
   const admin = user?.role === "admin";
   const editionLabel = (id?: number | null) => {
@@ -62,6 +76,11 @@ export function productionDetailPage(
     return v ? `${v.year || "年份待补"} · ${v.name}` : "初始版本";
   };
   const versionSelect = `<label>演出版本<select name="edition_id" required><option value="">请选择版本</option>${editions.map((v) => `<option value="${v.id}">${escapeHtml(v.year || "年份待补")} · ${escapeHtml(v.name)}</option>`).join("")}</select></label>`;
+  const moveForm =
+    admin && movable.length
+      ? `<details class="edition-editor"><summary>从其他版本选择资料并移动</summary><form data-move-resources method="post" action="/admin/productions/${item.id}/move-resources"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}">${versionSelect}<p class="hint">选择目标版本和资料，确认后资料会离开原版本，审核状态与原文件不变。</p><div class="check-list">${movable.map((r) => `<label data-source-edition="${r.edition_id}"><input type="checkbox" name="resource_ids" value="${r.id}">${escapeHtml(r.year || "年份待补")} · ${escapeHtml(r.edition_name)} — ${escapeHtml(r.title)}</label>`).join("")}</div><button>确认移动到所选版本</button></form></details>`
+      : "";
+  const creditRow = `<div class="credit-row" data-credit-row><label>搜索队员<input type="search" data-member-search placeholder="输入姓名或年级" autocomplete="off"></label><label>选择队员<select name="member_id" required><option value="">请选择</option>${members.map((m) => `<option value="${m.id}">${escapeHtml(m.name)}${m.cohort ? `（${escapeHtml(m.cohort)}）` : ""}</option>`).join("")}</select></label><label>类别<select name="kind"><option value="cast">演员</option><option value="crew">后台与创作</option></select></label><label>角色或分工<input name="role_name" maxlength="80" required></label><button type="button" class="secondary" data-remove-credit>移除这行</button></div>`;
   const group = (kind: "cast" | "crew", editionId?: number) => {
     const roles = new Map<string, CreditRow[]>();
     for (const credit of credits.filter(
@@ -141,12 +160,12 @@ export function productionDetailPage(
   }
   return layout(
     item.title,
-    `${archiveTabs("productions")}<p class="back-links"><a href="/productions">← 返回作品档案</a><a href="/resources">查看资料库</a></p><article class="card production-detail ratio-${item.cover_ratio === "portrait" ? "portrait" : "landscape"}">${item.cover_id ? `<img class="production-cover" src="/resources/${item.cover_id}/preview" alt="${escapeHtml(item.title)}封面">` : ""}<p class="eyebrow">${escapeHtml(item.year || "PRODUCTION")} · ${editions.length} 个版本</p><h1>${escapeHtml(item.title)}</h1><p class="lead">${escapeHtml(item.promo)}</p><p>${escapeHtml(item.synopsis || "暂无剧情介绍")}</p>
+    `${archiveTabs("productions")}<p class="back-links"><a href="/productions">← 返回作品档案</a><a href="/resources">查看资料库</a></p><article class="card production-detail work-detail ratio-${item.cover_ratio === "portrait" ? "portrait" : "landscape"}">${item.cover_id ? `<img class="production-cover" src="/resources/${item.cover_id}/preview" alt="${escapeHtml(item.title)}封面">` : ""}<p class="eyebrow">${escapeHtml(item.year || "PRODUCTION")} · ${editions.length} 个版本</p><h1>${escapeHtml(item.title)}</h1><p class="lead">${escapeHtml(item.promo)}</p><p>${escapeHtml(item.synopsis || "暂无剧情介绍")}</p>
     <nav class="edition-nav" aria-label="演出版本">${editions.map((v) => `<a href="#edition-${v.id}">${escapeHtml(editionLabel(v.id))}</a>`).join("")}</nav>
     ${editions.map((v) => `<section class="production-edition" id="edition-${v.id}"><p class="eyebrow">${escapeHtml(v.year || "年份待补")}</p><h2>${escapeHtml(v.name)}</h2><p class="edition-description">${escapeHtml(v.description)}</p>${admin ? `<details class="edition-editor"><summary>编辑这个版本</summary><form method="post" action="/admin/productions/${item.id}/editions/${v.id}"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>版本名称<input name="name" maxlength="80" required value="${escapeHtml(v.name)}"></label><label>演出年份${yearSelect("year", v.year)}</label><label>版本介绍<textarea name="description" maxlength="10000">${escapeHtml(v.description)}</textarea></label><button>保存版本</button></form></details>` : ""}<div class="two-column"><section><h3>演员</h3><ul>${group("cast", v.id)}</ul></section><section><h3>后台与创作</h3><ul>${group("crew", v.id)}</ul></section></div><p><a href="/resources/submit?production_id=${item.id}&amp;edition_id=${v.id}">补充这个版本的资料</a></p>${resources.some((r) => r.edition_id === v.id) ? `<div class="card-grid">${renderArchive(resources.filter((r) => r.edition_id === v.id))}</div>` : ""}</section>`).join("")}
-    <section class="production-archive"><h2>作品通用资料</h2><p class="muted">未指定版本的旧资料保留在这里。每页最多展示 24 份资料，指定版本的资料列在对应演职员下方。</p><div class="card-grid">${renderArchive(resources.filter((r) => !r.edition_id))}</div>${pagination(resourcePage)}</section>
+    <section class="production-archive">${pagination(resourcePage)}</section>${moveForm}
     ${join}
-    ${admin ? `<section id="manage-credits"><p><a href="/admin/productions/${item.id}/edit">编辑作品资料</a></p><form class="credit-form" method="post" action="/admin/productions/${item.id}/credits"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}">${versionSelect}<label>选择队员<select name="member_id" required><option value="">请选择</option>${members.map((member) => `<option value="${member.id}">${escapeHtml(member.name)}${member.cohort ? `（${escapeHtml(member.cohort)}）` : ""}</option>`).join("")}</select></label><label>类别<select name="kind"><option value="cast">演员</option><option value="crew">后台与创作</option></select></label><label>角色或分工<input name="role_name" maxlength="80" required></label><button>添加演职员</button></form><h3>添加演出版本</h3><form method="post" action="/admin/productions/${item.id}/editions"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>版本名称<input name="name" maxlength="80" required placeholder="如：毕业演出版"></label><label>演出年份${yearSelect("year", 2026)}</label><label>版本介绍<textarea name="description" maxlength="10000"></textarea></label><button>添加版本</button></form></section>` : ""}</article>`,
+    ${admin ? `<section id="manage-credits"><p><a href="/admin/productions/${item.id}/edit">编辑作品资料</a></p><form class="batch-credit-form" method="post" action="/admin/productions/${item.id}/credits"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}">${versionSelect}<div data-credit-rows>${creditRow}</div><template data-credit-template>${creditRow}</template><button type="button" class="secondary" data-add-credit>＋ 添加演职人员</button><button>确认提交演职人员</button></form><h3>添加演出版本</h3><form method="post" action="/admin/productions/${item.id}/editions"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>版本名称<input name="name" maxlength="80" required placeholder="如：毕业演出版"></label><label>演出年份${yearSelect("year", 2026)}</label><label>版本介绍<textarea name="description" maxlength="10000"></textarea></label><button>添加版本</button></form></section>` : ""}</article>`,
     Boolean(user),
     admin,
     item.id,

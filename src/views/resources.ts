@@ -6,7 +6,13 @@ import type { ResourceRow } from "../routes/resources";
 import type { UserSession } from "../types";
 import { escapeHtml, layout } from "../views";
 import { resourceCardArtwork, resourceDetailPreview } from "./resource-preview";
-const labels: Record<string, string> = { video: "视频", script: "剧本", photo: "剧照", audio: "音频", other: "其他" };
+const labels: Record<string, string> = {
+  video: "视频",
+  script: "剧本 / 台本",
+  photo: "剧照",
+  audio: "音频",
+  other: "其他",
+};
 const statuses: Record<string, string> = { approved: "已入库", pending: "等待审核", rejected: "已驳回" };
 export function resourceListPage(
   rows: ResourceRow[],
@@ -22,7 +28,7 @@ export function resourceListPage(
     ? rows
         .map(
           (r) =>
-            `<div><p class="muted">所属作品：${escapeHtml(r.production_title || "其他资料")} · ${escapeHtml(r.edition_name || "通用资料")}</p>${card(r)}</div>`,
+            `<div><p class="muted">所属作品：${escapeHtml(r.production_title || "其他资料")} · ${escapeHtml(r.edition_name || "未关联作品版本")}</p>${card(r)}</div>`,
         )
         .join("")
     : `<p class="card">${query ? `没有找到与“${escapeHtml(query)}”相关的资料或作品。` : "暂无资料。"}</p>`;
@@ -56,7 +62,7 @@ export function resourceListPage(
   const canSubmit = true;
   return layout(
     mine ? "我的资料" : "资料库",
-    `${archiveTabs("resources")}<section class="page-heading"><p class="eyebrow">ARCHIVE</p><h1>${mine ? "我的资料与审核结果" : "资料库"}</h1><p><a href="/resources">已入库资料</a> · <a href="/my-resources">我的提交</a>${canSubmit ? ' · <a href="/resources/submit">提交资料</a>' : ""}</p>${mine ? "" : `<form class="filters resource-search" method="get" action="/resources" role="search"><label>搜索资料或作品<input type="search" name="q" value="${escapeHtml(query)}" maxlength="100" placeholder="输入资料标题、文件名或作品名称"></label><button>搜索</button>${query ? '<a class="button secondary" href="/resources">清除</a>' : ""}</form>${query ? `<p class="search-summary">找到 ${page?.total ?? rows.length} 项与“${escapeHtml(query)}”相关的资料。</p>` : ""}`}</section><section class="review-grid" data-server-paged>${mine ? flatCards : groupedCards}</section>${pagination(page)}`,
+    `${archiveTabs("resources")}<section class="page-heading"><p class="eyebrow">ARCHIVE</p><h1>${mine ? "我的资料与审核结果" : "资料库"}</h1><p><a href="/resources">已入库资料</a> · <a href="/my-resources">我的提交</a>${canSubmit ? ' · <a href="/resources/submit">提交资料</a>' : ""}</p>${mine ? "" : `<p class="hint">剧本、台本与其他文件在这里查找；<a href="/productions">剧照请进入作品档案查看</a>。</p><form class="filters resource-search" method="get" action="/resources" role="search"><label>搜索资料或作品<input type="search" name="q" value="${escapeHtml(query)}" maxlength="100" placeholder="输入资料标题、文件名或作品名称"></label><button>搜索</button>${query ? '<a class="button secondary" href="/resources">清除</a>' : ""}</form>${query ? `<p class="search-summary">找到 ${page?.total ?? rows.length} 项与“${escapeHtml(query)}”相关的资料。</p>` : ""}`}</section><section class="review-grid" data-server-paged>${mine ? flatCards : groupedCards}</section>${pagination(page)}`,
     Boolean(user),
     user?.role === "admin",
   );
@@ -74,7 +80,7 @@ export function resourceDetailPage(row: ResourceRow, user: UserSession | null): 
       : "";
   return layout(
     row.title,
-    `${archiveTabs("resources")}<p class="back-links"><a href="${user?.id === row.uploader_id ? "/my-resources" : "/resources"}">← 返回资料列表</a><a href="/productions">返回作品档案</a></p><article class="card production-detail resource-detail"><p class="eyebrow">${escapeHtml(labels[row.res_type] || row.res_type)} · ${escapeHtml(statuses[row.status] || row.status)}</p><h1>${escapeHtml(row.title)}</h1>${edit}${resourceDetailPreview(row, Boolean(user))}<div class="resource-metadata"><p>${escapeHtml(row.description || "暂无说明")}</p><p>所属作品：${row.production_id ? `<a href="/productions/${row.production_id}">${escapeHtml(row.production_title)}</a>` : "其他资料"}</p><p>演出版本：${escapeHtml(row.edition_name || "作品通用资料")}</p><p>原文件名：${escapeHtml(row.original_name)}</p><p>提交人：${escapeHtml(row.uploader_name || "未知")}</p>${user && (user.id === row.uploader_id || user.role === "admin") && row.admin_note ? `<p class="alert">审核说明：${escapeHtml(row.admin_note)}</p>` : ""}${download}</div></article>`,
+    `${archiveTabs("resources")}<p class="back-links"><a href="${user?.id === row.uploader_id ? "/my-resources" : "/resources"}">← 返回资料列表</a><a href="/productions">返回作品档案</a></p><article class="card production-detail resource-detail"><p class="eyebrow">${escapeHtml(labels[row.res_type] || row.res_type)} · ${escapeHtml(statuses[row.status] || row.status)}</p><h1>${escapeHtml(row.title)}</h1>${edit}${resourceDetailPreview(row, Boolean(user))}<div class="resource-metadata"><p>${escapeHtml(row.description || "暂无说明")}</p><p>所属作品：${row.production_id ? `<a href="/productions/${row.production_id}">${escapeHtml(row.production_title)}</a>` : "其他资料"}</p><p>演出版本：${escapeHtml(row.edition_name || "未关联作品版本")}</p><p>原文件名：${escapeHtml(row.original_name)}</p><p>提交人：${escapeHtml(row.uploader_name || "未知")}</p>${user && (user.id === row.uploader_id || user.role === "admin") && row.admin_note ? `<p class="alert">审核说明：${escapeHtml(row.admin_note)}</p>` : ""}${download}</div></article>`,
     Boolean(user),
     user?.role === "admin",
   );
@@ -106,7 +112,7 @@ export function resourceReviewsPage(rows: ResourceRow[], csrf: string): string {
     ? rows
         .map(
           (r) =>
-            `<article class="card"><h2>${escapeHtml(r.title)}</h2><p>提交人：${escapeHtml(r.uploader_name)} · ${escapeHtml(labels[r.res_type])} · ${escapeHtml(r.production_title || "其他资料")} · ${escapeHtml(r.edition_name || "通用资料")}</p><p>${escapeHtml(r.description)}</p><p>文件：${escapeHtml(r.original_name)}</p><form method="post" action="/admin/resources/${r.id}/review"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>审核说明<input name="admin_note" maxlength="1000"></label><button name="decision" value="approve">通过入库</button> <button class="secondary" name="decision" value="reject">驳回</button></form></article>`,
+            `<article class="card"><h2>${escapeHtml(r.title)}</h2><p>提交人：${escapeHtml(r.uploader_name)} · ${escapeHtml(labels[r.res_type])} · ${escapeHtml(r.production_title || "其他资料")} · ${escapeHtml(r.edition_name || "未关联作品版本")}</p><p>${escapeHtml(r.description)}</p><p>文件：${escapeHtml(r.original_name)}</p><form method="post" action="/admin/resources/${r.id}/review"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>审核说明<input name="admin_note" maxlength="1000"></label><button name="decision" value="approve">通过入库</button> <button class="secondary" name="decision" value="reject">驳回</button></form></article>`,
         )
         .join("")
     : '<p class="card">没有待审核资料。</p>';

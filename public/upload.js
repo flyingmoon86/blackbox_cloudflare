@@ -8,6 +8,11 @@ if (form) {
   const submit = form.querySelector('button[type="submit"]');
   const type = form.elements.res_type;
   const fileInput = form.elements.file;
+  const requirePhotoProduction = () => {
+    form.elements.production_id.required = type.value === "photo";
+  };
+  type.addEventListener("change", requirePhotoProduction);
+  requirePhotoProduction();
   const csrf = form.dataset.csrf;
   let activeTask = "";
   let storageKey = "";

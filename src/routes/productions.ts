@@ -13,6 +13,7 @@ import {
 } from "../views/productions";
 
 export type ProductionRow = {
+  featured?: number;
   edition_count?: number;
   theme_color?: string;
   id: number;
@@ -113,6 +114,24 @@ productionRoutes.post("/admin/productions/:id/editions", async (c) => {
   return c.redirect("/productions/" + productionId, 303);
 });
 
+productionRoutes.post("/admin/productions/:id/move-resources", async (c) => {
+  if (c.get("user")?.role !== "admin") return c.text("没有管理员权限。", 403);
+  const form = await c.req.formData();
+  if (!csrfValid(c, form.get("csrf"))) return c.text("请求已失效。", 400);
+  const production = Number(c.req.param("id")),
+    edition = await selectedEdition(c, form, production);
+  const ids = selectedResourceIds(form);
+  if (!edition || !ids?.length || ids.length > 100) return c.text("请选择目标版本和最多 100 份资料。", 400);
+  const encoded = JSON.stringify(ids);
+  const result = await c.env.DB.prepare(
+    "UPDATE resource SET edition_id=? WHERE production_id=? AND id IN (SELECT value FROM json_each(?)) AND (SELECT COUNT(*) FROM resource WHERE production_id=? AND id IN (SELECT value FROM json_each(?)))=?",
+  )
+    .bind(edition, production, encoded, production, encoded, ids.length)
+    .run();
+  if (result.meta.changes !== ids.length) return c.text("资料归属已变化，本次未移动，请刷新后重试。", 409);
+  return c.redirect(`/productions/${production}#edition-${edition}`, 303);
+});
+
 productionRoutes.post("/admin/productions/:id/editions/:editionId", async (c) => {
   if (c.get("user")?.role !== "admin") return c.text("没有管理员权限。", 403);
   const form = await c.req.formData();
@@ -184,7 +203,7 @@ productionRoutes.get("/productions", async (c) => {
   const size = 12,
     page = Math.min(pageNumber(c.req.query("page")), Math.max(1, Math.ceil(total / size)));
   const result = await c.env.DB.prepare(
-    "SELECT p.id,title,synopsis,promo,COALESCE((SELECT MAX(year) FROM production_edition WHERE production_id=p.id),p.year) year,cover_id,cover_ratio,feature_layout,theme_color,(SELECT COUNT(*) FROM production_edition WHERE production_id=p.id) edition_count FROM production p ORDER BY CASE WHEN p.id=(SELECT featured_production_id FROM site_profile WHERE id=1) THEN 0 ELSE 1 END,year DESC,p.id DESC LIMIT ? OFFSET ?",
+    "SELECT p.id,(p.id=(SELECT featured_production_id FROM site_profile WHERE id=1)) featured,title,synopsis,promo,COALESCE((SELECT MAX(year) FROM production_edition WHERE production_id=p.id),p.year) year,cover_id,cover_ratio,feature_layout,theme_color,(SELECT COUNT(*) FROM production_edition WHERE production_id=p.id) edition_count FROM production p ORDER BY CASE WHEN p.id=(SELECT featured_production_id FROM site_profile WHERE id=1) THEN 0 ELSE 1 END,year DESC,p.id DESC LIMIT ? OFFSET ?",
   )
     .bind(size, (page - 1) * size)
     .all<ProductionRow>();
@@ -249,6 +268,15 @@ productionRoutes.get("/productions/:id", async (c) => {
       await csrfFor(c),
       { page, total, size, path: `/productions/${id}` },
       await editions(c, id),
+      admin
+        ? (
+            await c.env.DB.prepare(
+              "SELECT r.id,r.title,r.edition_id,e.name edition_name,e.year FROM resource r LEFT JOIN production_edition e ON e.id=r.edition_id WHERE r.production_id=? ORDER BY e.year DESC,r.id DESC",
+            )
+              .bind(id)
+              .all<{ id: number; title: string; edition_id: number; edition_name: string; year: number | null }>()
+          ).results
+        : [],
     ),
   );
 });
@@ -477,30 +505,46 @@ productionRoutes.post("/admin/productions/:id/credits", async (c) => {
   const form = await c.req.formData();
   if (!csrfValid(c, form.get("csrf"))) return c.text("请求已失效，请刷新页面后重试。", 400);
   const productionId = Number(c.req.param("id"));
-  const memberId = Number(form.get("member_id"));
   const editionId = await selectedEdition(c, form, productionId);
   if (!editionId) return c.text("请选择本作品的演出版本。", 400);
-  const roleName = String(form.get("role_name") ?? "").trim();
-  const kind = form.get("kind") === "crew" ? "crew" : "cast";
+  const ids = form.getAll("member_id").map(Number),
+    roles = form.getAll("role_name").map((v) => String(v).trim()),
+    kinds = form.getAll("kind").map(String);
   if (
-    !roleName ||
-    roleName.length > 80 ||
-    !(await c.env.DB.prepare("SELECT id FROM member WHERE id=?").bind(memberId).first())
-  )
-    return c.text("请选择队员并填写分工。", 400);
-  if (
-    await c.env.DB.prepare(
-      "SELECT id FROM production_credit WHERE production_id=? AND edition_id=? AND member_id=? AND kind=? AND role_name=? COLLATE NOCASE LIMIT 1",
+    !ids.length ||
+    ids.length > 50 ||
+    ids.length !== roles.length ||
+    ids.length !== kinds.length ||
+    ids.some(
+      (id, i) =>
+        !Number.isSafeInteger(id) ||
+        id < 1 ||
+        !roles[i] ||
+        roles[i].length > 80 ||
+        !["cast", "crew"].includes(kinds[i]),
     )
-      .bind(productionId, editionId, memberId, kind, roleName)
-      .first()
   )
-    return c.text("这位队员已经登记了相同的角色或分工。", 409);
-  await c.env.DB.prepare(
-    "INSERT INTO production_credit(production_id,edition_id,member_id,kind,role_name) VALUES(?,?,?,?,?) ON CONFLICT DO NOTHING",
-  )
-    .bind(productionId, editionId, memberId, kind, roleName)
-    .run();
+    return c.text("请为每一行选择队员、类别并填写角色或分工，一次最多 50 条。", 400);
+  if (new Set(ids.map((id, i) => `${id}:${kinds[i]}:${roles[i].toLocaleLowerCase()}`)).size !== ids.length)
+    return c.text("表单中有重复的演职员记录，请合并后提交。", 400);
+  const members = await c.env.DB.prepare("SELECT id FROM member WHERE id IN (SELECT value FROM json_each(?))")
+    .bind(JSON.stringify(ids))
+    .all<{ id: number }>();
+  if (new Set(members.results.map((m) => m.id)).size !== new Set(ids).size)
+    return c.text("部分队员档案已不存在，请重新选择。", 400);
+  try {
+    await c.env.DB.batch(
+      ids.map((id, i) =>
+        c.env.DB.prepare(
+          "INSERT INTO production_credit(production_id,edition_id,member_id,kind,role_name) VALUES(?,?,?,?,?)",
+        ).bind(productionId, editionId, id, kinds[i], roles[i]),
+      ),
+    );
+  } catch (error) {
+    if (/UNIQUE/.test(String(error)))
+      return c.text("本版本已有相同演职员记录，本次未添加任何一行，请检查后重试。", 409);
+    throw error;
+  }
   return c.redirect(`/productions/${productionId}`, 303);
 });
 
