@@ -73,6 +73,18 @@ test("guest flowers are CSRF protected, deduplicated per day and counted publicl
   assert.equal(s.db.prepare("SELECT COUNT(*) n FROM visitor_flower").get().n, 1);
   assert.match(await (await s.req(0, "/members/1")).text(), /收到 1 朵花/);
 });
+test("named flowers show cumulative names and retain anonymous counts", async () => {
+  const s = await setup();
+  await s.post(0, "/members/1/flowers");
+  await s.post(3, "/members/1/flowers");
+  await s.post(3, "/members/1/flowers");
+  const html = await (await s.req(0, "/members/1")).text();
+  assert.match(html, /收到 2 朵花/);
+  assert.match(html, /普通账号/);
+  assert.match(html, /匿名/);
+  assert.equal(s.db.prepare("SELECT COUNT(*) n FROM flower").get().n, 1);
+});
+
 test("feedback is idempotent, private text stays private and opting out hides thanks", async () => {
   const s = await setup(),
     nonce = crypto.randomUUID();
@@ -149,6 +161,8 @@ test("ordinary account uploads stay pending; member uploads record system approv
       headers,
       body: JSON.stringify({
         title: "新剧照",
+        productionId: 1,
+        editionId: 1,
         resType: "photo",
         originalName: "new.jpg",
         contentType: "image/jpeg",
@@ -217,21 +231,21 @@ test("appearance saves only valid admin settings and preserves existing page met
   s.db.close();
 });
 
-test("archive pages paginate all approved photos with stable groups and search", async () => {
+test("library paginates scripts with stable groups and excludes photos", async () => {
   const s = await setup();
   for (let id = 10; id < 40; id++)
     s.db
       .prepare(
-        "INSERT INTO resource(id,title,res_type,status,filename,production_id) VALUES(?,?,'photo','approved','fixture.jpg',1)",
+        "INSERT INTO resource(id,title,res_type,status,filename,production_id) VALUES(?,?,'script','approved','fixture.pdf',1)",
       )
       .run(id, "演出图片" + id);
   const first = await (await s.req(0, "/resources?q=测试作品")).text();
   assert.match(first, /第 1 \/ 2 页/);
-  assert.equal((first.match(/title="演出图片/g) || []).length, 24);
-  assert.ok(!first.includes('title="演出图片10"'));
+  assert.equal((first.match(/class="resource-card type-script"/g) || []).length, 24);
+  assert.ok(!first.includes("演出图片10"));
   const last = await (await s.req(0, "/resources?q=测试作品&page=999")).text();
   assert.match(last, /第 2 \/ 2 页/);
-  assert.match(last, /title="演出图片10"/);
+  assert.match(last, /演出图片10/);
   assert.ok(!last.includes("待审图"));
   const all = await (await s.req(0, "/resources?page=2")).text();
   assert.ok(all.indexOf("演出图片10") < all.indexOf("其他资料"));
