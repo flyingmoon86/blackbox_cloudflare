@@ -4,6 +4,8 @@
 
 在线访问：[npublackbox.online](https://npublackbox.online/)
 
+管理员入口：[admin.npublackbox.online](https://admin.npublackbox.online/)，使用现有管理员账号登录。
+
 ## 可以做什么
 
 - **看作品**：每部戏一张卡片，进入后查看不同年份的演出版本、演员、后台分工与相关资料。
