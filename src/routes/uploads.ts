@@ -84,6 +84,16 @@ uploadRoutes.post("/api/uploads", async (c) => {
       !(await c.env.DB.prepare("SELECT id FROM production WHERE id=?").bind(production).first()))
   )
     throw new HTTPException(400, { message: "作品不存在。" });
+  const edition = body.editionId ? Number(body.editionId) : null;
+  if (
+    edition !== null &&
+    (!production ||
+      !Number.isSafeInteger(edition) ||
+      !(await c.env.DB.prepare("SELECT id FROM production_edition WHERE id=? AND production_id=?")
+        .bind(edition, production)
+        .first()))
+  )
+    throw new HTTPException(400, { message: "版本不属于所选作品。" });
   const retry = await consumeAccountLimit(c, "upload-create", 120);
   if (retry) {
     c.header("Retry-After", String(retry));
@@ -102,9 +112,23 @@ uploadRoutes.post("/api/uploads", async (c) => {
   });
   try {
     await c.env.DB.prepare(
-      "INSERT INTO upload_task(id,user_id,production_id,object_key,original_name,content_type,size_bytes,status,expires_at,title,res_type,description,upload_mode,lease_token,lease_expires_at) VALUES(?,?,?,?,?,?,?,'uploading',datetime('now','+24 hours'),?,?,?,?,?,datetime('now','+5 minutes'))",
+      "INSERT INTO upload_task(id,user_id,production_id,edition_id,object_key,original_name,content_type,size_bytes,status,expires_at,title,res_type,description,upload_mode,lease_token,lease_expires_at) VALUES(?,?,?,?,?,?,?,?,'uploading',datetime('now','+24 hours'),?,?,?,?,?,datetime('now','+5 minutes'))",
     )
-      .bind(id, c.get("user")!.id, production, key, original, mime, size, title, resType, description, mode, token)
+      .bind(
+        id,
+        c.get("user")!.id,
+        production,
+        edition,
+        key,
+        original,
+        mime,
+        size,
+        title,
+        resType,
+        description,
+        mode,
+        token,
+      )
       .run();
   } catch (error) {
     await releaseStorageReservation(c.env, reservation);

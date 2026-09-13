@@ -94,9 +94,27 @@ for (const video of document.querySelectorAll("video[data-preview-frame]")) {
   );
 }
 
+for (const select of document.querySelectorAll("[data-resource-edition]")) {
+  const production = select.form?.elements.production_id;
+  if (!production) continue;
+  const options = [...select.options].map((option) => option.cloneNode(true));
+  const update = () => {
+    const previous = select.value;
+    select.replaceChildren(
+      ...options
+        .filter((option) => !option.value || option.dataset.production === production.value)
+        .map((option) => option.cloneNode(true)),
+    );
+    select.value = [...select.options].some((option) => option.value === previous) ? previous : "";
+  };
+  production.addEventListener("change", update);
+  update();
+}
+
 for (const section of document.querySelectorAll("[data-role-counts]")) {
   const kind = section.querySelector("[data-role-kind]");
   const name = section.querySelector("[data-role-name]");
+  const edition = section.querySelector('[name="edition_id"]');
   const hint = section.querySelector("[data-role-hint]");
   if (!kind || !name || !hint) continue;
   let counts = { cast: {}, crew: {} };
@@ -105,13 +123,27 @@ for (const section of document.querySelectorAll("[data-role-counts]")) {
   } catch {}
   const updateRoleHint = () => {
     const value = name.value.trim().toLocaleLowerCase();
-    const count = counts[kind.value]?.[value] || 0;
+    const count = counts[edition?.value]?.[kind.value]?.[value] || 0;
     hint.textContent = count
       ? `当前已有 ${count} 位队员登记这项${kind.value === "cast" ? "角色；通过后会作为多人饰演或 AB 角共同显示。" : "分工；通过后会作为共同分工显示。"}`
       : "这是新的角色或分工；也可以从已有名称中选择。";
     hint.classList.toggle("role-match", Boolean(count));
   };
-  kind.addEventListener("change", updateRoleHint);
+  const updateOptions = () => {
+    const list = section.querySelector("datalist");
+    if (list)
+      list.replaceChildren(
+        ...Object.keys(counts[edition?.value]?.[kind.value] || {}).map((value) => {
+          const option = document.createElement("option");
+          option.value = value;
+          return option;
+        }),
+      );
+    updateRoleHint();
+  };
+  edition?.addEventListener("change", updateOptions);
+  kind.addEventListener("change", updateOptions);
+  updateOptions();
   name.addEventListener("input", updateRoleHint);
 }
 
@@ -347,3 +379,19 @@ if (posterDialog instanceof HTMLDialogElement) {
     }
   });
 }
+document.querySelectorAll("[data-add-edition]").forEach((button) =>
+  button.addEventListener("click", () => {
+    const container = button.closest("[data-edition-fields]");
+    if (container.querySelectorAll("[data-edition-row]").length >= 30) return;
+    const row = container.querySelector("[data-edition-row]").cloneNode(true);
+    row.querySelector("input").value = "";
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "secondary";
+    remove.textContent = "移除这一行";
+    remove.addEventListener("click", () => row.remove());
+    row.append(remove);
+    button.before(row);
+    row.querySelector("input").focus();
+  }),
+);

@@ -1,3 +1,4 @@
+import type { EditionRow } from "./productions";
 import { reviewRequest } from "../services/reviews";
 import { pageNumber } from "../views/shared";
 import { canViewResource, serveResourceFile } from "../services/resource-files";
@@ -16,6 +17,8 @@ import {
 } from "../views/resources";
 
 export type ResourceRow = {
+  edition_id?: number | null;
+  edition_name?: string | null;
   id: number;
   title: string;
   res_type: string;
@@ -49,7 +52,7 @@ const adminDenied = (c: any) => (c.get("user")?.role === "admin" ? null : c.text
 
 resourceRoutes.get("/resources", async (c) => {
   const query = (c.req.query("q") || "").trim().slice(0, 100);
-  const base = `SELECT r.id,r.title,r.res_type,r.description,r.original_name,r.preview_filename,r.status,r.admin_note,r.created_at,r.production_id,p.title production_title,r.uploader_id,u.username uploader_name
+  const base = `SELECT r.edition_id,(SELECT COALESCE(year,'')||' · '||name FROM production_edition WHERE id=r.edition_id) edition_name,r.id,r.title,r.res_type,r.description,r.original_name,r.preview_filename,r.status,r.admin_note,r.created_at,r.production_id,p.title production_title,r.uploader_id,u.username uploader_name
     FROM resource r LEFT JOIN production p ON p.id=r.production_id LEFT JOIN user u ON u.id=r.uploader_id
     WHERE r.status='approved'`;
   const order = ` ORDER BY CASE WHEN r.production_id IS NULL THEN 1 ELSE 0 END,
@@ -87,7 +90,7 @@ resourceRoutes.get("/my-resources", async (c) => {
   const size = 24,
     page = Math.min(pageNumber(c.req.query("page")), Math.max(1, Math.ceil(total / size)));
   const rows = await c.env.DB.prepare(
-    `SELECT r.id,r.title,r.res_type,r.description,r.original_name,r.preview_filename,r.status,r.admin_note,r.created_at,r.production_id,p.title production_title,r.uploader_id,u.username uploader_name FROM resource r LEFT JOIN production p ON p.id=r.production_id LEFT JOIN user u ON u.id=r.uploader_id WHERE r.uploader_id=? ORDER BY r.id DESC LIMIT ? OFFSET ?`,
+    `SELECT r.edition_id,(SELECT COALESCE(year,'')||' · '||name FROM production_edition WHERE id=r.edition_id) edition_name,r.id,r.title,r.res_type,r.description,r.original_name,r.preview_filename,r.status,r.admin_note,r.created_at,r.production_id,p.title production_title,r.uploader_id,u.username uploader_name FROM resource r LEFT JOIN production p ON p.id=r.production_id LEFT JOIN user u ON u.id=r.uploader_id WHERE r.uploader_id=? ORDER BY r.id DESC LIMIT ? OFFSET ?`,
   )
     .bind(u.id, size, (page - 1) * size)
     .all<ResourceRow>();
@@ -105,7 +108,16 @@ resourceRoutes.get("/resources/submit", async (c) => {
   const selectedProductionId = productions.results.some((production) => production.id === requestedProductionId)
     ? requestedProductionId
     : null;
-  return c.html(resourceFormPage(productions.results, await csrfFor(c), u.role === "admin", selectedProductionId));
+  return c.html(
+    resourceFormPage(
+      productions.results,
+      await csrfFor(c),
+      u.role === "admin",
+      selectedProductionId,
+      (await c.env.DB.prepare("SELECT * FROM production_edition ORDER BY year DESC,id DESC").all<EditionRow>()).results,
+      Number(c.req.query("edition_id")) || null,
+    ),
+  );
 });
 resourceRoutes.post("/resources/submit", async (c) => {
   const u = c.get("user")!;
@@ -116,7 +128,7 @@ resourceRoutes.post("/resources/submit", async (c) => {
 resourceRoutes.get("/resources/:id", async (c) => {
   const u = c.get("user")!;
   const row = await c.env.DB.prepare(
-    `SELECT r.id,r.title,r.res_type,r.description,r.original_name,r.preview_filename,r.status,r.admin_note,r.created_at,r.production_id,p.title production_title,r.uploader_id,u.username uploader_name FROM resource r LEFT JOIN production p ON p.id=r.production_id LEFT JOIN user u ON u.id=r.uploader_id WHERE r.id=?`,
+    `SELECT r.edition_id,(SELECT COALESCE(year,'')||' · '||name FROM production_edition WHERE id=r.edition_id) edition_name,r.id,r.title,r.res_type,r.description,r.original_name,r.preview_filename,r.status,r.admin_note,r.created_at,r.production_id,p.title production_title,r.uploader_id,u.username uploader_name FROM resource r LEFT JOIN production p ON p.id=r.production_id LEFT JOIN user u ON u.id=r.uploader_id WHERE r.id=?`,
   )
     .bind(Number(c.req.param("id")))
     .first<ResourceRow>();
@@ -156,7 +168,7 @@ resourceRoutes.get("/admin/resources/reviews", async (c) => {
   const denied = adminDenied(c);
   if (denied) return denied;
   const rows = await c.env.DB.prepare(
-    `SELECT r.id,r.title,r.res_type,r.description,r.original_name,r.preview_filename,r.status,r.admin_note,r.created_at,r.production_id,p.title production_title,r.uploader_id,u.username uploader_name FROM resource r LEFT JOIN production p ON p.id=r.production_id LEFT JOIN user u ON u.id=r.uploader_id WHERE r.status='pending' ORDER BY r.id`,
+    `SELECT r.edition_id,(SELECT COALESCE(year,'')||' · '||name FROM production_edition WHERE id=r.edition_id) edition_name,r.id,r.title,r.res_type,r.description,r.original_name,r.preview_filename,r.status,r.admin_note,r.created_at,r.production_id,p.title production_title,r.uploader_id,u.username uploader_name FROM resource r LEFT JOIN production p ON p.id=r.production_id LEFT JOIN user u ON u.id=r.uploader_id WHERE r.status='pending' ORDER BY r.id`,
   ).all<ResourceRow>();
   return c.html(resourceReviewsPage(rows.results, await csrfFor(c)));
 });
@@ -175,7 +187,7 @@ resourceRoutes.get("/admin/resources", async (c) => {
   const denied = adminDenied(c);
   if (denied) return denied;
   const rows = await c.env.DB.prepare(
-    `SELECT r.id,r.title,r.res_type,r.description,r.original_name,r.preview_filename,r.status,r.admin_note,r.created_at,r.production_id,p.title production_title,r.uploader_id,u.username uploader_name FROM resource r LEFT JOIN production p ON p.id=r.production_id LEFT JOIN user u ON u.id=r.uploader_id ORDER BY r.id DESC LIMIT 300`,
+    `SELECT r.edition_id,(SELECT COALESCE(year,'')||' · '||name FROM production_edition WHERE id=r.edition_id) edition_name,r.id,r.title,r.res_type,r.description,r.original_name,r.preview_filename,r.status,r.admin_note,r.created_at,r.production_id,p.title production_title,r.uploader_id,u.username uploader_name FROM resource r LEFT JOIN production p ON p.id=r.production_id LEFT JOIN user u ON u.id=r.uploader_id ORDER BY r.id DESC LIMIT 300`,
   ).all<ResourceRow>();
   return c.html(resourceAdminPage(rows.results));
 });
@@ -183,7 +195,7 @@ resourceRoutes.get("/admin/resources/:id/edit", async (c) => {
   const denied = adminDenied(c);
   if (denied) return denied;
   const row = await c.env.DB.prepare(
-    `SELECT r.id,r.title,r.res_type,r.description,r.original_name,r.preview_filename,r.status,r.admin_note,r.created_at,r.production_id,p.title production_title,r.uploader_id,u.username uploader_name FROM resource r LEFT JOIN production p ON p.id=r.production_id LEFT JOIN user u ON u.id=r.uploader_id WHERE r.id=?`,
+    `SELECT r.edition_id,(SELECT COALESCE(year,'')||' · '||name FROM production_edition WHERE id=r.edition_id) edition_name,r.id,r.title,r.res_type,r.description,r.original_name,r.preview_filename,r.status,r.admin_note,r.created_at,r.production_id,p.title production_title,r.uploader_id,u.username uploader_name FROM resource r LEFT JOIN production p ON p.id=r.production_id LEFT JOIN user u ON u.id=r.uploader_id WHERE r.id=?`,
   )
     .bind(Number(c.req.param("id")))
     .first<ResourceRow>();
@@ -192,7 +204,15 @@ resourceRoutes.get("/admin/resources/:id/edit", async (c) => {
     id: number;
     title: string;
   }>();
-  return c.html(resourceEditPage(row, productions.results, await csrfFor(c), c.req.query("saved") === "1"));
+  return c.html(
+    resourceEditPage(
+      row,
+      productions.results,
+      await csrfFor(c),
+      c.req.query("saved") === "1",
+      (await c.env.DB.prepare("SELECT * FROM production_edition ORDER BY year DESC,id DESC").all<EditionRow>()).results,
+    ),
+  );
 });
 resourceRoutes.post("/admin/resources/:id/edit", async (c) => {
   const denied = adminDenied(c);
@@ -214,10 +234,26 @@ resourceRoutes.post("/admin/resources/:id/edit", async (c) => {
   if (production !== null && !(await c.env.DB.prepare("SELECT id FROM production WHERE id=?").bind(production).first()))
     return c.text("作品不存在。", 400);
   const id = Number(c.req.param("id"));
-  const result = await c.env.DB.prepare(
-    "UPDATE resource SET title=?,res_type=?,description=?,production_id=? WHERE id=?",
+  const previous = await c.env.DB.prepare("SELECT production_id,edition_id FROM resource WHERE id=?")
+    .bind(id)
+    .first<{ production_id: number | null; edition_id: number | null }>();
+  const editionId = f.has("edition_id")
+    ? Number(f.get("edition_id")) || null
+    : previous?.production_id === production
+      ? previous.edition_id
+      : null;
+  if (
+    editionId &&
+    (!production ||
+      !(await c.env.DB.prepare("SELECT id FROM production_edition WHERE id=? AND production_id=?")
+        .bind(editionId, production)
+        .first()))
   )
-    .bind(title, type, description, production, id)
+    return c.text("版本不属于所选作品。", 400);
+  const result = await c.env.DB.prepare(
+    "UPDATE resource SET title=?,res_type=?,description=?,production_id=?,edition_id=? WHERE id=?",
+  )
+    .bind(title, type, description, production, editionId, id)
     .run();
   if (result.meta.changes !== 1) return c.text("资料不存在。", 404);
   return c.redirect(`/admin/resources/${id}/edit?saved=1`, 303);

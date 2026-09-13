@@ -107,12 +107,34 @@ test(
         ).status,
         409,
       );
+      const workForm = new URLSearchParams({ csrf: "runtime-csrf", title: "运行时多版本" });
+      for (const [name, year] of [
+        ["首演", 2024],
+        ["复排", 2026],
+        ["巡演", 2026],
+      ]) {
+        workForm.append("edition_name", name);
+        workForm.append("edition_year", String(year));
+      }
+      response = await request(1, "/admin/productions/new", { method: "POST", body: workForm, redirect: "manual" });
+      assert.equal(response.status, 303, await response.clone().text());
+      const productionId = Number(response.headers.get("location").split("/").pop());
+      const editions = (
+        await db
+          .prepare("SELECT id FROM production_edition WHERE production_id=? ORDER BY year DESC,id DESC")
+          .bind(productionId)
+          .all()
+      ).results;
+      assert.equal(editions.length, 3);
+      assert.equal(await db.prepare("SELECT year FROM production WHERE id=?").bind(productionId).first("year"), 2026);
       const bytes = Uint8Array.from([255, 216, 255, 224, 0, 16, 74, 70, 73, 70, 0, 1, 0, 0, 255, 217]);
       response = await request(1, "/api/uploads", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           title: "运行时照片",
+          productionId,
+          editionId: editions[0].id,
           resType: "photo",
           originalName: "runtime.jpg",
           contentType: "image/jpeg",
@@ -127,6 +149,13 @@ test(
       assert.equal(response.status, 200, await response.clone().text());
       const resource = await response.json();
       assert.equal(resource.status, "approved");
+      assert.equal(
+        await db.prepare("SELECT edition_id FROM resource WHERE id=?").bind(resource.resourceId).first("edition_id"),
+        editions[0].id,
+      );
+      const detail = await (await request(1, "/productions/" + productionId)).text();
+      assert.match(detail, /运行时照片/);
+      assert.doesNotMatch(detail, />undefined</);
       response = await request(1, "/resources/" + resource.resourceId + "/media", { headers: { range: "bytes=0-3" } });
       assert.equal(response.status, 206);
       assert.deepEqual(new Uint8Array(await response.arrayBuffer()), bytes.slice(0, 4));
