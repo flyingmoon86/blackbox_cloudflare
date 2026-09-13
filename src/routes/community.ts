@@ -72,6 +72,24 @@ communityRoutes.post("/feedback", async (c) => {
 });
 communityRoutes.get("/thanks", async (c) => {
   const user = c.get("user");
+  const profile = await c.env.DB.prepare("SELECT page_texts,troupe_name FROM site_profile WHERE id=1").first<{
+    page_texts: string;
+    troupe_name: string;
+  }>();
+  let special = "";
+  try {
+    const text = JSON.parse(profile?.page_texts || "{}").special_thanks;
+    if (typeof text === "string") special = text.trim();
+  } catch {}
+  const dedication = special
+    ? '<section class="special-thanks"><span class="eyebrow">WITH LOVE</span><h2>特别致谢</h2><div class="thanks-letter">' +
+      e(special) +
+      '</div><p class="thanks-signature">' +
+      e(profile?.troupe_name || "黑匣子话剧队") +
+      "</p></section>"
+    : "";
+  const editThanks =
+    user?.role === "admin" ? '<a class="thanks-edit" href="/admin/site#special_thanks">编辑特别致谢 ↗</a>' : "";
   const rows = await c.env.DB.prepare(
     "SELECT c.id,c.display_name,COALESCE(m.name,'') member_name,m.id member_id,u.username FROM site_contributor c LEFT JOIN user u ON u.id=c.user_id LEFT JOIN member m ON m.id=COALESCE(c.member_id,u.member_id) WHERE c.revoked_at IS NULL AND c.public_consent=1 ORDER BY c.created_at DESC,c.id DESC",
   ).all<{ id: number; display_name: string; member_name: string; member_id: number | null; username: string | null }>();
@@ -90,7 +108,10 @@ communityRoutes.get("/thanks", async (c) => {
   return c.html(
     layout(
       "鸣谢",
-      '<section class="page-heading"><p class="eyebrow">WITH THANKS</p><h1>每一份心意，都留在这里。</h1><p>感谢一起完善黑匣子的朋友。</p><a href="/feedback">我也有个建议 ↗</a></section><section class="thanks-grid" data-paginate="12">' +
+      '<section class="page-heading"><p class="eyebrow">WITH THANKS</p><h1>每一份心意，都留在这里。</h1><p>感谢一起完善黑匣子的朋友。</p><a href="/feedback">我也有个建议 ↗</a></section>' +
+        dedication +
+        editThanks +
+        '<section class="thanks-grid" data-paginate="12">' +
         (cards || "<p>等待第一份心意。</p>") +
         "</section>",
       Boolean(user),

@@ -11,8 +11,19 @@ export const securityHeaders: MiddlewareHandler<AppEnv> = async (c, next) => {
     c.header("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   c.header(
     "Content-Security-Policy",
-    "default-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self' https://*.r2.cloudflarestorage.com; style-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'self'",
+    "default-src 'self'; script-src 'self'; object-src 'none'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self' https://*.r2.cloudflarestorage.com; style-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'self'",
   );
+};
+
+// Reject browser cross-site writes before parsing a body or querying the database.
+// Non-browser clients without Origin must still pass each route's CSRF/auth checks.
+export const sameOriginWrites: MiddlewareHandler<AppEnv> = async (c, next) => {
+  if (!["GET", "HEAD", "OPTIONS"].includes(c.req.method)) {
+    const origin = c.req.header("Origin");
+    if ((origin && origin !== new URL(c.req.url).origin) || c.req.header("Sec-Fetch-Site") === "cross-site")
+      return c.text("不接受跨站提交，请在本站重新操作。", 403);
+  }
+  await next();
 };
 
 export const noStore: MiddlewareHandler<AppEnv> = async (c, next) => {

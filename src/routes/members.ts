@@ -85,7 +85,7 @@ memberRoutes.get("/members", async (c) => {
   const result = await c.env.DB.prepare(
     `SELECT m.id, m.name, m.bio, m.join_year, m.cohort, m.works, m.photo, EXISTS(SELECT 1 FROM site_contributor sc LEFT JOIN user cu ON cu.id=sc.user_id WHERE (sc.member_id=m.id OR cu.member_id=m.id) AND sc.revoked_at IS NULL AND sc.public_consent=1) contributor,
     COUNT(f.id) + (SELECT COUNT(*) FROM visitor_flower vf WHERE vf.member_id=m.id) AS flower_count FROM member m LEFT JOIN flower f ON f.member_id = m.id ${condition}
-    GROUP BY m.id ORDER BY m.join_year DESC, m.name COLLATE NOCASE,m.id LIMIT ? OFFSET ?`,
+    GROUP BY m.id ORDER BY flower_count DESC,m.join_year DESC, m.name COLLATE NOCASE,m.id LIMIT ? OFFSET ?`,
   )
     .bind(...params, size, (page - 1) * size)
     .all<MemberRow>();

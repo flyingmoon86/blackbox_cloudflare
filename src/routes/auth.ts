@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { clearSession, csrfFor, csrfValid, startSession } from "../http/cookies";
 import { hashPassword, verifyPassword } from "../auth/password";
 import type { AccountRow, AppEnv } from "../types";
-import { loginPage, profilePage, registerDonePage, registerPage } from "../views";
+import { loginPage, profilePage, registerDonePage, registerPage, certificationPromptPage } from "../views";
 import { authForm, formText, safeNext } from "../http/validation";
 import { consumeAuthLimit } from "../middleware/request-limits";
 
@@ -42,7 +42,7 @@ authRoutes.post("/login", async (c) => {
     return c.html(loginPage(await csrfFor(c), "尝试次数较多，请稍后再登录。", safeNext(form.get("next"))), 429);
   }
   const user = (await c.env.DB.prepare(
-    "SELECT id, username, password_hash, auth_version, role, status, email, pending_email, member_id FROM user WHERE username = ? COLLATE NOCASE",
+    "SELECT id, username, password_hash, auth_version, role, status, email, pending_email, member_id, must_change_password FROM user WHERE username = ? COLLATE NOCASE",
   )
     .bind(username)
     .first()) as AccountRow | null;
@@ -50,7 +50,31 @@ authRoutes.post("/login", async (c) => {
     return c.html(loginPage(await csrfFor(c), "用户名或密码不正确。", safeNext(form.get("next"))), 401);
   }
   await startSession(c, user);
-  return c.redirect(safeNext(form.get("next")), 303);
+  if (user.must_change_password) return c.redirect("/profile", 303);
+  const next = safeNext(form.get("next"));
+  if (
+    user.role === "user" &&
+    !next.startsWith("/profile/member-application") &&
+    !(await c.env.DB.prepare("SELECT id FROM join_request WHERE user_id=? AND status='pending' LIMIT 1")
+      .bind(user.id)
+      .first())
+  )
+    return c.redirect("/profile/certification?next=" + encodeURIComponent(next), 303);
+  return c.redirect(next, 303);
+});
+
+authRoutes.get("/profile/certification", async (c) => {
+  const user = c.get("user"),
+    next = safeNext(c.req.query("next") ?? null);
+  if (!user) return c.redirect("/login?next=" + encodeURIComponent(next));
+  if (
+    user.role !== "user" ||
+    (await c.env.DB.prepare("SELECT id FROM join_request WHERE user_id=? AND status='pending' LIMIT 1")
+      .bind(user.id)
+      .first())
+  )
+    return c.redirect(next);
+  return c.html(certificationPromptPage(next));
 });
 
 authRoutes.post("/logout", async (c) => {
@@ -153,8 +177,10 @@ authRoutes.post("/profile/password", async (c) => {
   if (!account || !verifyPassword(account.password_hash, current)) {
     return c.html(profilePage(user, await csrfFor(c), "当前密码不正确。"), 400);
   }
+  if (user.must_change_password && verifyPassword(account.password_hash, password))
+    return c.html(profilePage(user, await csrfFor(c), "请设置与临时密码不同的新密码。"), 400);
   const result = await c.env.DB.prepare(
-    "UPDATE user SET password_hash = ?, auth_version = auth_version + 1 WHERE id = ? AND auth_version = ? AND status = 'active'",
+    "UPDATE user SET password_hash = ?, auth_version = auth_version + 1, must_change_password = 0 WHERE id = ? AND auth_version = ? AND status = 'active'",
   )
     .bind(hashPassword(password), user.id, user.auth_version)
     .run();
