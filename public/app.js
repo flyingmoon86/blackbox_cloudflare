@@ -1,3 +1,33 @@
+for (const form of document.querySelectorAll(".batch-credit-form")) {
+  const rows = form.querySelector("[data-credit-rows]");
+  const initialize = (row) => {
+    const select = row.querySelector('[name="member_id"]'),
+      input = row.querySelector("[data-member-search]");
+    const options = [...select.options].map((o) => o.cloneNode(true));
+    input.addEventListener("input", () => {
+      const value = select.value,
+        q = input.value.trim().toLocaleLowerCase();
+      select.replaceChildren(
+        ...options
+          .filter((o) => !o.value || o.textContent.toLocaleLowerCase().includes(q))
+          .map((o) => o.cloneNode(true)),
+      );
+      select.value = [...select.options].some((o) => o.value === value) ? value : "";
+    });
+    row.querySelector("[data-remove-credit]").addEventListener("click", () => {
+      if (rows.children.length > 1) row.remove();
+    });
+  };
+  rows.querySelectorAll("[data-credit-row]").forEach(initialize);
+  form.querySelector("[data-add-credit]").addEventListener("click", () => {
+    if (rows.children.length >= 50) return;
+    const row = form.querySelector("template").content.firstElementChild.cloneNode(true);
+    rows.append(row);
+    initialize(row);
+    row.querySelector("input").focus();
+  });
+}
+
 document.addEventListener("submit", (event) => {
   const form = event.target;
   if (form instanceof HTMLFormElement && form.dataset.confirm && !window.confirm(form.dataset.confirm))
@@ -94,9 +124,29 @@ for (const video of document.querySelectorAll("video[data-preview-frame]")) {
   );
 }
 
+for (const select of document.querySelectorAll("[data-resource-edition]")) {
+  const production = select.form?.elements.production_id;
+  if (!production) continue;
+  const options = [...select.options].map((option) => option.cloneNode(true));
+  const update = () => {
+    select.required = Boolean(production.value);
+    select.disabled = !production.value;
+    const previous = select.value;
+    select.replaceChildren(
+      ...options
+        .filter((option) => !option.value || option.dataset.production === production.value)
+        .map((option) => option.cloneNode(true)),
+    );
+    select.value = [...select.options].some((option) => option.value === previous) ? previous : "";
+  };
+  production.addEventListener("change", update);
+  update();
+}
+
 for (const section of document.querySelectorAll("[data-role-counts]")) {
   const kind = section.querySelector("[data-role-kind]");
   const name = section.querySelector("[data-role-name]");
+  const edition = section.querySelector('[name="edition_id"]');
   const hint = section.querySelector("[data-role-hint]");
   if (!kind || !name || !hint) continue;
   let counts = { cast: {}, crew: {} };
@@ -105,13 +155,27 @@ for (const section of document.querySelectorAll("[data-role-counts]")) {
   } catch {}
   const updateRoleHint = () => {
     const value = name.value.trim().toLocaleLowerCase();
-    const count = counts[kind.value]?.[value] || 0;
+    const count = counts[edition?.value]?.[kind.value]?.[value] || 0;
     hint.textContent = count
       ? `当前已有 ${count} 位队员登记这项${kind.value === "cast" ? "角色；通过后会作为多人饰演或 AB 角共同显示。" : "分工；通过后会作为共同分工显示。"}`
       : "这是新的角色或分工；也可以从已有名称中选择。";
     hint.classList.toggle("role-match", Boolean(count));
   };
-  kind.addEventListener("change", updateRoleHint);
+  const updateOptions = () => {
+    const list = section.querySelector("datalist");
+    if (list)
+      list.replaceChildren(
+        ...Object.keys(counts[edition?.value]?.[kind.value] || {}).map((value) => {
+          const option = document.createElement("option");
+          option.value = value;
+          return option;
+        }),
+      );
+    updateRoleHint();
+  };
+  edition?.addEventListener("change", updateOptions);
+  kind.addEventListener("change", updateOptions);
+  updateOptions();
   name.addEventListener("input", updateRoleHint);
 }
 
@@ -347,3 +411,33 @@ if (posterDialog instanceof HTMLDialogElement) {
     }
   });
 }
+document.querySelectorAll("[data-add-edition]").forEach((button) =>
+  button.addEventListener("click", () => {
+    const container = button.closest("[data-edition-fields]");
+    if (container.querySelectorAll("[data-edition-row]").length >= 30) return;
+    const row = container.querySelector("[data-edition-row]").cloneNode(true);
+    row.querySelector("input").value = "";
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "secondary";
+    remove.textContent = "移除这一行";
+    remove.addEventListener("click", () => row.remove());
+    row.append(remove);
+    button.before(row);
+    row.querySelector("input").focus();
+  }),
+);
+document.querySelectorAll("[data-move-resources]").forEach((form) => {
+  const target = form.querySelector('[name="edition_id"]');
+  const update = () => {
+    form.querySelectorAll("[data-source-edition]").forEach((row) => {
+      const unavailable = !target.value || row.dataset.sourceEdition === target.value;
+      row.hidden = unavailable;
+      const checkbox = row.querySelector("input");
+      checkbox.disabled = unavailable;
+      if (unavailable) checkbox.checked = false;
+    });
+  };
+  target.addEventListener("change", update);
+  update();
+});

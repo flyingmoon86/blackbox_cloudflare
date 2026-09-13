@@ -8,6 +8,11 @@ if (form) {
   const submit = form.querySelector('button[type="submit"]');
   const type = form.elements.res_type;
   const fileInput = form.elements.file;
+  const requirePhotoProduction = () => {
+    form.elements.production_id.required = type.value === "photo";
+  };
+  type.addEventListener("change", requirePhotoProduction);
+  requirePhotoProduction();
   const csrf = form.dataset.csrf;
   let activeTask = "";
   let storageKey = "";
@@ -195,6 +200,7 @@ if (form) {
           title,
           resType: type.value,
           productionId: form.elements.production_id.value || null,
+          editionId: form.elements.edition_id?.value || null,
           description: form.elements.description.value,
           originalName: file.name,
           contentType: file.type || "application/octet-stream",
@@ -206,7 +212,7 @@ if (form) {
   const uploadOne = async (file, index, total, bytesBefore, totalBytes) => {
     const enteredTitle = form.elements.title.value.trim();
     const title = total > 1 ? baseName(file.name) : enteredTitle || baseName(file.name);
-    storageKey = `blackbox-upload:${type.value}:${form.elements.production_id.value}:${file.name}:${file.size}:${file.lastModified}`;
+    storageKey = `blackbox-upload:${type.value}:${form.elements.production_id.value}:${form.elements.edition_id?.value || ""}:${file.name}:${file.size}:${file.lastModified}`;
     let task;
     const savedId = localStorage.getItem(storageKey);
     if (savedId) {

@@ -15,20 +15,20 @@ export function helpPage(texts: Record<string, string>, admin: boolean, signedIn
     "使用指南",
     `<section class="page-heading"><p class="eyebrow">HELP</p><h1>网站使用指南</h1><p>从下面选择要完成的事情；每一步都提供直接入口。</p></section>
     <nav class="guide-jumps" aria-label="指南目录"><a href="#member-guide">队员须知</a><a href="#find-production">寻找作品</a><a href="#join-production-guide">登记演职员</a><a href="#upload-guide">上传资料</a><a href="#profile-guide">个人档案</a>${adminNav}</nav>
-    <article id="member-guide" class="card guide-section"><div class="guide-title"><div><p class="eyebrow">MEMBER GUIDE</p><h2>队员须知</h2></div>${admin ? '<a class="edit-link" href="/admin/site#member_guide">编辑队员须知正文</a>' : ""}</div>${paragraph(memberGuide)}<p class="hint">下面的操作步骤由网站维护，会随功能更新；队长可在页面管理中补充本队约定。</p></article>
+    <div class="guide-content"><article id="member-guide" class="card guide-section"><div class="guide-title"><div><p class="eyebrow">MEMBER GUIDE</p><h2>队员须知</h2></div>${admin ? '<a class="edit-link" href="/admin/site#member_guide">编辑队员须知正文</a>' : ""}</div>${paragraph(memberGuide)}<p class="hint">下面的操作步骤由网站维护，会随功能更新；队长可在页面管理中补充本队约定。</p></article>
     <section class="guide-grid">
       <article id="find-production" class="card guide-section"><span class="guide-step">01</span><h2>先找到作品</h2><p>打开作品档案，找到你参与的戏。缺少档案时，直接点击页面上方“申请创建作品”，填写作品名、年份和说明。</p><p><a class="button" href="/productions">打开作品档案</a></p></article>
-      <article id="join-production-guide" class="card guide-section"><span class="guide-step">02</span><h2>登记角色或分工</h2><p>从作品卡片点击“我是主创！”。已有同名角色时仍可提交，审核通过后会显示为多人饰演或 AB 角；同一个人也能继续申请其他角色。</p><p><a href="/productions">选择作品并申请</a></p></article>
-      <article id="upload-guide" class="card guide-section"><span class="guide-step">03</span><h2>补充资料</h2><p>从作品卡片进入上传，作品会自动选中。图片可批量选择，测试阶段不支持视频。普通账号提交后人工审核，认证队员通过规则后自动入库。上传后到“我的提交”查看审核结果。</p><p><a href="/resources/submit">上传资料</a> · <a href="/my-resources">查看我的提交</a></p></article>
-      <article id="profile-guide" class="card guide-section"><span class="guide-step">04</span><h2>修改个人信息与账号</h2><p>在个人中心修改头像、简介和代表作，也可以修改密码。姓名、入学年级等公共档案信息由管理员编辑。</p><p><a href="/profile">进入个人中心</a></p></article>
+      <article id="join-production-guide" class="card guide-section"><span class="guide-step">02</span><h2>登记角色或分工</h2><p>从作品卡片点击“我是主创！”，先选择演出版本，再填写角色或分工。已有同名角色时仍可提交，审核通过后会显示为多人饰演或 AB 角；同一个人也能继续申请其他角色。</p><p><a href="/productions">选择作品并申请</a></p></article>
+      <article id="upload-guide" class="card guide-section"><span class="guide-step">03</span><h2>补充资料</h2><p>进入作品的演出版本，点击补充资料，作品与版本会自动选中。剧照在对应作品内展示，资料库保留剧本、台本等非剧照资料。图片可批量选择，测试阶段不支持视频。普通账号提交后人工审核，认证队员通过规则后自动入库。上传后到“我的提交”查看审核结果。</p><p><a href="/resources/submit">上传资料</a> · <a href="/my-resources">查看我的提交</a></p></article>
+      <article id="profile-guide" class="card guide-section"><span class="guide-step">04</span><h2>修改个人信息与账号</h2><p>在个人中心修改头像、简介，也可以修改密码。参与作品从已审核的演职员记录自动展示。姓名、入学年级等公共档案信息由管理员编辑。</p><p><a href="/profile">进入个人中心</a></p></article>
     </section>
     ${
       admin
         ? `<article id="captain-guide" class="card guide-section admin-guide"><div class="guide-title"><div><p class="eyebrow">CAPTAIN GUIDE</p><h2>队长与管理员指南</h2></div><a class="edit-link" href="/admin/site#admin_guide">编辑管理员须知正文</a></div>${paragraph(adminGuide)}
         <nav class="admin-guide-links" aria-label="管理员常用入口"><a href="/admin/production-requests">审核演职员</a><a href="/admin/resources/reviews">审核资料</a><a href="/admin/suggestions">处理建档申请</a><a href="/admin/productions/new">创建作品</a><a href="/admin/announcements/new">发布公告</a><a href="/admin/site">页面管理</a></nav>
-        <ol class="guide-checklist"><li><strong>先处理建档申请：</strong>确认作品尚不存在，再创建档案并补全名称、年份和介绍。</li><li><strong>再审核演职员：</strong>同角色已有人员时，页面会明确提示；通过后共同保留，不会覆盖原队员。</li><li><strong>审核资料：</strong>检查作品归属、内容和文件名；驳回时写清修改原因。剧照可逐张审核。</li><li><strong>维护展示：</strong>为作品选择已入库剧照作封面，再按需设为首页精选；公告和页面文案从工作台管理。</li><li><strong>定期检查：</strong>测试账号权限、下载与大文件上传，重要修改后按本地验收指南复核再上线。</li></ol></article>`
+        <ol class="guide-checklist"><li><strong>先处理建档申请：</strong>确认作品尚不存在，再创建档案并补全名称、年份和介绍。</li><li><strong>再审核演职员：</strong>同角色已有人员时，页面会明确提示；通过后共同保留，不会覆盖原队员。</li><li><strong>批量登记：</strong>进入作品底部，先选择版本，再点“添加演职人员”增加多行；可按姓名或年级搜索队员，最后一次确认提交。</li><li><strong>整理版本资料：</strong>展开“从其他版本选择资料并移动”，选择目标版本和资料；只能在同一作品内移动，原版本不再显示，审核状态不变。</li><li><strong>审核资料：</strong>检查作品归属、内容和文件名；驳回时写清修改原因。剧照可逐张审核。</li><li><strong>维护展示：</strong>为作品选择已入库剧照作封面，再按需设为首页精选；公告和页面文案从工作台管理。</li><li><strong>定期检查：</strong>测试账号权限、下载与大文件上传，重要修改后按本地验收指南复核再上线。</li></ol></article>`
         : ""
-    }`,
+    }</div>`,
     signedIn,
     admin,
   );

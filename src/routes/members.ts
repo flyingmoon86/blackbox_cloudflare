@@ -11,6 +11,8 @@ import type { AppEnv } from "../types";
 import { memberApplicationPage, memberCreatePage, memberDetailPage, memberEditPage, memberListPage } from "../views";
 
 export type MemberRow = {
+  flower_senders?: Array<{ name: string; member_id: number | null; amount: number }>;
+  anonymous_flowers?: number;
   productions?: Array<{ id: number; title: string }>;
   id: number;
   name: string;
@@ -111,6 +113,17 @@ memberRoutes.get("/members/:id", async (c) => {
     .bind(id)
     .first<MemberRow>();
   if (!member) return c.text("未找到队员档案。", 404);
+  member.flower_senders = (
+    await c.env.DB.prepare(
+      "SELECT COALESCE(NULLIF(m.name,''),u.username) name,u.member_id,COUNT(*) amount FROM flower f JOIN user u ON u.id=f.user_id LEFT JOIN member m ON m.id=u.member_id WHERE f.member_id=? GROUP BY u.id ORDER BY amount DESC,u.id",
+    )
+      .bind(id)
+      .all<{ name: string; member_id: number | null; amount: number }>()
+  ).results;
+  member.anonymous_flowers = Math.max(
+    0,
+    member.flower_count - member.flower_senders.reduce((sum, sender) => sum + sender.amount, 0),
+  );
   member.productions = (
     await c.env.DB.prepare(
       "SELECT DISTINCT p.id,p.title FROM production p JOIN production_credit pc ON pc.production_id=p.id WHERE pc.member_id=? ORDER BY p.year DESC,p.id DESC",
