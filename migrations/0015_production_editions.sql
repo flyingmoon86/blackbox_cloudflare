@@ -11,10 +11,10 @@ ALTER TABLE resource ADD COLUMN edition_id INTEGER REFERENCES production_edition
 ALTER TABLE upload_task ADD COLUMN edition_id INTEGER REFERENCES production_edition(id) ON DELETE SET NULL;
 CREATE INDEX ix_resource_edition ON resource(edition_id,status,id);
 CREATE TRIGGER resource_edition_insert_validate BEFORE INSERT ON resource WHEN NEW.edition_id IS NOT NULL BEGIN
- SELECT CASE WHEN NOT EXISTS(SELECT 1 FROM production_edition WHERE id=NEW.edition_id AND production_id=NEW.production_id) THEN RAISE(ABORT,'edition_mismatch') END;
+ SELECT RAISE(ABORT,'edition_mismatch') WHERE NOT EXISTS(SELECT 1 FROM production_edition WHERE id=NEW.edition_id AND production_id=NEW.production_id);
 END;
 CREATE TRIGGER resource_edition_update_validate BEFORE UPDATE OF edition_id ON resource WHEN NEW.edition_id IS NOT NULL BEGIN
- SELECT CASE WHEN NOT EXISTS(SELECT 1 FROM production_edition WHERE id=NEW.edition_id AND production_id=NEW.production_id) THEN RAISE(ABORT,'edition_mismatch') END;
+ SELECT RAISE(ABORT,'edition_mismatch') WHERE NOT EXISTS(SELECT 1 FROM production_edition WHERE id=NEW.edition_id AND production_id=NEW.production_id);
 END;
 CREATE TRIGGER resource_edition_detach AFTER UPDATE OF production_id ON resource WHEN OLD.production_id IS NOT NEW.production_id AND OLD.edition_id IS NEW.edition_id BEGIN
  UPDATE resource SET edition_id=NULL WHERE id=NEW.id;
@@ -38,10 +38,10 @@ CREATE TRIGGER request_initial_edition AFTER INSERT ON production_join_request W
  UPDATE production_join_request SET edition_id=(SELECT id FROM production_edition WHERE production_id=NEW.production_id ORDER BY id LIMIT 1) WHERE id=NEW.id;
 END;
 CREATE TRIGGER credit_edition_update_validate BEFORE UPDATE OF edition_id,production_id ON production_credit BEGIN
- SELECT CASE WHEN NOT EXISTS(SELECT 1 FROM production_edition WHERE id=NEW.edition_id AND production_id=NEW.production_id) THEN RAISE(ABORT,'edition_mismatch') END;
+ SELECT RAISE(ABORT,'edition_mismatch') WHERE NOT EXISTS(SELECT 1 FROM production_edition WHERE id=NEW.edition_id AND production_id=NEW.production_id);
 END;
 CREATE TRIGGER request_edition_update_validate BEFORE UPDATE OF edition_id,production_id ON production_join_request BEGIN
- SELECT CASE WHEN NOT EXISTS(SELECT 1 FROM production_edition WHERE id=NEW.edition_id AND production_id=NEW.production_id) THEN RAISE(ABORT,'edition_mismatch') END;
+ SELECT RAISE(ABORT,'edition_mismatch') WHERE NOT EXISTS(SELECT 1 FROM production_edition WHERE id=NEW.edition_id AND production_id=NEW.production_id);
 END;
 CREATE TRIGGER edition_latest_year_insert AFTER INSERT ON production_edition BEGIN
  UPDATE production SET year=(SELECT MAX(year) FROM production_edition WHERE production_id=NEW.production_id) WHERE id=NEW.production_id;
@@ -50,10 +50,10 @@ CREATE TRIGGER edition_latest_year_update AFTER UPDATE OF year ON production_edi
  UPDATE production SET year=(SELECT MAX(year) FROM production_edition WHERE production_id=NEW.production_id) WHERE id=NEW.production_id;
 END;
 CREATE TRIGGER credit_edition_validate BEFORE INSERT ON production_credit WHEN NEW.edition_id IS NOT NULL BEGIN
- SELECT CASE WHEN NOT EXISTS(SELECT 1 FROM production_edition WHERE id=NEW.edition_id AND production_id=NEW.production_id) THEN RAISE(ABORT,'edition_mismatch') END;
+ SELECT RAISE(ABORT,'edition_mismatch') WHERE NOT EXISTS(SELECT 1 FROM production_edition WHERE id=NEW.edition_id AND production_id=NEW.production_id);
 END;
 CREATE TRIGGER request_edition_validate BEFORE INSERT ON production_join_request WHEN NEW.edition_id IS NOT NULL BEGIN
- SELECT CASE WHEN NOT EXISTS(SELECT 1 FROM production_edition WHERE id=NEW.edition_id AND production_id=NEW.production_id) THEN RAISE(ABORT,'edition_mismatch') END;
+ SELECT RAISE(ABORT,'edition_mismatch') WHERE NOT EXISTS(SELECT 1 FROM production_edition WHERE id=NEW.edition_id AND production_id=NEW.production_id);
 END;
 DROP TRIGGER production_review_apply;
 CREATE TRIGGER production_review_apply AFTER UPDATE OF status ON production_join_request
