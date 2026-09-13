@@ -6,6 +6,10 @@
 
 ## 新手从这里开始
 
+2026-09-13 本机已用正式站快照替换旧本地运行数据：16 个账号、64 份档案、17 部作品、66 份资料、132 个文件。数据库与文件在 `.wrangler/state/v3`，快照校验记录在 `migration-work/production-sync`，均不进 Git。本地与线上后续各自独立，不能将本地整库覆盖回生产。
+
+发布节奏改为本地积累、验收后再手动上线。用户已断开 Cloudflare Git 构建连接；Git 提交不等于部署，仅在用户明确要求部署时运行 `npm run deploy`。旧自动构建失败原因已确认：裸命令 `npx wrangler deploy` 未指定 production，使用了本地 D1 全零占位 ID（错误 10181），与中文提交说明无关。未来若恢复 CI，检查命令用 `npm run deploy:check`，发布命令用 `npm run deploy`，不要使用未指定环境的裸命令。
+
 ```powershell
 npm ci
 # 仅首次且没有 .dev.vars 时复制；已有配置不要覆盖
