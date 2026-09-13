@@ -1,5 +1,7 @@
 import { communityRoutes } from "./routes/community";
 import { Hono } from "hono";
+import { contextStorage } from "hono/context-storage";
+import { adminPortalGate } from "./middleware/admin-portal";
 import { securityHeaders, noStore, sameOriginWrites } from "./middleware/security";
 import { loadUser } from "./middleware/session";
 import { authRoutes } from "./routes/auth";
@@ -19,12 +21,14 @@ import { requestContext, handleError } from "./middleware/errors";
 import { cleanExpiredRequestLimits } from "./middleware/request-limits";
 
 const app = new Hono<AppEnv>();
+app.use("*", contextStorage());
 
 app.use("*", requestContext);
 app.use("*", securityHeaders);
 app.use("*", noStore);
 app.use("*", sameOriginWrites);
 app.use("*", loadUser);
+app.use("*", adminPortalGate);
 
 app.get("/", homePage);
 app.get("/site/hero", heroImage);

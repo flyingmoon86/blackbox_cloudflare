@@ -13,6 +13,17 @@ const requiredSecrets = new Set(production?.secrets?.required || []);
 const expectedSecrets = ["SESSION_SECRET"];
 
 const problems = [];
+if (production?.vars?.ADMIN_ORIGIN || production?.vars?.PUBLIC_ORIGIN) {
+  for (const key of ["ADMIN_ORIGIN", "PUBLIC_ORIGIN"]) {
+    const origin = production?.vars?.[key];
+    if (
+      typeof origin !== "string" ||
+      !production.routes?.some((item) => item.custom_domain && origin === `https://${item.pattern}`)
+    )
+      problems.push(`${key} 必须匹配已声明的 HTTPS 自定义域名`);
+  }
+  if (production.vars.ADMIN_ORIGIN === production.vars.PUBLIC_ORIGIN) problems.push("主站与后台域名不能相同");
+}
 if (!production) problems.push("缺少 env.production 正式环境配置");
 if (!database || !/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(database.database_id || ""))
   problems.push("D1 database_id 仍是占位值");

@@ -43,6 +43,10 @@
         {
           "pattern": "npublackbox.online",
           "custom_domain": true
+        },
+        {
+          "pattern": "admin.npublackbox.online",
+          "custom_domain": true
         }
       ],
       "d1_databases": [
@@ -61,6 +65,8 @@
       ],
       "vars": {
         "ENVIRONMENT": "production",
+        "ADMIN_ORIGIN": "https://admin.npublackbox.online",
+        "PUBLIC_ORIGIN": "https://npublackbox.online",
         "R2_BUCKET_NAME": "blackbox-files-production"
       },
       "secrets": {
