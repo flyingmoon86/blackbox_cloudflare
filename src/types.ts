@@ -19,6 +19,7 @@ export type UserSession = {
   email: string | null;
   pending_email: string | null;
   member_id: number | null;
+  must_change_password?: number;
 };
 
 export type AccountRow = UserSession & { password_hash: string };
