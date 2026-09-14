@@ -57,6 +57,14 @@ const section =
 document.querySelector(`[data-section="${section}"]`)?.setAttribute("aria-current", "page");
 
 const notificationHost = document.querySelector("[data-admin-notifications]");
+document.addEventListener("blackbox:reviewed", () => {
+  // Snapshot counts predate the write; avoid another query after every review.
+  if (!notificationHost) return;
+  const link = document.createElement("a");
+  link.href = "/admin";
+  link.textContent = "查看最新待办";
+  notificationHost.replaceChildren(link);
+});
 if (notificationHost) {
   fetch("/admin/notifications", { headers: { accept: "application/json" } })
     .then((response) => {
