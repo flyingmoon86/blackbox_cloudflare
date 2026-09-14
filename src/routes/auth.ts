@@ -1,4 +1,6 @@
 import { Hono } from "hono";
+import { verifyTurnstile } from "../services/turnstile";
+import { adminPortal } from "../services/admin-portal";
 import { clearSession, csrfFor, csrfValid, startSession } from "../http/cookies";
 import { hashPassword, verifyPassword } from "../auth/password";
 import type { AccountRow, AppEnv } from "../types";
@@ -49,6 +51,8 @@ authRoutes.post("/login", async (c) => {
   if (!user || user.status !== "active" || !verifyPassword(user.password_hash, password)) {
     return c.html(loginPage(await csrfFor(c), "用户名或密码不正确。", safeNext(form.get("next"))), 401);
   }
+  if (adminPortal(c)?.active && user.role !== "admin")
+    return c.html(loginPage(await csrfFor(c), "请使用管理员账号登录。", "/admin"), 403);
   await startSession(c, user);
   if (user.must_change_password) return c.redirect("/profile", 303);
   const next = safeNext(form.get("next"));
@@ -103,6 +107,7 @@ authRoutes.post("/register", async (c) => {
   if (!validPassword(password, confirmation))
     return c.html(registerPage(await csrfFor(c), "密码需为 8–128 位，且两次输入一致。", values), 400);
   if (email === null) return c.html(registerPage(await csrfFor(c), "请填写有效的邮箱地址。", values), 400);
+  await verifyTurnstile(c, form, "signup");
   const retryAfter = await consumeAuthLimit(c, "register");
   if (retryAfter) {
     c.header("Retry-After", String(retryAfter));

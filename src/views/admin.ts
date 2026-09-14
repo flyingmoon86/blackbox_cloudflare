@@ -1,3 +1,4 @@
+import { reviewQueue, reviewAttributes } from "./review-queue";
 import type { JoinReview, ManagedUser, PendingCounts } from "../routes/admin";
 import { escapeHtml, layout } from "../views";
 
@@ -21,7 +22,7 @@ export function adminDashboardPage(
         .map(
           (
             request,
-          ) => `<article class="card review-card"><h3>${escapeHtml(request.username)} · ${request.apply_type === "bind" ? "绑定档案" : "新建档案"}</h3>
+          ) => `<article class="card review-card" ${reviewAttributes(request.id, request.apply_type === "bind" ? "绑定档案" : "新建档案", [request.username, request.member_name, request.name, request.cohort].join(" "))}><h3>${escapeHtml(request.username)} · ${request.apply_type === "bind" ? "绑定档案" : "新建档案"}</h3>
     <p>目标：${escapeHtml(request.member_name || request.name)}</p><p>核对信息：${escapeHtml(request.identity_note)}</p>
     ${request.apply_type === "new" ? `<p>届别：${escapeHtml(request.cohort || request.join_year || "未填写")}</p><p>${escapeHtml(request.bio)}</p>` : ""}
     <div class="admin-actions"><form method="post" action="/admin/requests/${request.id}/approve"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button>通过</button></form>
@@ -51,7 +52,7 @@ export function adminDashboardPage(
       <article class="admin-command-group"><p class="eyebrow">CONTENT</p><h2>内容管理</h2><nav><a href="/productions"><span aria-hidden="true">🎭</span><span>作品与演职员</span></a><a href="/admin/productions/new"><span aria-hidden="true">＋</span><span>创建作品</span></a><a href="/members"><span aria-hidden="true">👥</span><span>队员名录</span></a><a href="/admin/members/new"><span aria-hidden="true">＋</span><span>新建队员档案</span></a><a href="/admin/resources"><span aria-hidden="true">📁</span><span>资料管理</span></a><a href="/announcements"><span aria-hidden="true">📣</span><span>公告管理</span></a></nav></article>
       <article class="admin-command-group"><p class="eyebrow">WEBSITE</p><h2>网站设置</h2><nav><a href="/admin/review-history"><span aria-hidden="true">✓</span><span>审核历史</span></a><a href="/admin/system"><span aria-hidden="true">▤</span><span>存储与服务状态</span></a><a href="/admin/site"><span aria-hidden="true">⚙</span><span>页面与剧团信息</span></a><a href="/help"><span aria-hidden="true">?</span><span>管理员指南</span></a></nav></article>
     </section>
-    <section id="member-requests" class="admin-section"><div class="section-heading"><div><p class="eyebrow">MEMBER REQUESTS</p><h2>待审核队员申请</h2></div>${badge(counts.member_requests)}</div><div class="review-grid">${requestRows}</div></section><section class="admin-section"><div class="section-heading"><div><p class="eyebrow">ACCOUNTS</p><h2>账号管理</h2></div></div><div class="table-wrap"><table><thead><tr><th>用户名</th><th>身份</th><th>队员档案</th><th>状态</th><th>操作</th></tr></thead><tbody>${userRows}</tbody></table></div></section>`,
+    <section id="member-requests" class="admin-section"><div class="section-heading"><div><p class="eyebrow">MEMBER REQUESTS</p><h2>待审核队员申请</h2></div>${badge(counts.member_requests)}</div>${reviewQueue("member", requestRows)}</section><details class="admin-section admin-account-panel" id="accounts"><summary>账号管理 · ${users.length} 个账号</summary><div class="table-wrap"><table><thead><tr><th>用户名</th><th>身份</th><th>队员档案</th><th>状态</th><th>操作</th></tr></thead><tbody>${userRows}</tbody></table></div></details>`,
     true,
     true,
   );

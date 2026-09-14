@@ -1,5 +1,9 @@
 import { YEARS, yearSelect, icon, pagination, type PageInfo } from "./views/shared";
 import { assetUrl } from "./views/assets";
+import { turnstileWidget } from "./services/turnstile";
+import { tryGetContext } from "hono/context-storage";
+import { adminPortal } from "./services/admin-portal";
+import type { AppEnv } from "./types";
 import type { UserSession } from "./types";
 import type { MemberRow } from "./routes/members";
 
@@ -13,6 +17,8 @@ export function escapeHtml(value: unknown): string {
 }
 
 export function layout(title: string, content: string, signedIn = false, admin = false, themeId?: number): string {
+  const context = tryGetContext<AppEnv>();
+  const portal = context ? adminPortal(context) : null;
   const link = (href: string, label: string) =>
     '<a href="' +
     href +
@@ -54,7 +60,7 @@ export function layout(title: string, content: string, signedIn = false, admin =
     children +
     "</ul></section>";
   const child = (href: string, label: string) => "<li>" + link(href, label) + "</li>";
-  const nav =
+  let nav =
     link("/", "首页") +
     menu(
       "作品与资料",
@@ -90,17 +96,35 @@ export function layout(title: string, content: string, signedIn = false, admin =
     '<a class="account-link" href="' +
     (signedIn ? "/profile" : "/login") +
     '" aria-label="' +
-    (signedIn ? "个人中心" : "登录或注册") +
+    (signedIn ? "个人中心" : portal?.active ? "后台登录" : "登录或注册") +
     '" title="' +
-    (signedIn ? "个人中心" : "登录或注册") +
+    (signedIn ? "个人中心" : portal?.active ? "后台登录" : "登录或注册") +
     '"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="8" r="3.25"/><path d="M5.5 20v-1.5a6.5 6.5 0 0 1 13 0V20"/><circle cx="12" cy="12" r="10"/></svg></a>';
-  const mobile =
+  let mobile =
     '<nav class="mobile-nav" aria-label="手机主导航">' +
     link("/", "首页") +
     link("/productions", "作品资料") +
     link("/members", "队员") +
     link(signedIn ? "/profile" : "/login", signedIn ? "我的" : "登录") +
     "</nav>";
+  if (portal?.active) {
+    nav =
+      (admin
+        ? link("/admin", "工作台") +
+          link("/productions", "作品") +
+          link("/members", "队员") +
+          link("/admin/resources", "资料") +
+          link("/admin/site", "页面设置")
+        : "") + `<a href="${escapeHtml(portal.publicSite)}" target="_blank" rel="noopener">查看正式网站 ↗</a>`;
+    mobile = admin
+      ? '<nav class="mobile-nav" aria-label="手机管理导航">' +
+        link("/admin", "工作台") +
+        link("/productions", "作品") +
+        link("/admin/resources/reviews", "资料审核") +
+        link("/profile", "账号") +
+        "</nav>"
+      : "";
+  }
   return (
     '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' +
     escapeHtml(title) +
@@ -114,8 +138,11 @@ export function layout(title: string, content: string, signedIn = false, admin =
     assetUrl("/app.js") +
     '" defer></script><script src="' +
     assetUrl("/experience.js") +
-    '" defer></script></head><body class="' +
+    '" defer></script>' +
+    (admin ? '<script src="' + assetUrl("/review.js") + '" defer></script>' : "") +
+    '</head><body class="' +
     (signedIn ? "signed-in" : "signed-out") +
+    (portal?.active ? " admin-portal" : "") +
     (content.includes('class="section-tabs"') ? " archive-page" : "") +
     '"><a class="skip-link" href="#main-content">跳到内容</a><header class="top"><a href="/" class="brand">黑匣子<span>BLACK BOX THEATRE</span></a><button class="menu-toggle" aria-expanded="false" aria-controls="main-navigation">菜单 ＋</button><nav id="main-navigation" class="desktop-nav" aria-label="主导航">' +
     nav +
@@ -135,12 +162,14 @@ function message(text: string, kind = "alert"): string {
 }
 
 export function loginPage(csrf: string, error = "", next = "/", info = ""): string {
+  const context = tryGetContext<AppEnv>();
+  const portal = context ? adminPortal(context)?.active : false;
   return layout(
     "登录",
-    `<section class="auth-stage"><section class="card auth"><p class="eyebrow">BLACK BOX</p><h1>欢迎回来</h1><p class="muted">欢迎浏览剧团档案。登录后可以提交资料、申请作品和下载原文件。</p>
+    `<section class="auth-stage"><section class="card auth"><p class="eyebrow">BLACK BOX${portal ? " · ADMIN" : ""}</p><h1>${portal ? "后台登录" : "欢迎回来"}</h1><p class="muted">${portal ? "使用现有管理员账号登录。登录状态最长保留 14 天；共用设备使用后请退出。" : "欢迎浏览剧团档案。登录后可以提交资料、申请作品和下载原文件。"}</p>
   ${message(info, "notice")}${message(error)}<form method="post" action="/login"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><input type="hidden" name="next" value="${escapeHtml(next)}">
   <label>用户名<input name="username" autocomplete="username" maxlength="50" required></label><label>密码<input name="password" type="password" autocomplete="current-password" required></label>
-  <button type="submit">登录</button></form><p><a href="/register">还没有账号？注册</a></p></section></section>`,
+  <button type="submit">登录</button></form>${portal ? "" : '<p><a href="/register">还没有账号？注册</a></p>'}</section></section>`,
   );
 }
 
@@ -153,7 +182,7 @@ export function registerPage(csrf: string, error = "", values: { username?: stri
   <label>邮箱（可稍后填写）<input name="email" type="email" autocomplete="email" maxlength="254" value="${escapeHtml(values.email)}"><span class="hint">邮件服务接入后，验证邮箱可用于找回密码。</span></label>
   <label>密码<input name="password" type="password" minlength="8" maxlength="128" autocomplete="new-password" required></label>
   <label>再次输入密码<input name="confirm_password" type="password" minlength="8" maxlength="128" autocomplete="new-password" required></label>
-  <button type="submit">注册</button></form><p><a href="/login">已有账号？返回登录</a></p></section></section>`,
+  ${turnstileWidget("signup")}<button type="submit">注册</button></form><p><a href="/login">已有账号？返回登录</a></p></section></section>`,
   );
 }
 

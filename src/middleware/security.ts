@@ -11,7 +11,13 @@ export const securityHeaders: MiddlewareHandler<AppEnv> = async (c, next) => {
     c.header("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   c.header(
     "Content-Security-Policy",
-    "default-src 'self'; script-src 'self'; object-src 'none'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self' https://*.r2.cloudflarestorage.com; style-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'self'",
+    "default-src 'self'; script-src 'self'" +
+      (c.env.TURNSTILE_ENABLED === "true" ? " https://challenges.cloudflare.com" : "") +
+      "; frame-src " +
+      (c.env.TURNSTILE_ENABLED === "true" ? "https://challenges.cloudflare.com" : "'none'") +
+      "; object-src 'none'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self' https://*.r2.cloudflarestorage.com" +
+      (c.env.TURNSTILE_ENABLED === "true" ? " https://challenges.cloudflare.com" : "") +
+      "; style-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'self'",
   );
 };
 
