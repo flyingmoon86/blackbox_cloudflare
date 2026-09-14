@@ -1,3 +1,4 @@
+import { reviewQueue, reviewAttributes } from "./review-queue";
 import { archiveTabs, pagination, type PageInfo, yearSelect } from "./shared";
 import type {
   CreditRow,
@@ -199,13 +200,13 @@ export function productionRequestsPage(rows: ProductionJoinRequestRow[], csrf: s
     ? rows
         .map(
           (row) =>
-            `<article class="card"><p class="eyebrow">${escapeHtml(row.production_title)} · ${escapeHtml(row.edition_name || "原有版本")}</p><h2>${escapeHtml(row.member_name)}申请${row.kind === "crew" ? "后台与创作" : "演员"}</h2><p>角色或分工：${escapeHtml(row.role_name)}</p>${row.existing_names ? `<p class="notice">相同角色或分工已有：${escapeHtml(row.existing_names)}。通过后会共同列入，不会覆盖原记录。</p>` : '<p class="muted">这是当前名单中的新角色或分工。</p>'}<p class="muted">账号：${escapeHtml(row.username)} · ${escapeHtml(row.created_at.slice(0, 16))}</p><form method="post" action="/admin/production-requests/${row.id}/review"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>审核说明<input name="admin_note" maxlength="1000" placeholder="驳回时必填"></label><button name="decision" value="approve">通过并加入名单</button> <button class="secondary" name="decision" value="reject">驳回</button></form></article>`,
+            `<article class="card" ${reviewAttributes(row.id, row.kind === "crew" ? "后台与创作" : "演员", [row.production_title, row.edition_name, row.member_name, row.username, row.role_name].join(" "))}><p class="eyebrow">${escapeHtml(row.production_title)} · ${escapeHtml(row.edition_name || "原有版本")}</p><h2>${escapeHtml(row.member_name)}申请${row.kind === "crew" ? "后台与创作" : "演员"}</h2><p>角色或分工：${escapeHtml(row.role_name)}</p>${row.existing_names ? `<p class="notice">相同角色或分工已有：${escapeHtml(row.existing_names)}。通过后会共同列入，不会覆盖原记录。</p>` : '<p class="muted">这是当前名单中的新角色或分工。</p>'}<p class="muted">账号：${escapeHtml(row.username)} · ${escapeHtml(row.created_at.slice(0, 16))}</p><form method="post" action="/admin/production-requests/${row.id}/review"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>审核说明<input name="admin_note" maxlength="1000" placeholder="驳回时必填"></label><button name="decision" value="approve">通过并加入名单</button> <button class="secondary" name="decision" value="reject">驳回</button></form></article>`,
         )
         .join("")
     : '<p class="card">当前没有待审核的作品加入申请。</p>';
   return layout(
     "作品加入审核",
-    `<section class="page-heading"><p class="eyebrow">PRODUCTION REQUESTS</p><h1>作品加入审核</h1></section><section class="review-grid">${requests}</section>`,
+    `<section class="page-heading"><p class="eyebrow">PRODUCTION REQUESTS</p><h1>作品加入审核</h1></section>${reviewQueue("production", requests)}`,
     true,
     true,
   );

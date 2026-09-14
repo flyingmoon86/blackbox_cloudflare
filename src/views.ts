@@ -137,7 +137,9 @@ export function layout(title: string, content: string, signedIn = false, admin =
     assetUrl("/app.js") +
     '" defer></script><script src="' +
     assetUrl("/experience.js") +
-    '" defer></script></head><body class="' +
+    '" defer></script>' +
+    (admin ? '<script src="' + assetUrl("/review.js") + '" defer></script>' : "") +
+    '</head><body class="' +
     (signedIn ? "signed-in" : "signed-out") +
     (portal?.active ? " admin-portal" : "") +
     (content.includes('class="section-tabs"') ? " archive-page" : "") +

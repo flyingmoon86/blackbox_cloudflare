@@ -1,3 +1,4 @@
+import { reviewQueue, reviewAttributes } from "./review-queue";
 import type { EditionRow } from "../routes/productions";
 import { editionChoice } from "./edition-choice";
 import { archiveTabs, pagination, type PageInfo, yearSelect } from "./shared";
@@ -112,13 +113,13 @@ export function resourceReviewsPage(rows: ResourceRow[], csrf: string): string {
     ? rows
         .map(
           (r) =>
-            `<article class="card"><h2>${escapeHtml(r.title)}</h2><p>提交人：${escapeHtml(r.uploader_name)} · ${escapeHtml(labels[r.res_type])} · ${escapeHtml(r.production_title || "其他资料")} · ${escapeHtml(r.edition_name || "未关联作品版本")}</p><p>${escapeHtml(r.description)}</p><p>文件：${escapeHtml(r.original_name)}</p><form method="post" action="/admin/resources/${r.id}/review"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>审核说明<input name="admin_note" maxlength="1000"></label><button name="decision" value="approve">通过入库</button> <button class="secondary" name="decision" value="reject">驳回</button></form></article>`,
+            `<article class="card" ${reviewAttributes(r.id, labels[r.res_type] || r.res_type, [r.title, r.uploader_name, r.production_title, r.edition_name, r.original_name].join(" "))}><h2>${escapeHtml(r.title)}</h2><p>提交人：${escapeHtml(r.uploader_name)} · ${escapeHtml(labels[r.res_type])} · ${escapeHtml(r.production_title || "其他资料")} · ${escapeHtml(r.edition_name || "未关联作品版本")}</p><p>${escapeHtml(r.description)}</p><p>文件：${escapeHtml(r.original_name)}</p><form method="post" action="/admin/resources/${r.id}/review"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>审核说明<input name="admin_note" maxlength="1000"></label><button name="decision" value="approve">通过入库</button> <button class="secondary" name="decision" value="reject">驳回</button></form></article>`,
         )
         .join("")
     : '<p class="card">没有待审核资料。</p>';
   return layout(
     "资料审核",
-    `<section class="page-heading"><h1>资料审核</h1></section><section class="review-grid">${cards}</section>`,
+    `<section class="page-heading"><h1>资料审核</h1></section>${reviewQueue("resource", cards)}`,
     true,
     true,
   );

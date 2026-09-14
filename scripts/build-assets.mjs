@@ -6,6 +6,7 @@ const files = [
   "app.js",
   "experience.js",
   "upload.js",
+  "review.js",
   "images/elephant-mascot-360-v1.webp",
 ];
 mkdirSync("public/assets", { recursive: true });
