@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>队员档案 — 黑匣子</title>
+<meta name="description" content="黑匣子话剧队队员档案：舞台经历与送花。">
+<meta name="theme-color" content="#0f0d0a">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🎭%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+<a class="skip-link" href="#main">跳到主要内容</a>
+<div class="spotline" aria-hidden="true"></div>
+
+<header class="top">
+  <a class="brand" href="index.html">
+    <strong>黑匣子</strong><span>BLACK BOX THEATRE</span>
+  </a>
+  <nav aria-label="全站导航">
+    <a href="index.html">首页</a>
+    <a href="productions.html">作品与资料</a>
+    <a href="members.html" aria-current="page">队员与剧团</a>
+    <a href="help.html">指南与鸣谢</a>
+  </nav>
+  <a class="account" href="auth.html" aria-label="检票入场 / 登录">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+      <circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/>
+    </svg>
+  </a>
+</header>
+
+<main id="main">
+  <section class="act" aria-label="队员档案">
+    <header class="act-head">
+      <div>
+        <p class="eyebrow fx" style="--i:0">队员档案 <i>PROFILE</i></p>
+        <h1 class="fx" style="--i:1"><span data-name>队员</span></h1>
+        <p class="act-lede fx" style="--i:2">
+          <span data-cohort>—</span>
+          <span data-tags style="margin-left:10px"></span>
+        </p>
+      </div>
+      <span class="no" aria-hidden="true">✿</span>
+    </header>
+
+    <div class="profile-grid" data-profile>
+      <div class="profile-side">
+        <figure class="profile-portrait fx" style="--i:2" data-portrait>
+          <figcaption>舞台留影</figcaption>
+        </figure>
+        <div class="flower-box fx" style="--i:3">
+          <p class="fb-count"><span data-flower-count>0</span><small>朵花<br>来自观众与队友</small></p>
+          <button class="flower-btn" data-flower-btn type="button">送 TA 一朵花 ✿</button>
+          <p style="margin:12px 0 0;font-size:11px;color:var(--type-faint);letter-spacing:.06em">demo 中本地记一次；正式版显示送花人与总数。</p>
+        </div>
+      </div>
+
+      <div class="profile-main">
+        <div class="credit-group fx" style="--i:3">
+          <h3>关于 TA</h3>
+          <p style="margin:6px 0 22px;color:var(--type-dim);max-width:36em" data-bio></p>
+        </div>
+        <div class="credit-group fx" style="--i:4">
+          <h3>舞台经历</h3>
+          <div class="credit-rows" data-credits></div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="act-foot">
+      <a href="members.html">← 返回队员名录</a>
+      <a class="push" href="https://npublackbox.online/members" target="_blank" rel="noopener">线上档案 ↗</a>
+    </footer>
+  </section>
+</main>
+
+<footer class="curtain-call">
+  <div class="cc-grid">
+    <section>
+      <h4>剧团</h4>
+      <p class="cc-brand">黑匣子话剧队</p>
+      <p>记录演出，保存资料，也让新朋友认识剧团。</p>
+    </section>
+    <section>
+      <h4>去哪儿</h4>
+      <ul>
+        <li><a href="index.html">首页</a></li>
+        <li><a href="productions.html">作品与资料</a></li>
+        <li><a href="help.html">指南与鸣谢</a></li>
+      </ul>
+    </section>
+    <section>
+      <h4>参与进来</h4>
+      <ul>
+        <li><a href="https://github.com/flyingmoon86/blackbox_cloudflare" target="_blank" rel="noopener">GitHub · 代码开源</a></li>
+        <li><a href="mailto:moonflying56@gmail.com">moonflying56@gmail.com</a></li>
+      </ul>
+    </section>
+  </div>
+  <div class="cc-sign">
+    <strong>黑匣子，永远是你家。</strong>
+    <small>美术改造方向稿 · 数据来自 npublackbox.online · 2026-09</small>
+  </div>
+</footer>
+
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
