@@ -2,6 +2,7 @@ import { communityRoutes } from "./routes/community";
 import { Hono } from "hono";
 import { contextStorage } from "hono/context-storage";
 import { adminPortalGate } from "./middleware/admin-portal";
+import { reviewResponse } from "./middleware/review-response";
 import { securityHeaders, noStore, sameOriginWrites } from "./middleware/security";
 import { loadUser } from "./middleware/session";
 import { authRoutes } from "./routes/auth";
@@ -29,6 +30,7 @@ app.use("*", noStore);
 app.use("*", sameOriginWrites);
 app.use("*", loadUser);
 app.use("*", adminPortalGate);
+app.use("*", reviewResponse);
 
 app.get("/", homePage);
 app.get("/site/hero", heroImage);

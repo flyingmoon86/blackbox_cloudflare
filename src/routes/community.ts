@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { turnstileWidget, verifyTurnstile } from "../services/turnstile";
 import type { AppEnv } from "../types";
 import { csrfFor, csrfValid } from "../http/cookies";
 import { visitorIdentity, publicLimit } from "../services/visitors";
@@ -38,6 +39,7 @@ communityRoutes.get("/feedback", async (c) => {
         crypto.randomUUID() +
         '">' +
         nickname +
+        turnstileWidget("feedback") +
         '<label>建议<textarea name="content" rows="7" maxlength="3000" required></textarea></label><label class="check"><input name="public_consent" type="checkbox" value="1" checked> 在鸣谢中显示我的名字</label><button>送出建议 ↗</button></form></section>',
       Boolean(user),
       user?.role === "admin",
@@ -47,6 +49,7 @@ communityRoutes.get("/feedback", async (c) => {
 communityRoutes.post("/feedback", async (c) => {
   const f = await c.req.formData();
   if (!csrfValid(c, f.get("csrf"))) return c.text("请求已失效，请刷新。", 400);
+  await verifyTurnstile(c, f, "feedback");
   const user = c.get("user"),
     name = user?.username || String(f.get("display_name") || "").trim();
   const content = String(f.get("content") || "").trim(),

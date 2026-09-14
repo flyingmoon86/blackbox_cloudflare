@@ -4,6 +4,10 @@ export type Bindings = {
   ASSETS: Fetcher;
   SESSION_SECRET: string;
   ENVIRONMENT: string;
+  TURNSTILE_ENABLED?: string;
+  TURNSTILE_SITE_KEY?: string;
+  TURNSTILE_SECRET?: string;
+  TURNSTILE_HOSTNAMES?: string;
   ADMIN_ORIGIN?: string;
   PUBLIC_ORIGIN?: string;
   R2_BUCKET_NAME?: string;

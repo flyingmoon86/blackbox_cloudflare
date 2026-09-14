@@ -38,6 +38,18 @@ async function setup() {
     req(path, id, { method: "POST", headers, body: new URLSearchParams({ csrf: "portal-csrf", ...fields }) });
   return { db, env, req, post };
 }
+test("JSON review avoids redirect only after an authorized successful write; native fallback and conflicts stay intact", async () => {
+  const s = await setup();
+  s.db.exec("INSERT INTO join_request(id,user_id,apply_type,name) VALUES(10,2,'new','测试申请');");
+  assert.equal((await s.post("/admin/requests/10/approve", {}, 2, { Accept: "application/json" })).status, 403);
+  const result = await s.post("/admin/requests/10/approve", {}, 1, { Accept: "application/json" });
+  assert.equal(result.status, 200);
+  assert.deepEqual(await result.json(), { reviewed: true });
+  assert.equal(result.headers.get("Cache-Control"), "private, no-store");
+  assert.match(result.headers.get("Server-Timing"), /worker;dur=/);
+  assert.equal((await s.post("/admin/requests/10/approve", {}, 1, { Accept: "application/json" })).status, 409);
+});
+
 test("portal is private, public admin links redirect and normal site stays public", async () => {
   const s = await setup();
   assert.equal((await s.req("/")).headers.get("location"), "/login?next=%2Fadmin");

@@ -11,6 +11,7 @@ const bucket = production?.r2_buckets?.find((item) => item.binding === "FILES");
 const route = production?.routes?.find((item) => item.custom_domain);
 const requiredSecrets = new Set(production?.secrets?.required || []);
 const expectedSecrets = ["SESSION_SECRET"];
+if (production?.vars?.TURNSTILE_ENABLED === "true") expectedSecrets.push("TURNSTILE_SECRET");
 
 const problems = [];
 if (production?.vars?.ADMIN_ORIGIN || production?.vars?.PUBLIC_ORIGIN) {

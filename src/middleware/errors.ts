@@ -32,6 +32,7 @@ export const requestContext: MiddlewareHandler<AppEnv> = async (c, next) => {
   const info = requestInfo(c);
   await next();
   c.header("X-Request-Id", info.id);
+  c.header("Server-Timing", `worker;dur=${Math.max(0, Date.now() - info.started)}`);
   // Preserve the existing error text field for upload.js while adding stable metadata.
   if (c.res.status >= 400 && c.res.headers.get("Content-Type")?.includes("application/json")) {
     const payload: unknown = await c.res

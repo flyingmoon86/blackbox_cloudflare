@@ -20,7 +20,7 @@ document.querySelectorAll("[data-review-queue]").forEach((queue) => {
     savedStorage = localStorage;
     progressStorage = sessionStorage;
   } catch {}
-  const cards = [...queue.querySelectorAll("[data-review-id]")];
+  let cards = [...queue.querySelectorAll("[data-review-id]")];
   const query = queue.querySelector("[data-review-query]");
   const filter = queue.querySelector("[data-review-filter]");
   const count = queue.querySelector("[data-review-count]");
@@ -105,7 +105,10 @@ document.querySelectorAll("[data-review-queue]").forEach((queue) => {
         // A rejected empty input must not prevent a later approval.
         form.querySelector('[value="approve"]')?.addEventListener("click", () => note.setCustomValidity(""));
       }
-      form.addEventListener("submit", (event) => {
+      let submitting = false;
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (submitting) return;
         const rejected = event.submitter?.value === "reject" || new URL(form.action).pathname.endsWith("/reject");
         if (rejected && note && !note.value.trim()) {
           event.preventDefault();
@@ -115,10 +118,50 @@ document.querySelectorAll("[data-review-queue]").forEach((queue) => {
         }
         const visible = cards.filter((item) => !item.hidden);
         const index = visible.indexOf(card);
-        write(progressStorage, key, {
-          submitted: card.dataset.reviewId,
-          next: [...visible.slice(index + 1), ...visible.slice(0, index)].map((item) => item.dataset.reviewId),
-        });
+        const next = visible[index + 1] || visible[index - 1];
+        const body = new FormData(form);
+        if (event.submitter?.name) body.set(event.submitter.name, event.submitter.value);
+        const buttons = [...card.querySelectorAll("button")];
+        const button = event.submitter;
+        const original = button?.textContent;
+        submitting = true;
+        buttons.forEach((b) => (b.disabled = true));
+        if (button) button.textContent = "处理中…";
+        try {
+          const response = await fetch(form.action, {
+            method: "POST",
+            body,
+            headers: { Accept: "application/json" },
+            signal: AbortSignal.timeout(20000),
+          });
+          const result = response.headers.get("content-type")?.includes("application/json")
+            ? await response.json()
+            : null;
+          if (!response.ok || response.redirected || result?.reviewed !== true)
+            throw new Error(result?.error || "未能确认处理结果，请刷新核对。当前说明仍保留。");
+          cards = cards.filter((item) => item !== card);
+          card.remove();
+          document.dispatchEvent(new CustomEvent("blackbox:reviewed"));
+          apply();
+          feedback.hidden = false;
+          feedback.textContent = next
+            ? "已处理，已定位下一条，请核对后操作。"
+            : "当前筛选下已无待办，可清除筛选查看其他类别。";
+          if (next) {
+            next.focus({ preventScroll: true });
+            next.scrollIntoView({ block: "start" });
+          }
+        } catch (error) {
+          feedback.hidden = false;
+          feedback.textContent =
+            error.name === "TimeoutError" || error.name === "TypeError"
+              ? "网络等待超时或连接中断，结果可能已保存。请刷新核对后再操作，勿重复提交。"
+              : error.message;
+        } finally {
+          submitting = false;
+          buttons.forEach((b) => (b.disabled = false));
+          if (button) button.textContent = original;
+        }
       });
     }
   }

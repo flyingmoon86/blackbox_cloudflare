@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { verifyTurnstile } from "../services/turnstile";
 import { adminPortal } from "../services/admin-portal";
 import { clearSession, csrfFor, csrfValid, startSession } from "../http/cookies";
 import { hashPassword, verifyPassword } from "../auth/password";
@@ -106,6 +107,7 @@ authRoutes.post("/register", async (c) => {
   if (!validPassword(password, confirmation))
     return c.html(registerPage(await csrfFor(c), "密码需为 8–128 位，且两次输入一致。", values), 400);
   if (email === null) return c.html(registerPage(await csrfFor(c), "请填写有效的邮箱地址。", values), 400);
+  await verifyTurnstile(c, form, "signup");
   const retryAfter = await consumeAuthLimit(c, "register");
   if (retryAfter) {
     c.header("Retry-After", String(retryAfter));

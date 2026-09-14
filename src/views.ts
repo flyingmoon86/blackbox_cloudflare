@@ -1,5 +1,6 @@
 import { YEARS, yearSelect, icon, pagination, type PageInfo } from "./views/shared";
 import { assetUrl } from "./views/assets";
+import { turnstileWidget } from "./services/turnstile";
 import { tryGetContext } from "hono/context-storage";
 import { adminPortal } from "./services/admin-portal";
 import type { AppEnv } from "./types";
@@ -181,7 +182,7 @@ export function registerPage(csrf: string, error = "", values: { username?: stri
   <label>邮箱（可稍后填写）<input name="email" type="email" autocomplete="email" maxlength="254" value="${escapeHtml(values.email)}"><span class="hint">邮件服务接入后，验证邮箱可用于找回密码。</span></label>
   <label>密码<input name="password" type="password" minlength="8" maxlength="128" autocomplete="new-password" required></label>
   <label>再次输入密码<input name="confirm_password" type="password" minlength="8" maxlength="128" autocomplete="new-password" required></label>
-  <button type="submit">注册</button></form><p><a href="/login">已有账号？返回登录</a></p></section></section>`,
+  ${turnstileWidget("signup")}<button type="submit">注册</button></form><p><a href="/login">已有账号？返回登录</a></p></section></section>`,
   );
 }
 

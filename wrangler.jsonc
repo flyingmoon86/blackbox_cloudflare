@@ -65,6 +65,9 @@
       ],
       "vars": {
         "ENVIRONMENT": "production",
+        "TURNSTILE_ENABLED": "false",
+        "TURNSTILE_SITE_KEY": "0x4AAAAAAEyw2TkArr24rmUI",
+        "TURNSTILE_HOSTNAMES": "npublackbox.online",
         "ADMIN_ORIGIN": "https://admin.npublackbox.online",
         "PUBLIC_ORIGIN": "https://npublackbox.online",
         "R2_BUCKET_NAME": "blackbox-files-production"
