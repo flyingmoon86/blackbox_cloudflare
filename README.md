@@ -50,6 +50,7 @@ public/          样式、浏览器脚本和静态图片
 migrations/      数据库增量升级
 scripts/         开发、测试与发布工具
 docs/            验收指南和发布记录
+design-proposal/ 美术与动效改造方向稿（静态 demo + 移植指南）
 legacy-python/   原网站对照
 ```
 

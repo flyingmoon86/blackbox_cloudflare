@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>队员名录 · HALL OF FAME — 黑匣子</title>
+<meta name="description" content="黑匣子话剧队队员名录：认识每一位队员，给喜欢的演员送花。">
+<meta name="theme-color" content="#0f0d0a">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🎭%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+<a class="skip-link" href="#main">跳到主要内容</a>
+<div class="spotline" aria-hidden="true"></div>
+
+<header class="top">
+  <a class="brand" href="index.html">
+    <strong>黑匣子</strong><span>BLACK BOX THEATRE</span>
+  </a>
+  <nav aria-label="全站导航">
+    <a href="index.html">首页</a>
+    <a href="productions.html">作品与资料</a>
+    <a href="members.html" aria-current="page">队员与剧团</a>
+    <a href="help.html">指南与鸣谢</a>
+  </nav>
+  <a class="account" href="auth.html" aria-label="检票入场 / 登录">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+      <circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/>
+    </svg>
+  </a>
+</header>
+
+<main id="main">
+  <section class="act" id="hall" aria-label="队员名录">
+    <header class="act-head">
+      <div>
+        <p class="eyebrow fx" style="--i:0">队员名录 <i>HALL OF FAME</i></p>
+        <h1 class="fx" style="--i:1">戏比天大，人也重要</h1>
+        <p class="act-lede fx" style="--i:2">24 位在册队员 · 悬停看介绍，点进档案可以送花。</p>
+      </div>
+      <span class="no" aria-hidden="true">24人</span>
+    </header>
+
+    <div class="chip-row fx" style="--i:2" role="group" aria-label="按年级筛选">
+      <button class="chip" data-filter="all" aria-pressed="true">全部</button>
+      <button class="chip" data-filter="2025" aria-pressed="false">2025 级</button>
+      <button class="chip" data-filter="2024" aria-pressed="false">2024 级</button>
+      <button class="chip" data-filter="2023" aria-pressed="false">2023 级</button>
+      <button class="chip" data-filter="2022" aria-pressed="false">2022 级</button>
+    </div>
+
+    <div class="member-grid" data-member-grid>
+      <noscript><p class="empty-state">需要启用 JavaScript 查看名录（数据在 assets/data.js 中）。</p></noscript>
+    </div>
+
+    <footer class="act-foot">
+      <span>送花需登录 · 花数与线上不一致时以线上为准</span>
+      <a class="push" href="https://npublackbox.online/members" target="_blank" rel="noopener">线上名录 ↗</a>
+    </footer>
+  </section>
+</main>
+
+<footer class="curtain-call">
+  <div class="cc-grid">
+    <section>
+      <h4>剧团</h4>
+      <p class="cc-brand">黑匣子话剧队</p>
+      <p>记录演出，保存资料，也让新朋友认识剧团。</p>
+    </section>
+    <section>
+      <h4>去哪儿</h4>
+      <ul>
+        <li><a href="index.html">首页</a></li>
+        <li><a href="productions.html">作品与资料</a></li>
+        <li><a href="help.html">指南与鸣谢</a></li>
+      </ul>
+    </section>
+    <section>
+      <h4>参与进来</h4>
+      <ul>
+        <li><a href="https://github.com/flyingmoon86/blackbox_cloudflare" target="_blank" rel="noopener">GitHub · 代码开源</a></li>
+        <li><a href="mailto:moonflying56@gmail.com">moonflying56@gmail.com</a></li>
+      </ul>
+    </section>
+  </div>
+  <div class="cc-sign">
+    <strong>黑匣子，永远是你家。</strong>
+    <small>美术改造方向稿 · 数据来自 npublackbox.online · 2026-09</small>
+  </div>
+</footer>
+
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
