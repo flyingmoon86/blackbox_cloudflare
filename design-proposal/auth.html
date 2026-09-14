@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>检票入场 — 黑匣子</title>
+<meta name="description" content="登录黑匣子话剧队网站：检票入场。">
+<meta name="theme-color" content="#0f0d0a">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🎭%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+<a class="skip-link" href="#main">跳到主要内容</a>
+<div class="spotline" aria-hidden="true"></div>
+
+<header class="top">
+  <a class="brand" href="index.html">
+    <strong>黑匣子</strong><span>BLACK BOX THEATRE</span>
+  </a>
+  <nav aria-label="全站导航">
+    <a href="index.html">首页</a>
+    <a href="productions.html">作品与资料</a>
+    <a href="members.html">队员与剧团</a>
+    <a href="help.html">指南与鸣谢</a>
+  </nav>
+  <a class="account" href="auth.html" aria-label="检票入场 / 登录" aria-current="page">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+      <circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/>
+    </svg>
+  </a>
+</header>
+
+<main id="main">
+  <section class="auth-stage is-lit" aria-label="检票入场">
+    <div>
+      <article class="ticket fx" aria-label="入场券">
+        <div class="ticket-head">
+          <p class="t-eyebrow"><span>ADMIT ONE</span><span>NO. 2026-0914</span></p>
+          <h1>检票入场</h1>
+          <p>黑匣子话剧队 · 仅限本人使用</p>
+        </div>
+        <div class="ticket-tear" aria-hidden="true"></div>
+        <div class="ticket-body">
+          <form action="https://npublackbox.online/login" method="get" target="_blank" rel="noopener">
+            <label>姓名 / 编号
+              <input type="text" name="demo-account" placeholder="输入账号或昵称" autocomplete="username">
+            </label>
+            <label>口令
+              <input type="password" name="demo-passcode" placeholder="••••••••" autocomplete="current-password">
+            </label>
+            <button class="ticket-btn" type="submit">撕下票根 · 入场</button>
+          </form>
+        </div>
+        <div class="ticket-stub">
+          <span>SEAT · 自由入座</span>
+          <span>黑匣子剧场</span>
+        </div>
+      </article>
+      <p class="demo-note fx" style="--i:2">
+        这是美术方向稿的演示票根，不处理真实登录——<br>
+        正式入口在 <a href="https://npublackbox.online/login" target="_blank" rel="noopener">npublackbox.online/login ↗</a>
+        · <a href="https://npublackbox.online/register" target="_blank" rel="noopener">注册 ↗</a>
+      </p>
+    </div>
+  </section>
+</main>
+
+<footer class="curtain-call">
+  <div class="cc-sign" style="border-top:0">
+    <strong>黑匣子，永远是你家。</strong>
+    <small>美术改造方向稿 · 数据来自 npublackbox.online · 2026-09</small>
+  </div>
+</footer>
+
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
