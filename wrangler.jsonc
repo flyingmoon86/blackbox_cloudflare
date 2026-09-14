@@ -3,7 +3,9 @@
   "name": "blackbox",
   "main": "src/index.ts",
   "compatibility_date": "2026-09-08",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",
@@ -28,10 +30,14 @@
     "R2_BUCKET_NAME": "blackbox-files"
   },
   "secrets": {
-    "required": ["SESSION_SECRET"]
+    "required": [
+      "SESSION_SECRET"
+    ]
   },
   "triggers": {
-    "crons": ["17 * * * *"]
+    "crons": [
+      "17 * * * *"
+    ]
   },
   "env": {
     "production": {
@@ -65,7 +71,7 @@
       ],
       "vars": {
         "ENVIRONMENT": "production",
-        "TURNSTILE_ENABLED": "false",
+        "TURNSTILE_ENABLED": "true",
         "TURNSTILE_SITE_KEY": "0x4AAAAAAEyw2TkArr24rmUI",
         "TURNSTILE_HOSTNAMES": "npublackbox.online",
         "ADMIN_ORIGIN": "https://admin.npublackbox.online",
@@ -73,10 +79,16 @@
         "R2_BUCKET_NAME": "blackbox-files-production"
       },
       "secrets": {
-        "required": ["SESSION_SECRET"]
+        "required": [
+          "SESSION_SECRET",
+          "TURNSTILE_SECRET"
+        ]
       },
       "observability": {
         "enabled": true
+      },
+      "placement": {
+        "mode": "smart"
       }
     }
   }
