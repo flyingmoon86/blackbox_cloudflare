@@ -43,10 +43,12 @@ export function adminDashboardPage(
       return `<tr><td>${escapeHtml(user.username)}</td><td>${escapeHtml(user.role)}</td><td>${escapeHtml(user.member_name || "—")}</td><td>${escapeHtml(user.status)}</td><td><div class="account-actions"><form method="post" action="/admin/users/${user.id}/toggle"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button class="small secondary">${user.status === "active" ? "禁用" : "启用"}</button></form>${unlink}${remove}</div></td></tr>`;
     })
     .join("");
+  const pendingTotal = Object.values(counts).reduce((sum, count) => sum + count, 0);
   const badge = (count: number) => (count ? `<strong class="count-badge">${count}</strong>` : "");
   return layout(
     "管理员",
     `<section class="page-heading admin-heading"><p class="eyebrow">ADMIN</p><h1>管理员工作台</h1><p>先处理待办，再管理剧团内容和网站设置。</p>${notices[message] ? `<p class="notice">${notices[message]}</p>` : ""}</section>
+    <aside class="dashboard-task-alert" data-pending-alert role="status"${pendingTotal ? "" : " hidden"}><strong data-pending-message>有 ${pendingTotal} 项任务等待处理</strong><a data-pending-link href="#dashboard-pending-title">立即查看 →</a></aside>
     <section class="dashboard-pending" aria-labelledby="dashboard-pending-title"><h2 id="dashboard-pending-title">待处理</h2><nav aria-label="待处理事项"><a href="#member-requests">队员认证 ${badge(counts.member_requests)}</a><a href="/admin/production-requests">作品加入 ${badge(counts.production_joins)}</a><a href="/admin/resources/reviews">资料审核 ${badge(counts.resource_reviews)}</a><a href="/admin/suggestions">建档申请 ${badge(counts.production_creates)}</a><a href="/admin/community">网站建议 ${badge(counts.website_suggestions)}</a></nav></section>
     <nav class="dashboard-tools" aria-label="常用管理"><div><a href="/productions">作品与演职员 →</a><a class="dashboard-create" href="/admin/productions/new">＋ 创建作品</a></div><div><a href="/members">队员名录 →</a><a class="dashboard-create" href="/admin/members/new">＋ 新建档案</a></div><div><a href="/admin/resources">资料管理 →</a></div><div><a href="/announcements">公告管理 →</a></div><div><a href="/admin/site">页面编辑 →</a></div></nav>
     <details class="dashboard-more"><summary>更多管理</summary><nav aria-label="其他管理入口"><a href="/admin/review-history">审核历史 →</a><a href="/admin/system">存储与服务状态 →</a></nav></details>

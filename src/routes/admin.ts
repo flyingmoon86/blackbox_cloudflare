@@ -117,16 +117,18 @@ adminRoutes.get("/admin/notifications", async (c) => {
     suggestion: { title: "旧网站建议", href: "/admin/suggestions" },
     feedback: { title: "新网站建议", href: "/admin/community" },
   };
-  const unread = groups.results
+  const pending = groups.results
     .filter((group) => group.count > 0)
     .map((group) => ({
       key: `${group.kind}:${group.newest_id}`,
       count: group.count,
       ...labels[group.kind],
-    }))
-    .filter((item) => !seen.has(item.key));
+    }));
+  const unread = pending.filter((item) => !seen.has(item.key));
   return c.json({
     csrf: await csrfFor(c),
+    pending,
+    pendingTotal: pending.reduce((sum, item) => sum + item.count, 0),
     total: unread.reduce((sum, item) => sum + item.count, 0),
     hidden: Math.max(0, unread.length - 4),
     items: unread.slice(0, 4),
