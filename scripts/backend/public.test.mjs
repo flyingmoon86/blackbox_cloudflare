@@ -375,3 +375,40 @@ test("all production covers expose only the selected approved original", async (
   assert.equal((await s.req(0, "/productions/1/cover")).status, 404);
   assert.equal((await s.req(0, "/resources/1/media")).status, 302);
 });
+
+test("dismissed notifications remain pending until the actual task is processed", async () => {
+  const s = await setup();
+  let data = await (await s.req(1, "/admin/notifications")).json();
+  assert.equal(data.pendingTotal, 1);
+  assert.equal(data.total, 1);
+  assert.equal((await s.post(1, "/admin/notifications/dismiss", { key: "resource:2" })).status, 200);
+  data = await (await s.req(1, "/admin/notifications")).json();
+  assert.equal(data.total, 0);
+  assert.equal(data.pendingTotal, 1);
+  assert.equal(data.pending[0].href, "/admin/resources/reviews");
+  const dashboard = await (await s.req(1, "/admin")).text();
+  assert.match(dashboard, /data-pending-message>有 1 项任务等待处理/);
+  s.db.exec("UPDATE resource SET status='rejected' WHERE id=2");
+  data = await (await s.req(1, "/admin/notifications")).json();
+  assert.equal(data.pendingTotal, 0);
+  assert.equal((await s.req(3, "/admin/notifications")).status, 403);
+});
+
+test("announcement reminder changes only with the newest announcement content and escapes titles", async () => {
+  const s = await setup();
+  const revision = async (user = 0) => {
+    const html = await (await s.req(user, "/")).text();
+    return { html, key: html.match(/data-announcement-update="([a-f0-9]{64})"/)?.[1] };
+  };
+  const first = await revision();
+  assert.ok(first.key);
+  assert.equal((await revision()).key, first.key);
+  assert.match(first.html, /data-announcement-user="guest"/);
+  assert.match((await revision(2)).html, /data-announcement-user="2"/);
+  s.db.exec("UPDATE announcement SET content='更新正文' WHERE id=1");
+  assert.notEqual((await revision()).key, first.key);
+  s.db.prepare("UPDATE announcement SET title=? WHERE id=1").run("<img src=x onerror=alert(1)>");
+  assert.match((await revision()).html, /&lt;img src=x onerror=alert\(1\)&gt;/);
+  s.db.exec("DELETE FROM announcement");
+  assert.equal((await revision()).key, undefined);
+});

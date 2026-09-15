@@ -37,9 +37,17 @@ document.addEventListener("submit", (event) => {
 const notice = document.querySelector("[data-test-notice]");
 if (notice instanceof HTMLDialogElement) {
   const key = `blackbox-test-notice-${notice.dataset.testNotice}`;
-  if (localStorage.getItem(key) !== "understood") notice.showModal();
+  let understood = false;
+  try {
+    understood = localStorage.getItem(key) === "understood";
+  } catch {}
+  if (!understood) notice.showModal();
   notice.addEventListener("close", () => {
-    if (notice.returnValue === "understood") localStorage.setItem(key, "understood");
+    if (notice.returnValue === "understood") {
+      try {
+        localStorage.setItem(key, "understood");
+      } catch {}
+    }
   });
 }
 
@@ -57,27 +65,47 @@ const section =
 document.querySelector(`[data-section="${section}"]`)?.setAttribute("aria-current", "page");
 
 const notificationHost = document.querySelector("[data-admin-notifications]");
-document.addEventListener("blackbox:reviewed", () => {
-  // Snapshot counts predate the write; avoid another query after every review.
-  if (!notificationHost) return;
-  const link = document.createElement("a");
-  link.href = "/admin";
-  link.textContent = "查看最新待办";
-  notificationHost.replaceChildren(link);
-});
 if (notificationHost) {
-  fetch("/admin/notifications", { headers: { accept: "application/json" } })
-    .then((response) => {
+  let running = false,
+    timer,
+    signature = "",
+    lastAttempt = 0;
+  async function refreshNotifications() {
+    if (running || document.hidden) return;
+    clearTimeout(timer);
+    running = true;
+    lastAttempt = Date.now();
+    try {
+      const response = await fetch("/admin/notifications", {
+        headers: { accept: "application/json" },
+        signal: AbortSignal.timeout(15000),
+      });
       if (!response.ok) throw new Error("notification request failed");
-      return response.json();
-    })
-    .then((data) => {
-      if (!Array.isArray(data.items) || !data.items.length) return;
+      const data = await response.json();
+      const count = Number(data.pendingTotal) || 0;
+      const alert = document.querySelector("[data-pending-alert]");
+      if (alert) {
+        alert.hidden = !count;
+        alert.querySelector("[data-pending-message]").textContent = `有 ${count} 项任务等待处理`;
+        alert.querySelector("[data-pending-link]").href = data.pending?.[0]?.href || "/admin";
+      }
+      const current = JSON.stringify([data.pending, data.items]);
+      if (current === signature) return;
+      signature = current;
+      notificationHost.replaceChildren();
+      if (!count) return;
+      const persistent = document.createElement("a");
+      persistent.className = "admin-pending-indicator";
+      persistent.href = "/admin";
+      persistent.textContent = `${count} 项待办`;
+      persistent.setAttribute("aria-label", `还有 ${count} 项管理员任务未处理`);
+      notificationHost.append(persistent);
+      if (!data.items?.length) return;
       const details = document.createElement("details");
       details.className = "admin-notification-menu";
       details.open = true;
       const summary = document.createElement("summary");
-      summary.innerHTML = `<span aria-hidden="true">●</span><span>待处理</span><strong>${data.total}</strong>`;
+      summary.textContent = "新任务";
       const stack = document.createElement("div");
       stack.className = "notification-stack";
       for (const item of data.items) {
@@ -95,14 +123,17 @@ if (notificationHost) {
         action.textContent = "处理 →";
         action.addEventListener("click", async () => {
           action.disabled = true;
-          const body = new URLSearchParams({ csrf: data.csrf, key: item.key });
-          const response = await fetch("/admin/notifications/dismiss", { method: "POST", body });
-          if (response.ok) {
-            card.remove();
+          try {
+            const result = await fetch("/admin/notifications/dismiss", {
+              method: "POST",
+              body: new URLSearchParams({ csrf: data.csrf, key: item.key }),
+              signal: AbortSignal.timeout(15000),
+            });
+            if (!result.ok) throw new Error("dismiss failed");
             location.assign(item.href);
-          } else {
+          } catch {
             action.disabled = false;
-            description.textContent = "操作失败，请刷新后再试";
+            description.textContent = "提醒状态未确认，请刷新核对或稍后再试";
           }
         });
         card.append(copy, action);
@@ -110,15 +141,61 @@ if (notificationHost) {
       }
       if (data.hidden) {
         const more = document.createElement("a");
-        more.className = "notification-more";
         more.href = "/admin";
-        more.textContent = `还有 ${data.hidden} 类待办，前往工作台查看`;
+        more.className = "notification-more";
+        more.textContent = `还有 ${data.hidden} 类待办，查看全部 →`;
         stack.append(more);
       }
       details.append(summary, stack);
       notificationHost.append(details);
-    })
-    .catch(() => {});
+    } catch {
+      if (!notificationHost.childElementCount) {
+        const retry = document.createElement("a");
+        retry.href = "/admin";
+        retry.textContent = "待办暂未更新，查看工作台";
+        notificationHost.append(retry);
+      }
+    } finally {
+      running = false;
+      if (!document.hidden) timer = setTimeout(refreshNotifications, 60000);
+    }
+  }
+  refreshNotifications();
+  document.addEventListener("visibilitychange", () => {
+    clearTimeout(timer);
+    if (!document.hidden) {
+      if (Date.now() - lastAttempt > 5000) refreshNotifications();
+      else timer = setTimeout(refreshNotifications, 5000);
+    }
+  });
+  document.addEventListener("blackbox:reviewed", () => {
+    clearTimeout(timer);
+    timer = setTimeout(refreshNotifications, 600);
+  });
+}
+
+const announcementUpdate = document.querySelector("[data-announcement-update]");
+if (announcementUpdate) {
+  const key = `blackbox-announcement-${announcementUpdate.dataset.announcementUser}`;
+  const revision = announcementUpdate.dataset.announcementUpdate;
+  let seen = false;
+  try {
+    seen = localStorage.getItem(key) === revision;
+  } catch {}
+  const show = () => {
+    if (!seen) announcementUpdate.hidden = false;
+  };
+  if (notice instanceof HTMLDialogElement && notice.open) notice.addEventListener("close", show, { once: true });
+  else show();
+  const acknowledge = () => {
+    seen = true;
+    announcementUpdate.hidden = true;
+    try {
+      localStorage.setItem(key, revision);
+    } catch {}
+  };
+  announcementUpdate.querySelector("[data-announcement-read]").addEventListener("click", acknowledge);
+  announcementUpdate.querySelector("[data-announcement-dismiss]").addEventListener("click", acknowledge);
 }
 
 for (const video of document.querySelectorAll("video[data-preview-frame]")) {

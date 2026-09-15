@@ -10,6 +10,7 @@ export function theatreHome(
   user: UserSession | null,
   backgroundId: number | null,
   latest: ProductionRow[] = [],
+  announcementRevision = "",
 ): string {
   let texts: Record<string, string> = {};
   try {
@@ -131,9 +132,14 @@ export function theatreHome(
     '"><form method="dialog"><h2>测试须知</h2><p class="preline">' +
     e(testNotice) +
     "</p><button value=understood>我已明白</button></form></dialog>";
+  const announcementAlert =
+    news[0] && announcementRevision
+      ? `<aside class="announcement-update" data-announcement-update="${e(announcementRevision)}" data-announcement-user="${user?.id || "guest"}" hidden role="status"><div><strong>公告更新了</strong><p>${e(news[0].title)}</p></div><a href="/announcements/${news[0].id}" data-announcement-read>查看公告 →</a><button type="button" data-announcement-dismiss>知道了</button></aside>`
+      : "";
   return layout(
     "首页",
-    dialog +
+    announcementAlert +
+      dialog +
       posterDialog +
       '<div class="theatre-stage">' +
       image +

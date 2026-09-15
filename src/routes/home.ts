@@ -49,7 +49,21 @@ export async function homePage(c: Context<AppEnv>) {
     }),
   );
   profile.page_texts = JSON.stringify(texts);
-  return c.html(theatreHome(profile, featured, announcements.results, c.get("user"), hero?.id ?? null, latest.results));
+  const news = announcements.results[0];
+  const revision = news
+    ? Array.from(
+        new Uint8Array(
+          await crypto.subtle.digest(
+            "SHA-256",
+            new TextEncoder().encode(JSON.stringify([news.id, news.title, news.content, news.created_at])),
+          ),
+        ),
+        (byte) => byte.toString(16).padStart(2, "0"),
+      ).join("")
+    : "";
+  return c.html(
+    theatreHome(profile, featured, announcements.results, c.get("user"), hero?.id ?? null, latest.results, revision),
+  );
 }
 async function photoResponse(c: Context<AppEnv>, photo: Photo | null) {
   if (!photo?.filename) return c.text("展示图正在准备。", 404);
