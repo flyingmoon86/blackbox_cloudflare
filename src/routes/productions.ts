@@ -1,3 +1,4 @@
+import { serveResourceFile } from "../services/resource-files";
 import { consumeAccountLimit } from "../middleware/request-limits";
 import { validAccent } from "../services/theme";
 import { pageNumber } from "../views/shared";
@@ -171,7 +172,7 @@ productionRoutes.post("/admin/productions/:id/editions/:editionId", async (c) =>
 
 productionRoutes.use("*", async (c, next) => {
   if (!c.req.path.startsWith("/productions") && !c.req.path.startsWith("/admin/production")) return next();
-  if (!c.get("user") && !(c.req.method === "GET" && /^\/productions(?:\/\d+)?$/.test(c.req.path)))
+  if (!c.get("user") && !(c.req.method === "GET" && /^\/productions(?:\/\d+(?:\/cover)?)?$/.test(c.req.path)))
     return c.redirect(`/login?next=${encodeURIComponent(c.req.path)}`);
   await next();
 });
@@ -225,6 +226,22 @@ productionRoutes.get("/productions", async (c) => {
       query: search,
     }),
   );
+});
+
+productionRoutes.get("/productions/:id/cover", async (c) => {
+  const id = Number(c.req.param("id"));
+  if (!Number.isSafeInteger(id) || id <= 0) return c.notFound();
+  const photo = await c.env.DB.prepare(
+    "SELECT r.filename,r.original_name FROM production p JOIN resource r ON r.id=p.cover_id WHERE p.id=? AND r.status='approved' AND r.res_type='photo'",
+  )
+    .bind(id)
+    .first<{ filename: string; original_name: string }>();
+  if (!photo) return c.notFound();
+  return serveResourceFile(c.req.raw, c.env.FILES, {
+    key: photo.filename,
+    filename: photo.original_name || photo.filename,
+    publicImage: true,
+  });
 });
 
 productionRoutes.get("/productions/:id", async (c) => {

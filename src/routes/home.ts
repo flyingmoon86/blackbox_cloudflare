@@ -52,10 +52,10 @@ export async function homePage(c: Context<AppEnv>) {
   return c.html(theatreHome(profile, featured, announcements.results, c.get("user"), hero?.id ?? null, latest.results));
 }
 async function photoResponse(c: Context<AppEnv>, photo: Photo | null) {
-  if (!photo?.preview_filename) return c.text("展示图正在准备。", 404);
+  if (!photo?.filename) return c.text("展示图正在准备。", 404);
   return serveResourceFile(c.req.raw, c.env.FILES, {
-    key: photo.preview_filename,
-    filename: "preview.jpg",
+    key: photo.filename,
+    filename: photo.original_name || photo.filename,
     publicImage: true,
   });
 }
@@ -111,4 +111,27 @@ export async function mascotImage(c: Context<AppEnv>) {
 }
 export function health(c: Context<AppEnv>) {
   return c.json({ ok: true, runtime: "typescript-worker" });
+}
+
+export async function recruitmentPosterImage(c: Context<AppEnv>) {
+  const row = await c.env.DB.prepare("SELECT page_texts FROM site_profile WHERE id=1").first<{ page_texts: string }>();
+  let texts: Record<string, string> = {};
+  try {
+    texts = JSON.parse(row?.page_texts || "{}");
+  } catch {}
+  const candidates =
+    c.req.query("variant") === "mobile"
+      ? [texts.recruitment_poster_mobile, texts.recruitment_poster]
+      : [texts.recruitment_poster, texts.recruitment_poster_mobile];
+  for (const value of candidates) {
+    const id = Number(value);
+    if (!Number.isSafeInteger(id) || id <= 0) continue;
+    const photo = await c.env.DB.prepare(
+      "SELECT id,filename,original_name,preview_filename FROM resource WHERE id=? AND status='approved' AND res_type='photo'",
+    )
+      .bind(id)
+      .first<Photo>();
+    if (photo) return photoResponse(c, photo);
+  }
+  return c.notFound();
 }

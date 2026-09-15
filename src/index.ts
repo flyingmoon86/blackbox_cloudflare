@@ -6,7 +6,15 @@ import { reviewResponse } from "./middleware/review-response";
 import { securityHeaders, noStore, sameOriginWrites } from "./middleware/security";
 import { loadUser } from "./middleware/session";
 import { authRoutes } from "./routes/auth";
-import { mascotImage, featuredCoverImage, health, heroImage, homePage, pageBackgroundImage } from "./routes/home";
+import {
+  recruitmentPosterImage,
+  mascotImage,
+  featuredCoverImage,
+  health,
+  heroImage,
+  homePage,
+  pageBackgroundImage,
+} from "./routes/home";
 import { memberRoutes } from "./routes/members";
 import { adminRoutes } from "./routes/admin";
 import { productionRoutes } from "./routes/productions";
@@ -35,6 +43,7 @@ app.use("*", reviewResponse);
 app.get("/", homePage);
 app.get("/_design/theme", (c) => (c.env.ENVIRONMENT === "development" ? c.redirect("/") : c.notFound()));
 app.get("/site/hero", heroImage);
+app.get("/site/poster", recruitmentPosterImage);
 app.get("/site/mascot", mascotImage);
 app.get("/site/background", pageBackgroundImage);
 app.get("/site/featured-cover", featuredCoverImage);

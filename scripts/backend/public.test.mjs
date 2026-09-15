@@ -327,3 +327,51 @@ test("section backgrounds accept approved previews only and cannot expose pendin
   assert.doesNotMatch(editor, /name="page_background_photo"|name="member_guide"|name="admin_guide"/);
   s.db.close();
 });
+
+test("selected display assets serve original bytes without exposing unselected or pending files", async () => {
+  const s = await setup();
+  const original = new Uint8Array([255, 216, 255, 1, 2, 3, 255, 217]);
+  await s.env.FILES.put("original.jpg", original);
+  s.db.prepare("UPDATE site_profile SET hero_photo='1',featured_production_id=1,page_texts=? WHERE id=1").run(
+    JSON.stringify({
+      mascot_photo: "1",
+      productions_background: "1",
+      recruitment_poster: "1",
+      recruitment_poster_mobile: "2",
+    }),
+  );
+  s.db.exec("UPDATE production SET cover_id=1 WHERE id=1");
+  for (const path of [
+    "/site/hero",
+    "/site/mascot",
+    "/site/background?section=productions",
+    "/site/featured-cover",
+    "/site/poster",
+    "/site/poster?variant=mobile&id=2",
+  ]) {
+    const r = await s.req(0, path);
+    assert.equal(r.status, 200, path);
+    assert.deepEqual(new Uint8Array(await r.arrayBuffer()), original, path);
+  }
+  assert.equal((await s.req(0, "/resources/1/media")).status, 302);
+  s.db.exec("UPDATE resource SET status='pending' WHERE id=1");
+  for (const path of ["/site/hero", "/site/mascot", "/site/featured-cover", "/site/poster?id=2"])
+    assert.equal((await s.req(0, path)).status, 404, path);
+  assert.equal((await s.req(0, "/site/background?section=productions")).status, 204);
+});
+
+test("all production covers expose only the selected approved original", async () => {
+  const s = await setup();
+  const bytes = new Uint8Array([255, 216, 255, 5, 6, 255, 217]);
+  await s.env.FILES.put("original.jpg", bytes);
+  s.db.exec("UPDATE production SET cover_id=1 WHERE id=1");
+  const response = await s.req(0, "/productions/1/cover?id=2");
+  assert.equal(response.status, 200);
+  assert.deepEqual(new Uint8Array(await response.arrayBuffer()), bytes);
+  for (const path of ["/productions", "/productions/1"])
+    assert.match(await (await s.req(0, path)).text(), /src="\/productions\/1\/cover\?v=1"/);
+  assert.equal((await s.req(0, "/productions/999/cover")).status, 404);
+  s.db.exec("UPDATE resource SET status='pending' WHERE id=1");
+  assert.equal((await s.req(0, "/productions/1/cover")).status, 404);
+  assert.equal((await s.req(0, "/resources/1/media")).status, 302);
+});

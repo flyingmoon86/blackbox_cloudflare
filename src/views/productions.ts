@@ -41,12 +41,12 @@ export function productionListPage(
           if (item.feature_layout === "overlay" && item.cover_id) {
             return (
               heading +
-              `<article class="card production-card production-stage-card ratio-${item.cover_ratio === "portrait" ? "portrait" : "landscape"}"><img class="production-stage-image" src="/resources/${item.cover_id}/preview" alt="${escapeHtml(item.title)}封面"><span class="production-stage-shade" aria-hidden="true"></span><div class="production-stage-copy"><p class="eyebrow">${escapeHtml(item.year || "作品档案")} · ${item.edition_count || 1} 个版本</p><h2><a class="production-stage-title" href="/productions/${item.id}">${escapeHtml(item.title)}</a></h2><div class="production-stage-details"><div><p class="production-stage-intro">${escapeHtml(item.promo || item.synopsis || "暂无介绍")}</p>${contributionActions(item)}</div></div></div></article>`
+              `<article class="card production-card production-stage-card ratio-${item.cover_ratio === "portrait" ? "portrait" : "landscape"}"><img class="production-stage-image" src="/productions/${item.id}/cover?v=${item.cover_id}" alt="${escapeHtml(item.title)}封面"><span class="production-stage-shade" aria-hidden="true"></span><div class="production-stage-copy"><p class="eyebrow">${escapeHtml(item.year || "作品档案")} · ${item.edition_count || 1} 个版本</p><h2><a class="production-stage-title" href="/productions/${item.id}">${escapeHtml(item.title)}</a></h2><div class="production-stage-details"><div><p class="production-stage-intro">${escapeHtml(item.promo || item.synopsis || "暂无介绍")}</p>${contributionActions(item)}</div></div></div></article>`
             );
           }
           return (
             heading +
-            `<article class="card production-card ratio-${item.cover_ratio === "portrait" ? "portrait" : "landscape"}">${item.cover_id ? `<img class="production-cover" src="/resources/${item.cover_id}/preview" alt="${escapeHtml(item.title)}封面">` : ""}<p class="eyebrow">${escapeHtml(item.year || "作品档案")} · ${item.edition_count || 1} 个版本</p><h2><a href="/productions/${item.id}">${escapeHtml(item.title)}</a></h2><p>${escapeHtml(item.promo || item.synopsis || "暂无介绍")}</p>${contributionActions(item)}</article>`
+            `<article class="card production-card ratio-${item.cover_ratio === "portrait" ? "portrait" : "landscape"}">${item.cover_id ? `<img class="production-cover" src="/productions/${item.id}/cover?v=${item.cover_id}" alt="${escapeHtml(item.title)}封面">` : ""}<p class="eyebrow">${escapeHtml(item.year || "作品档案")} · ${item.edition_count || 1} 个版本</p><h2><a href="/productions/${item.id}">${escapeHtml(item.title)}</a></h2><p>${escapeHtml(item.promo || item.synopsis || "暂无介绍")}</p>${contributionActions(item)}</article>`
           );
         })
         .join("")
@@ -163,7 +163,7 @@ export function productionDetailPage(
   }
   return layout(
     item.title,
-    `${archiveTabs("productions")}<p class="back-links"><a href="/productions">← 返回作品档案</a><a href="/resources">查看资料库</a></p><article class="card production-detail work-detail ratio-${item.cover_ratio === "portrait" ? "portrait" : "landscape"}"><header class="production-hero">${item.cover_id ? `<img class="production-cover" decoding="async" fetchpriority="high" src="/resources/${item.cover_id}/${user ? "media" : "preview"}" alt="${escapeHtml(item.title)}封面">` : ""}<p class="eyebrow">${escapeHtml(item.year || "PRODUCTION")} · ${editions.length} 个版本</p><h1>${escapeHtml(item.title)}</h1><p class="lead">${escapeHtml(item.promo)}</p></header><p class="production-synopsis">${escapeHtml(item.synopsis || "暂无剧情介绍")}</p>
+    `${archiveTabs("productions")}<p class="back-links"><a href="/productions">← 返回作品档案</a><a href="/resources">查看资料库</a></p><article class="card production-detail work-detail ratio-${item.cover_ratio === "portrait" ? "portrait" : "landscape"}"><header class="production-hero">${item.cover_id ? `<img class="production-cover" decoding="async" fetchpriority="high" src="/productions/${item.id}/cover?v=${item.cover_id}" alt="${escapeHtml(item.title)}封面">` : ""}<p class="eyebrow">${escapeHtml(item.year || "PRODUCTION")} · ${editions.length} 个版本</p><h1>${escapeHtml(item.title)}</h1><p class="lead">${escapeHtml(item.promo)}</p></header><p class="production-synopsis">${escapeHtml(item.synopsis || "暂无剧情介绍")}</p>
     <nav class="edition-nav" aria-label="演出版本">${editions.map((v) => `<a href="/productions/${item.id}?edition=${v.id}#edition-${v.id}"${v.id === (resourcePage?.edition || editions[0]?.id) ? ' aria-current="true"' : ""}>${escapeHtml(editionLabel(v.id))}</a>`).join("")}</nav>
     ${editions
       .filter((v) => v.id === (resourcePage?.edition || editions[0]?.id))
