@@ -50,10 +50,12 @@ export function productionListPage(
           );
         })
         .join("")
-    : '<p class="card">还没有作品档案。</p>';
+    : page?.query
+      ? '<p class="card">没有找到符合条件的作品。请换个关键词试试，或清除搜索。</p>'
+      : '<p class="card">还没有作品档案。</p>';
   return layout(
     "作品",
-    `${archiveTabs("productions")}<section class="page-heading"><p class="eyebrow">PRODUCTIONS</p><h1>作品档案</h1>${deleted ? '<p class="notice">作品已删除，原有资料已转入“其他资料”。</p>' : ""}<p>浏览剧团作品，进入作品可查看演职员与已经审核入库的相关资料。</p>${admin ? '<a class="button" href="/admin/productions/new">＋ 创建作品</a>' : !admin ? '<a class="button" href="/suggestions?type=production&source=productions">申请创建作品</a>' : ""}</section><section class="card-grid production-grid" data-server-paged>${cards}</section>${pagination(page)}`,
+    `${archiveTabs("productions")}<section class="page-heading"><p class="eyebrow">PRODUCTIONS</p><h1>作品档案</h1><form method="get" action="/productions" class="filters" role="search"><input type="search" name="q" maxlength="80" aria-label="搜索作品" value="${escapeHtml(page?.query || "")}" placeholder="搜索作品名称、简介、版本或年份"><button>查找</button>${page?.query ? '<a href="/productions">清除搜索</a>' : ""}</form>${deleted ? '<p class="notice">作品已删除，原有资料已转入“其他资料”。</p>' : ""}<p>浏览剧团作品，进入作品可查看演职员与已经审核入库的相关资料。</p>${admin ? '<a class="button" href="/admin/productions/new">＋ 创建作品</a>' : !admin ? '<a class="button" href="/suggestions?type=production&source=productions">申请创建作品</a>' : ""}</section><section class="card-grid production-grid" data-server-paged>${cards}</section>${pagination(page)}`,
     Boolean(user),
     admin,
   );
