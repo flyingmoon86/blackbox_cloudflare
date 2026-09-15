@@ -199,13 +199,22 @@ async function resourceChoices(c: Context<AppEnv>, productionId: number | null):
 }
 
 productionRoutes.get("/productions", async (c) => {
-  const total = (await c.env.DB.prepare("SELECT COUNT(*) n FROM production").first<number>("n")) || 0;
+  const search = (c.req.query("q") || "").trim().slice(0, 80);
+  const pattern = "%" + search.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_") + "%";
+  const where = search
+    ? "WHERE (p.title LIKE ? ESCAPE '\\' OR p.promo LIKE ? ESCAPE '\\' OR p.synopsis LIKE ? ESCAPE '\\' OR EXISTS(SELECT 1 FROM production_edition e WHERE e.production_id=p.id AND (e.name LIKE ? ESCAPE '\\' OR CAST(e.year AS TEXT) LIKE ? ESCAPE '\\')))"
+    : "";
+  const params = search ? [pattern, pattern, pattern, pattern, pattern] : [];
+  const total =
+    (await c.env.DB.prepare(`SELECT COUNT(*) n FROM production p ${where}`)
+      .bind(...params)
+      .first<number>("n")) || 0;
   const size = 12,
     page = Math.min(pageNumber(c.req.query("page")), Math.max(1, Math.ceil(total / size)));
   const result = await c.env.DB.prepare(
-    "SELECT p.id,(p.id=(SELECT featured_production_id FROM site_profile WHERE id=1)) featured,title,synopsis,promo,COALESCE((SELECT MAX(year) FROM production_edition WHERE production_id=p.id),p.year) year,cover_id,cover_ratio,feature_layout,theme_color,(SELECT COUNT(*) FROM production_edition WHERE production_id=p.id) edition_count FROM production p ORDER BY CASE WHEN p.id=(SELECT featured_production_id FROM site_profile WHERE id=1) THEN 0 ELSE 1 END,year DESC,p.id DESC LIMIT ? OFFSET ?",
+    `SELECT p.id,(p.id=(SELECT featured_production_id FROM site_profile WHERE id=1)) featured,title,synopsis,promo,COALESCE((SELECT MAX(year) FROM production_edition WHERE production_id=p.id),p.year) year,cover_id,cover_ratio,feature_layout,theme_color,(SELECT COUNT(*) FROM production_edition WHERE production_id=p.id) edition_count FROM production p ${where} ORDER BY CASE WHEN p.id=(SELECT featured_production_id FROM site_profile WHERE id=1) THEN 0 ELSE 1 END,year DESC,p.id DESC LIMIT ? OFFSET ?`,
   )
-    .bind(size, (page - 1) * size)
+    .bind(...params, size, (page - 1) * size)
     .all<ProductionRow>();
   return c.html(
     productionListPage(result.results, c.get("user")!, c.req.query("deleted") === "1", {
@@ -213,6 +222,7 @@ productionRoutes.get("/productions", async (c) => {
       total,
       size,
       path: "/productions",
+      query: search,
     }),
   );
 });
