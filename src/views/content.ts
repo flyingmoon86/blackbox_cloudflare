@@ -41,5 +41,5 @@ export function siteSettingsPage(
   csrf: string,
   saved: boolean,
 ): string {
-  return layout("页面管理", siteEditor(p, productions, photos, csrf, saved), true, true);
+  return layout("页面编辑", siteEditor(p, productions, photos, csrf, saved), true, true);
 }

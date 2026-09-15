@@ -1,4 +1,4 @@
-export const DEFAULT_ACCENT = "#536c57";
+export const DEFAULT_ACCENT = "#ffb547";
 export const validAccent = (value: string): boolean => /^#[0-9a-f]{6}$/i.test(value);
 function luminance(hex: string): number {
   const rgb = hex

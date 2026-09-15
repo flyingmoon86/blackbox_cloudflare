@@ -33,6 +33,7 @@ app.use("*", adminPortalGate);
 app.use("*", reviewResponse);
 
 app.get("/", homePage);
+app.get("/_design/theme", (c) => (c.env.ENVIRONMENT === "development" ? c.redirect("/") : c.notFound()));
 app.get("/site/hero", heroImage);
 app.get("/site/mascot", mascotImage);
 app.get("/site/background", pageBackgroundImage);

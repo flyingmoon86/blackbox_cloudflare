@@ -11,12 +11,15 @@ export async function selectHero(c: Context<AppEnv>): Promise<Photo | null> {
   ).first<Photo>();
 }
 export async function homePage(c: Context<AppEnv>) {
-  const [profile, announcements, hero] = await Promise.all([
+  const [profile, announcements, hero, latest] = await Promise.all([
     c.env.DB.prepare("SELECT * FROM site_profile WHERE id=1").first<SiteProfileRow>(),
     c.env.DB.prepare(
       "SELECT id,title,content,created_at FROM announcement ORDER BY created_at DESC,id DESC LIMIT 1",
     ).all<AnnouncementRow>(),
     selectHero(c),
+    c.env.DB.prepare(
+      "SELECT id,title,promo,synopsis,year,cover_id FROM production ORDER BY year DESC,id DESC LIMIT 4",
+    ).all<ProductionRow>(),
   ]);
   if (!profile) return c.text("剧团信息暂不可用，请稍后重试。", 503);
   const featured = profile.featured_production_id
@@ -46,7 +49,7 @@ export async function homePage(c: Context<AppEnv>) {
     }),
   );
   profile.page_texts = JSON.stringify(texts);
-  return c.html(theatreHome(profile, featured, announcements.results, c.get("user"), hero?.id ?? null));
+  return c.html(theatreHome(profile, featured, announcements.results, c.get("user"), hero?.id ?? null, latest.results));
 }
 async function photoResponse(c: Context<AppEnv>, photo: Photo | null) {
   if (!photo?.preview_filename) return c.text("展示图正在准备。", 404);
@@ -60,12 +63,26 @@ export async function heroImage(c: Context<AppEnv>) {
   return photoResponse(c, await selectHero(c));
 }
 export async function pageBackgroundImage(c: Context<AppEnv>) {
-  return photoResponse(
-    c,
-    await c.env.DB.prepare(
-      "SELECT r.id,r.filename,r.original_name,r.preview_filename FROM resource r JOIN site_profile s ON CAST(r.id AS TEXT)=s.page_background_photo WHERE s.id=1 AND r.status='approved' AND r.res_type='photo'",
-    ).first<Photo>(),
-  );
+  const section = c.req.query("section") || "";
+  const keys: Record<string, string> = {
+    productions: "productions_background",
+    members: "members_background",
+    thanks: "thanks_background",
+  };
+  if (!keys[section]) return c.body(null, 204);
+  const row = await c.env.DB.prepare("SELECT page_texts FROM site_profile WHERE id=1").first<{ page_texts: string }>();
+  let id = 0;
+  try {
+    id = Number(JSON.parse(row?.page_texts || "{}")[keys[section]]);
+  } catch {}
+  if (!Number.isSafeInteger(id) || id <= 0) return c.body(null, 204);
+  const photo = await c.env.DB.prepare(
+    "SELECT id,filename,original_name,preview_filename FROM resource WHERE id=? AND status='approved' AND res_type='photo' AND preview_filename IS NOT NULL AND preview_filename<>''",
+  )
+    .bind(id)
+    .first<Photo>();
+  if (!photo) return c.body(null, 204);
+  return photoResponse(c, photo);
 }
 export async function featuredCoverImage(c: Context<AppEnv>) {
   return photoResponse(

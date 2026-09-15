@@ -122,8 +122,16 @@ test("multi-edition creation is atomic and lists one work by latest edition", as
   assert.equal(s.db.prepare("SELECT year FROM production WHERE id=?").get(production).year, 2026);
   assert.equal(s.db.prepare("SELECT COUNT(*) n FROM production WHERE title=?").get(fields.title).n, 1);
   const html = await (await s.req(0, "/productions/" + production)).text();
-  assert.equal((html.match(/class="production-edition"/g) || []).length, 3);
-  assert.ok(html.indexOf("<h2>校园版") < html.indexOf("<h2>首演版"));
+  assert.equal((html.match(/class="production-edition"/g) || []).length, 1);
+  assert.match(html, /<h2>校园版/);
+  const first = s.db
+    .prepare("SELECT id FROM production_edition WHERE production_id=? AND name='首演版'")
+    .get(production).id;
+  const old = await (await s.req(0, `/productions/${production}?edition=${first}`)).text();
+  assert.match(old, /<h2>首演版/);
+  assert.doesNotMatch(old, /<h2>校园版/);
+  const foreign = await (await s.req(0, `/productions/${production}?edition=30`)).text();
+  assert.match(foreign, /<h2>校园版/);
   assert.equal(
     (
       await s.post(1, "/admin/productions/new", {
@@ -246,4 +254,23 @@ test("upload and resource editing enforce edition ownership; unassigned old file
   assert.equal(s.db.prepare("SELECT edition_id FROM resource WHERE id=99").get().edition_id, edition);
   s.db.exec("UPDATE resource SET production_id=NULL WHERE id=99");
   assert.equal(s.db.prepare("SELECT edition_id FROM resource WHERE id=99").get().edition_id, null);
+});
+
+test("edition pagination counts only selected-version files and keeps its edition parameter", async () => {
+  const s = await setup();
+  const add = s.db.prepare(
+    "INSERT INTO resource(title,filename,res_type,status,production_id,edition_id) VALUES(?,?,'script','approved',10,?)",
+  );
+  for (let i = 0; i < 26; i++) add.run("复排资料" + i, "new-" + i, 30);
+  add.run("初版独有资料", "old-only", 1);
+  const first = await (await s.req(0, "/productions/10?edition=30")).text();
+  assert.doesNotMatch(first, /初版独有资料/);
+  assert.match(first, /edition=30(?:&amp;|&)page=2/);
+  const second = await (await s.req(0, "/productions/10?edition=30&page=2")).text();
+  assert.match(second, /复排资料/);
+  assert.doesNotMatch(second, /初版独有资料/);
+  const old = await (await s.req(0, "/productions/10?edition=1")).text();
+  assert.match(old, /初版独有资料/);
+  assert.doesNotMatch(old, /复排资料/);
+  s.db.close();
 });

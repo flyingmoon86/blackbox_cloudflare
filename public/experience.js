@@ -106,7 +106,12 @@
     }
     const scenes = [...stage.querySelectorAll(".stage-scene")],
       links = [...stage.querySelectorAll(".scene-nav a")];
-    let index = location.hash === "#about" || location.hash === "#contact" ? 1 : 0,
+    const sceneIndex = (hash) =>
+      Math.max(
+        0,
+        scenes.findIndex((scene) => "#" + scene.id === (hash === "#contact" ? "#about" : hash)),
+      );
+    let index = sceneIndex(location.hash),
       last = 0,
       accumulated = 0,
       lastWheel = 0;
@@ -117,21 +122,21 @@
         scene.inert = desktop.matches && i !== index;
       });
       links.forEach((link, i) => link.setAttribute("aria-current", String(i === index)));
-      if (update) history.replaceState(null, "", index ? "#about" : "#welcome");
+      if (update) history.replaceState(null, "", "#" + scenes[index].id);
     };
     const setup = () => {
       stage.classList.toggle("stage-ready", desktop.matches);
       show(index);
     };
-    stage.querySelectorAll('a[href="#about"],a[href="#welcome"]').forEach((a) =>
+    stage.querySelectorAll('a[href="#about"],a[href="#welcome"],a[href="#playbill"]').forEach((a) =>
       a.addEventListener("click", (event) => {
         if (!desktop.matches) return;
         event.preventDefault();
-        show(a.hash === "#about" ? 1 : 0, true);
+        show(sceneIndex(a.hash), true);
       }),
     );
     window.addEventListener("hashchange", () => {
-      show(location.hash === "#about" || location.hash === "#contact" ? 1 : 0);
+      show(sceneIndex(location.hash));
     });
     stage.addEventListener(
       "wheel",
@@ -217,4 +222,201 @@
     list.after(pager);
     render();
   });
+})();
+
+// Preserve the native POST when JavaScript is unavailable. Update only after the
+// server's redirect confirms the write result; an uncertain request is never retried.
+(() => {
+  document.addEventListener("submit", async (event) => {
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement) || !/^\/members\/\d+\/flowers$/.test(new URL(form.action).pathname)) return;
+    if (!form.closest(".profile-detail")) return;
+    event.preventDefault();
+    if (form.dataset.sending) return;
+    form.dataset.sending = "true";
+    const button = form.querySelector("button");
+    const previous = button.textContent;
+    button.disabled = true;
+    button.textContent = "正在送达…";
+    let status = form.querySelector('[role="status"]');
+    if (!status) {
+      status = document.createElement("p");
+      status.setAttribute("role", "status");
+      form.append(status);
+    }
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+    try {
+      const response = await fetch(form.action, {
+        method: "POST",
+        body: new FormData(form),
+        credentials: "same-origin",
+        signal: controller.signal,
+      });
+      const url = new URL(response.url);
+      const memberPath = new URL(form.action).pathname.replace(/\/flowers$/, "");
+      const result = url.searchParams.get("flower");
+      if (
+        !response.ok ||
+        url.origin !== location.origin ||
+        url.pathname !== memberPath ||
+        !["sent", "already"].includes(result)
+      )
+        throw new Error("Unconfirmed flower result");
+      const doc = new DOMParser().parseFromString(await response.text(), "text/html");
+      const fresh = doc.querySelector(".profile-detail");
+      if (!fresh) throw new Error("Missing profile");
+      form.closest(".profile-detail").dispatchEvent(new Event("profile:detach"));
+      form.closest(".profile-detail").replaceWith(fresh);
+      document.dispatchEvent(new Event("profile:updated"));
+      const nextButton = fresh.querySelector('form[action$="/flowers"] button');
+      nextButton?.focus({ preventScroll: true });
+      if (result === "sent" && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        const burst = document.createElement("div");
+        burst.className = "flower-burst";
+        burst.setAttribute("aria-hidden", "true");
+        for (let i = 0; i < 7; i++) {
+          const petal = document.createElement("span");
+          petal.textContent = "✻";
+          burst.append(petal);
+        }
+        fresh.append(burst);
+        setTimeout(() => burst.remove(), 1600);
+      }
+    } catch {
+      status.textContent = "暂时无法确认送花结果，请刷新核对后再操作。";
+      button.disabled = false;
+      button.textContent = previous;
+    } finally {
+      clearTimeout(timeout);
+      delete form.dataset.sending;
+    }
+  });
+})();
+// Fit the desktop profile into the available frame. Large collections paginate
+// within their section; mobile and no-JS pages retain a complete readable document.
+(() => {
+  const media = matchMedia("(min-width:901px)");
+  const attach = () => {
+    const profile = document.querySelector(".member-detail");
+    if (!profile || profile.dataset.profileFit) return;
+    profile.dataset.profileFit = "true";
+    const pagers = [];
+    for (const selector of [".profile-experience>ul"]) {
+      const list = profile.querySelector(selector);
+      if (!list) continue;
+      const items = [...list.children];
+      let page = 0,
+        size = items.length || 1;
+      const pager = document.createElement("nav");
+      pager.className = "profile-pagination";
+      pager.setAttribute("aria-label", selector.includes("experience") ? "舞台经历分页" : "送花记录分页");
+      const prev = document.createElement("button"),
+        next = document.createElement("button"),
+        status = document.createElement("span");
+      prev.type = next.type = "button";
+      prev.textContent = "上一页";
+      next.textContent = "下一页";
+      status.setAttribute("aria-live", "polite");
+      pager.append(prev, status, next);
+      list.after(pager);
+      const render = () => {
+        const pages = Math.max(1, Math.ceil(items.length / size));
+        page = Math.min(page, pages - 1);
+        items.forEach((item, i) => (item.hidden = media.matches && (i < page * size || i >= (page + 1) * size)));
+        prev.disabled = page === 0;
+        next.disabled = page >= pages - 1;
+        status.textContent = `${page + 1} / ${pages}`;
+        pager.hidden = !media.matches || pages <= 1;
+      };
+      const fit = () => {
+        items.forEach((item) => (item.hidden = false));
+        pager.hidden = false;
+        if (!media.matches) {
+          size = items.length || 1;
+          render();
+          return;
+        }
+        const columns = selector.includes("experience") ? 2 : 3;
+        const row = Math.max(
+          selector.includes("experience") ? 58 : 33,
+          ...items.map((item) => item.getBoundingClientRect().height),
+        );
+        size = Math.max(columns, Math.floor(list.clientHeight / row) * columns);
+        render();
+      };
+      prev.onclick = () => {
+        page--;
+        render();
+      };
+      next.onclick = () => {
+        page++;
+        render();
+      };
+      pagers.push(fit);
+    }
+    const bio = profile.querySelector(".profile-story>section:first-child>p");
+    const more = document.createElement("button");
+    more.type = "button";
+    more.className = "profile-read-more";
+    more.textContent = "展开完整介绍";
+    more.hidden = true;
+    bio?.after(more);
+    more.onclick = () => {
+      const dialog = document.createElement("dialog");
+      dialog.className = "profile-biography";
+      const close = document.createElement("button");
+      close.type = "button";
+      close.textContent = "关闭";
+      close.onclick = () => dialog.close();
+      const text = document.createElement("p");
+      text.textContent = bio.textContent;
+      dialog.append(close, text);
+      document.body.append(dialog);
+      dialog.onclose = () => {
+        dialog.remove();
+        more.focus();
+      };
+      dialog.showModal();
+    };
+    const fit = () => {
+      profile.classList.toggle("profile-fixed", media.matches);
+      pagers.forEach((fn) => fn());
+      more.hidden = !media.matches || !bio || bio.scrollHeight <= bio.clientHeight + 2;
+    };
+    let frame;
+    const schedule = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(fit);
+    };
+    const observer = new ResizeObserver(schedule);
+    observer.observe(profile);
+    media.addEventListener("change", schedule);
+    document.fonts?.ready.then(() => {
+      if (profile.isConnected) schedule();
+    });
+    fit();
+    profile.addEventListener(
+      "profile:detach",
+      () => {
+        observer.disconnect();
+        media.removeEventListener("change", schedule);
+        cancelAnimationFrame(frame);
+      },
+      { once: true },
+    );
+  };
+  attach();
+  document.addEventListener("profile:updated", attach);
+})();
+
+// Translate historic edition anchors to the selected-version URL.
+(() => {
+  const openLegacy = () => {
+    if (!/^#edition-\d+$/.test(location.hash) || document.querySelector(location.hash)) return;
+    const link = [...document.querySelectorAll(".edition-nav a")].find((a) => a.hash === location.hash);
+    if (link) location.replace(link.href);
+  };
+  openLegacy();
+  window.addEventListener("hashchange", openLegacy);
 })();

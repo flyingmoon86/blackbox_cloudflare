@@ -41,15 +41,15 @@
         </div>
         <div class="ticket-tear" aria-hidden="true"></div>
         <div class="ticket-body">
-          <form action="https://npublackbox.online/login" method="get" target="_blank" rel="noopener">
+          <div aria-label="登录外观演示，不收集账号密码">
             <label>姓名 / 编号
-              <input type="text" name="demo-account" placeholder="输入账号或昵称" autocomplete="username">
+              <input type="text" placeholder="演示页面，请到正式入口登录" disabled>
             </label>
             <label>口令
-              <input type="password" name="demo-passcode" placeholder="••••••••" autocomplete="current-password">
+              <input type="password" placeholder="不在此处填写密码" disabled>
             </label>
-            <button class="ticket-btn" type="submit">撕下票根 · 入场</button>
-          </form>
+            <a class="ticket-btn" href="https://npublackbox.online/login" target="_blank" rel="noopener">前往正式网站登录</a>
+          </div>
         </div>
         <div class="ticket-stub">
           <span>SEAT · 自由入座</span>

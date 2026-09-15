@@ -44,7 +44,7 @@ export function layout(title: string, content: string, signedIn = false, admin =
       ? icon("productions")
       : label === "队员与剧团"
         ? icon("members")
-        : label === "指南与鸣谢"
+        : label === "鸣谢"
           ? icon("help")
           : "") +
     label +
@@ -86,11 +86,7 @@ export function layout(title: string, content: string, signedIn = false, admin =
         child("/profile/member", "修改我的信息") + child("/profile/member-application", "申请队员认证"),
       ) + group("认识我们", "/#about", "剧团介绍", child("/#contact", "联系我们")),
     ) +
-    menu(
-      "指南与鸣谢",
-      group("从这里开始", "/help", "网站使用指南", admin ? child("/help#captain-guide", "管理员指南") : "") +
-        group("一起完善黑匣子", "/thanks", "网站贡献者", child("/feedback", "提交网站建议")),
-    ) +
+    menu("鸣谢", group("一起完善黑匣子", "/thanks", "网站贡献者", child("/feedback", "提交网站建议"))) +
     (admin ? link("/admin", "管理") : "");
   const account =
     '<a class="account-link" href="' +
@@ -114,7 +110,7 @@ export function layout(title: string, content: string, signedIn = false, admin =
           link("/productions", "作品") +
           link("/members", "队员") +
           link("/admin/resources", "资料") +
-          link("/admin/site", "页面设置")
+          link("/admin/site", "页面编辑")
         : "") + `<a href="${escapeHtml(portal.publicSite)}" target="_blank" rel="noopener">查看正式网站 ↗</a>`;
     mobile = admin
       ? '<nav class="mobile-nav" aria-label="手机管理导航">' +
@@ -134,6 +130,10 @@ export function layout(title: string, content: string, signedIn = false, admin =
     assetUrl("/experience.css") +
     '"><link id="site-theme" rel="stylesheet" href="/site/theme.css' +
     (themeId ? "?production=" + themeId : "") +
+    '"><link rel="stylesheet" href="' +
+    assetUrl("/redesign.css") +
+    '"><link rel="stylesheet" href="' +
+    assetUrl("/fonts.css") +
     '"><script src="' +
     assetUrl("/app.js") +
     '" defer></script><script src="' +
@@ -142,8 +142,17 @@ export function layout(title: string, content: string, signedIn = false, admin =
     (admin ? '<script src="' + assetUrl("/review.js") + '" defer></script>' : "") +
     '</head><body class="' +
     (signedIn ? "signed-in" : "signed-out") +
+    (portal?.active || context?.req.path.startsWith("/admin") ? " design-admin" : " design-public") +
     (portal?.active ? " admin-portal" : "") +
     (content.includes('class="section-tabs"') ? " archive-page" : "") +
+    '" data-section="' +
+    (/^\/(productions|resources|my-resources|suggestions)(?:\/|$)/.test(context?.req.path || "")
+      ? "productions"
+      : /^\/(members|profile)(?:\/|$)/.test(context?.req.path || "")
+        ? "members"
+        : /^\/(thanks|feedback)(?:\/|$)/.test(context?.req.path || "")
+          ? "thanks"
+          : "") +
     '"><a class="skip-link" href="#main-content">跳到内容</a><header class="top"><a href="/" class="brand">黑匣子<span>BLACK BOX THEATRE</span></a><button class="menu-toggle" aria-expanded="false" aria-controls="main-navigation">菜单 ＋</button><nav id="main-navigation" class="desktop-nav" aria-label="主导航">' +
     nav +
     "</nav>" +
@@ -166,7 +175,7 @@ export function loginPage(csrf: string, error = "", next = "/", info = ""): stri
   const portal = context ? adminPortal(context)?.active : false;
   return layout(
     "登录",
-    `<section class="auth-stage"><section class="card auth"><p class="eyebrow">BLACK BOX${portal ? " · ADMIN" : ""}</p><h1>${portal ? "后台登录" : "欢迎回来"}</h1><p class="muted">${portal ? "使用现有管理员账号登录。登录状态最长保留 14 天；共用设备使用后请退出。" : "欢迎浏览剧团档案。登录后可以提交资料、申请作品和下载原文件。"}</p>
+    `<section class="auth-stage"><section class="card auth ticket-login"><p class="eyebrow">ADMIT ONE · BLACK BOX${portal ? " · ADMIN" : ""}</p><h1>${portal ? "后台登录" : "检票入场"}</h1><p class="muted">${portal ? "使用现有管理员账号登录。登录状态最长保留 14 天；共用设备使用后请退出。" : "黑匣子话剧队 · 欢迎回到舞台"}</p>
   ${message(info, "notice")}${message(error)}<form method="post" action="/login"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><input type="hidden" name="next" value="${escapeHtml(next)}">
   <label>用户名<input name="username" autocomplete="username" maxlength="50" required></label><label>密码<input name="password" type="password" autocomplete="current-password" required></label>
   <button type="submit">登录</button></form>${portal ? "" : '<p><a href="/register">还没有账号？注册</a></p>'}</section></section>`,
@@ -267,7 +276,7 @@ export function memberListPage(
   ).join("");
   return layout(
     "队员名录",
-    `<section class="page-heading"><p class="eyebrow">HALL OF FAME</p><h1>队员名录</h1>${admin ? '<p><a class="button" href="/admin/members/new">＋ 新建队员档案</a></p>' : ""}<form method="get" class="filters"><input name="q" value="${escapeHtml(search)}" placeholder="搜索姓名、入学年级或作品"><select name="year"><option value="">全部年份</option>${options}</select><button>查找</button></form></section><section class="card-grid" data-server-paged>${cards}</section>${pagination(page)}`,
+    `<section class="page-heading"><p class="eyebrow">HALL OF FAME</p><h1>队员名录</h1>${admin ? '<p><a class="button" href="/admin/members/new">＋ 新建队员档案</a></p>' : ""}<form method="get" class="filters"><input name="q" value="${escapeHtml(search)}" placeholder="搜索姓名、入学年级或作品"><select name="year"><option value="">全部年份</option>${options}</select><button>查找</button></form></section><section class="card-grid member-grid" data-server-paged>${cards}</section>${pagination(page)}`,
     signedIn,
     admin,
   );
@@ -303,7 +312,18 @@ export function memberDetailPage(
       : "";
   return layout(
     member.name,
-    `<article class="card profile-detail">${member.photo ? `<img class="avatar avatar-large" src="/members/${member.id}/avatar" alt="${escapeHtml(member.name)}的头像">` : ""}<p class="eyebrow">${escapeHtml(cohortLabel(member.cohort) || "剧团成员")}</p><h1>${escapeHtml(member.name)}</h1>${member.contributor ? '<span class="contributor-tag">网站贡献者</span>' : ""}<p>${member.join_year ? member.join_year + " 年入队" : "入队年份待补充"}</p>${edit}${notice}<p>${escapeHtml(member.bio || "暂无简介")}</p><h2>参与作品</h2>${member.productions?.length ? `<ul>${member.productions.map((p) => `<li><a href="/productions/${p.id}">${escapeHtml(p.title)}</a></li>`).join("")}</ul>` : "<p>暂无已关联作品。</p>"}<p>收到 ${member.flower_count} 朵花</p><form method="post" action="/members/${member.id}/flowers"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button>送一朵花</button></form><section class="flower-senders"><h2>送来的心意</h2><p class="hint">登录送花会公开姓名或账号名，游客送花匿名保留。</p><ul>${(member.flower_senders || []).map((sender) => `<li><span>${sender.member_id ? `<a href="/members/${sender.member_id}">${escapeHtml(sender.name)}</a>` : escapeHtml(sender.name)}</span><strong>${sender.amount} 朵</strong></li>`).join("")}${member.anonymous_flowers ? `<li><span>匿名心意</span><strong>${member.anonymous_flowers} 朵</strong></li>` : ""}</ul></section><p><a href="/members">返回队员名录</a></p></article>`,
+    `<article class="profile-detail member-detail"><header class="profile-heading"><p class="eyebrow">队员档案 / PROFILE</p><h1>${escapeHtml(member.name)}</h1><p>${escapeHtml(cohortLabel(member.cohort) || "剧团成员")}${member.join_year ? ` · ${member.join_year} 年入队` : ""}</p>${member.contributor ? '<span class="contributor-tag">网站贡献者</span>' : ""}${edit}</header>${notice}<div class="profile-columns"><aside class="profile-portrait-column">${member.photo ? `<figure class="profile-photo"><img src="/members/${member.id}/avatar" alt="${escapeHtml(member.name)}的头像"></figure>` : `<div class="profile-photo profile-initial" aria-label="暂未上传头像">${escapeHtml(member.name.slice(0, 1))}</div>`}<section class="profile-flowers"><p><strong>${member.flower_count}</strong> 朵花</p><form method="post" action="/members/${member.id}/flowers"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button>送 TA 一朵花 ✻</button></form></section></aside><div class="profile-story"><section><h2>关于 TA</h2><p class="preline">${escapeHtml(member.bio || "这位队员的故事，等待慢慢补充。")}</p></section><section class="profile-experience"><h2>舞台经历</h2>${member.productions?.length ? `<ul>${member.productions.map((p) => `<li><strong>${escapeHtml(p.role_name || "参与演出")}${p.kind === "crew" ? " · 幕后" : ""}</strong><a href="/productions/${p.id}${p.edition_id ? `?edition=${p.edition_id}#edition-${p.edition_id}` : ""}">${escapeHtml(p.title)}${p.year ? ` · ${p.year}` : ""}${p.edition_name ? ` · ${escapeHtml(p.edition_name)}` : ""} →</a></li>`).join("")}</ul>` : '<p class="muted">暂无已关联的舞台经历。</p>'}</section><section class="flower-senders flower-senders-compact" aria-label="送花最多的前三名"><span class="bouquet-mark" aria-hidden="true">✻</span><h2>送来的心意</h2><ul>${[
+      ...(member.flower_senders || []),
+    ]
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 3)
+      .map(
+        (sender) =>
+          `<li><span>${sender.member_id ? `<a href="/members/${sender.member_id}">${escapeHtml(sender.name)}</a>` : escapeHtml(sender.name)}</span><strong>${sender.amount} 朵</strong></li>`,
+      )
+      .join(
+        "",
+      )}${(member.flower_senders?.length || 0) > 3 || member.anonymous_flowers ? `<li class="flower-more" aria-label="还有其他或匿名心意" title="还有其他或匿名心意">…</li>` : ""}</ul></section></div></div><a class="profile-back" href="/members">← 返回队员名录</a></article>`,
     signedIn,
     admin,
   );
