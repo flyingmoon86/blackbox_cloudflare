@@ -41,17 +41,17 @@ export function theatreHome(
   const heading = (texts.about_heading || "在黑匣子\n一起成为故事").replace(/[\p{P}\p{S}]/gu, "");
   const posterId = texts.recruitment_poster || texts.recruitment_poster_mobile;
   const poster = posterId
-    ? '<figure class="recruitment-poster"><a href="/resources/' +
+    ? '<figure class="recruitment-poster"><a href="/site/poster?v=' +
       Number(posterId) +
-      '/preview" data-poster-open><picture>' +
+      '" data-poster-open><picture>' +
       (texts.recruitment_poster_mobile
-        ? '<source media="(max-width:900px)" srcset="/resources/' +
+        ? '<source media="(max-width:900px)" srcset="/site/poster?variant=mobile&amp;v=' +
           Number(texts.recruitment_poster_mobile) +
-          '/preview">'
+          '">'
         : "") +
-      '<img src="/resources/' +
+      '<img src="/site/poster?v=' +
       Number(posterId) +
-      '/preview" alt="' +
+      '" alt="' +
       e(texts.recruitment_poster_alt || "剧团招新海报") +
       '" loading="lazy" decoding="async"></picture><figcaption>点击放大海报 ↗</figcaption></a></figure>'
     : "";
@@ -91,9 +91,9 @@ export function theatreHome(
         featured.id +
         '">' +
         (featured.cover_id
-          ? '<img src="/resources/' +
+          ? '<img src="/site/featured-cover?v=' +
             featured.cover_id +
-            '/preview" alt="' +
+            '" alt="' +
             e(featured.title) +
             '封面" loading="lazy">'
           : '<span class="playbill-empty" aria-hidden="true">剧</span>') +
