@@ -231,17 +231,22 @@ productionRoutes.get("/productions/:id", async (c) => {
   )
     .bind(id)
     .all<CreditRow>();
+  const versions = await editions(c, id);
+  const selected = versions.find((v) => v.id === Number(c.req.query("edition"))) || versions[0];
+  const selectedId = selected?.id || 0;
   const total =
-    (await c.env.DB.prepare("SELECT COUNT(*) n FROM resource WHERE production_id=? AND status='approved'")
-      .bind(id)
+    (await c.env.DB.prepare(
+      "SELECT COUNT(*) n FROM resource WHERE production_id=? AND edition_id=? AND status='approved'",
+    )
+      .bind(id, selectedId)
       .first<number>("n")) || 0;
   const size = 24,
     page = Math.min(pageNumber(c.req.query("page")), Math.max(1, Math.ceil(total / size)));
   const resources = await c.env.DB.prepare(
     `SELECT id,edition_id,title,res_type,description,original_name,preview_filename FROM resource
-    WHERE production_id=? AND status='approved' ORDER BY created_at DESC,id DESC LIMIT ? OFFSET ?`,
+    WHERE production_id=? AND edition_id=? AND status='approved' ORDER BY created_at DESC,id DESC LIMIT ? OFFSET ?`,
   )
-    .bind(id, size, (page - 1) * size)
+    .bind(id, selectedId, size, (page - 1) * size)
     .all<ProductionResourceRow>();
   const user = c.get("user")!;
   const admin = user?.role === "admin";
@@ -266,8 +271,8 @@ productionRoutes.get("/productions/:id", async (c) => {
       user,
       myRequests.results,
       await csrfFor(c),
-      { page, total, size, path: `/productions/${id}` },
-      await editions(c, id),
+      { page, total, size, path: `/productions/${id}`, edition: selectedId },
+      versions,
       admin
         ? (
             await c.env.DB.prepare(

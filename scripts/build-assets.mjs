@@ -3,6 +3,8 @@ import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 const files = [
   "app.css",
   "experience.css",
+  "fonts.css",
+  "redesign.css",
   "app.js",
   "experience.js",
   "upload.js",

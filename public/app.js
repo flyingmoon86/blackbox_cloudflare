@@ -279,14 +279,16 @@ if (themeEditor) {
   };
   hex.addEventListener("input", () => update(hex.value));
   picker.addEventListener("input", () => update(picker.value));
-  themeEditor.querySelector("[data-theme-reset]").addEventListener("click", () => update("#536c57"));
+  themeEditor.querySelector("[data-theme-reset]").addEventListener("click", () => update("#ffb547"));
   themeEditor.querySelector("[data-theme-cancel]").addEventListener("click", () => update(initial));
 }
 // Native selects are the no-JS fallback; enhanced pages use one thumbnail chooser.
 const imageFields = {
   hero_photo: "首页背景",
-  page_background_photo: "全站背景",
-  mascot_photo: "小象图片",
+  productions_background: "作品与资料背景",
+  members_background: "队员与剧团背景",
+  thanks_background: "鸣谢背景",
+  mascot_photo: "本周明星照片",
   cover_id: "作品封面",
   recruitment_poster: "通用海报",
   recruitment_poster_mobile: "手机海报",

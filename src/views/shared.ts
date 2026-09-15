@@ -27,6 +27,7 @@ export type PageInfo = {
   path: string;
   query?: string;
   year?: number | null;
+  edition?: number;
 };
 export function pageNumber(value: string | undefined): number {
   return value && /^[1-9]\d{0,6}$/.test(value) ? Number(value) : 1;
@@ -40,6 +41,7 @@ export function pagination(info?: PageInfo): string {
     new URLSearchParams({
       ...(info.query ? { q: info.query } : {}),
       ...(info.year ? { year: String(info.year) } : {}),
+      ...(info.edition ? { edition: String(info.edition) } : {}),
       page: String(page),
     });
   return `<nav class="pagination" aria-label="内容分页">${info.page > 1 ? `<a href="${escapeHtml(href(info.page - 1))}">上一页</a>` : ""}<span>第 ${info.page} / ${pages} 页</span>${info.page < pages ? `<a href="${escapeHtml(href(info.page + 1))}">下一页</a>` : ""}</nav>`;

@@ -50,7 +50,6 @@ test("guests browse public pages but cannot fetch originals, pending files or ad
     "/announcements/1",
     "/resources",
     "/resources/1",
-    "/help",
     "/thanks",
     "/feedback",
   ]) {
@@ -63,6 +62,7 @@ test("guests browse public pages but cannot fetch originals, pending files or ad
   assert.equal((await s.req(0, "/resources/2/preview")).status, 403);
   const html = await (await s.req(0, "/resources/3")).text();
   assert.ok(!html.includes('src="/resources/3/media"'));
+  assert.equal((await s.req(0, "/help")).headers.get("Location"), "/thanks");
   const help = await (await s.req(0, "/help")).text();
   assert.ok(!help.includes('id="captain-guide"'));
 });
@@ -71,7 +71,7 @@ test("guest flowers are CSRF protected, deduplicated per day and counted publicl
   assert.equal((await s.post(0, "/members/1/flowers", { csrf: "wrong" })).status, 400);
   for (let i = 0; i < 2; i++) assert.equal((await s.post(0, "/members/1/flowers")).status, 303);
   assert.equal(s.db.prepare("SELECT COUNT(*) n FROM visitor_flower").get().n, 1);
-  assert.match(await (await s.req(0, "/members/1")).text(), /收到 1 朵花/);
+  assert.match(await (await s.req(0, "/members/1")).text(), /<strong>1<\/strong> 朵花/);
 });
 test("named flowers show cumulative names and retain anonymous counts", async () => {
   const s = await setup();
@@ -79,7 +79,7 @@ test("named flowers show cumulative names and retain anonymous counts", async ()
   await s.post(3, "/members/1/flowers");
   await s.post(3, "/members/1/flowers");
   const html = await (await s.req(0, "/members/1")).text();
-  assert.match(html, /收到 2 朵花/);
+  assert.match(html, /<strong>2<\/strong> 朵花/);
   assert.match(html, /普通账号/);
   assert.match(html, /匿名/);
   assert.equal(s.db.prepare("SELECT COUNT(*) n FROM flower").get().n, 1);
@@ -276,7 +276,7 @@ test("work themes are admin-only and old years and profile works survive unrelat
   assert.equal(row.join_year, 2018);
   s.db.exec("INSERT INTO production_credit(production_id,member_id,kind,role_name) VALUES(1,1,'cast','角色')");
   const detail = await (await s.req(0, "/members/1")).text();
-  assert.match(detail, /参与作品/);
+  assert.match(detail, /舞台经历/);
   assert.match(detail, /测试作品/);
   assert.ok(!detail.includes("历史原文"));
   const edit = await (await s.req(2, "/profile/member")).text();
@@ -303,5 +303,27 @@ test("avatar thumbnail is optional, accounted for, served and removed with origi
   assert.equal((await s.post(1, "/admin/members/1/avatar/delete")).status, 303);
   assert.equal(await s.env.FILES.head(row.avatar_preview), null);
   assert.equal(await s.env.FILES.head(row.photo), null);
+  s.db.close();
+});
+
+test("section backgrounds accept approved previews only and cannot expose pending media", async () => {
+  const s = await setup();
+  const form = { troupe_name: "话剧队", productions_background: "1", members_background: "1", thanks_background: "1" };
+  assert.equal((await s.post(3, "/admin/site", form)).status, 403);
+  assert.equal((await s.post(1, "/admin/site", { ...form, members_background: "2" })).status, 400);
+  assert.equal((await s.post(1, "/admin/site", form)).status, 303);
+  const settings = JSON.parse(s.db.prepare("SELECT page_texts FROM site_profile WHERE id=1").get().page_texts);
+  assert.equal(settings.productions_background, "1");
+  assert.equal(settings.members_background, "1");
+  assert.equal(settings.thanks_background, "1");
+  for (const section of ["productions", "members", "thanks"])
+    assert.equal((await s.req(0, `/site/background?section=${section}`)).status, 200);
+  assert.equal((await s.req(0, "/site/background?section=unknown")).status, 204);
+  s.db.exec("UPDATE resource SET status='pending' WHERE id=1");
+  assert.equal((await s.req(0, "/site/background?section=members")).status, 204);
+  const editor = await (await s.req(1, "/admin/site")).text();
+  assert.match(editor, /页面编辑/);
+  assert.match(editor, /name="thanks_background"/);
+  assert.doesNotMatch(editor, /name="page_background_photo"|name="member_guide"|name="admin_guide"/);
   s.db.close();
 });

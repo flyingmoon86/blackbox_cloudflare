@@ -50,6 +50,16 @@ test("JSON review avoids redirect only after an authorized successful write; nat
   assert.equal((await s.post("/admin/requests/10/approve", {}, 1, { Accept: "application/json" })).status, 409);
 });
 
+test("design preview is development-only and does not collect credentials", async () => {
+  const s = await setup();
+  assert.equal((await s.req("/_design/theme", 0, {}, s.env.PUBLIC_ORIGIN)).status, 404);
+  s.env.ENVIRONMENT = "development";
+  const response = await s.req("/_design/theme", 0, {}, s.env.PUBLIC_ORIGIN);
+  assert.equal(response.status, 302);
+  assert.equal(response.headers.get("Location"), "/");
+  assert.equal(response.headers.get("Cache-Control"), "private, no-store");
+});
+
 test("portal is private, public admin links redirect and normal site stays public", async () => {
   const s = await setup();
   assert.equal((await s.req("/")).headers.get("location"), "/login?next=%2Fadmin");

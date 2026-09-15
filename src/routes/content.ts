@@ -37,10 +37,7 @@ contentRoutes.use("*", async (c, next) => {
 contentRoutes.get("/site/theme.css", async (c) => {
   let accent = DEFAULT_ACCENT;
   const preview = c.req.query("accent");
-  const row = await c.env.DB.prepare(
-    "SELECT s.page_texts,EXISTS(SELECT 1 FROM resource r WHERE r.id=CAST(s.page_background_photo AS INTEGER) AND r.status='approved' AND r.res_type='photo' AND r.preview_filename<>'') AS has_background FROM site_profile s WHERE s.id=1",
-  ).first<{ page_texts: string; has_background: number }>();
-  const background = row?.has_background;
+  const row = await c.env.DB.prepare("SELECT page_texts FROM site_profile WHERE id=1").first<{ page_texts: string }>();
   if (preview && validAccent(preview) && c.get("user")?.role === "admin") accent = preview;
   else {
     try {
@@ -56,7 +53,7 @@ contentRoutes.get("/site/theme.css", async (c) => {
   }
   c.header("Content-Type", "text/css; charset=utf-8");
   c.header("Cache-Control", "private, no-cache");
-  return c.body(themeCss(accent) + (background ? "" : "body::before{background-image:none}"));
+  return c.body(themeCss(accent));
 });
 const adminDenied = (c: any) => (c.get("user")?.role === "admin" ? null : c.text("没有管理员权限。", 403));
 
@@ -150,7 +147,13 @@ contentRoutes.post("/admin/site", async (c) => {
     if (!validAccent(value)) return c.text("主题色请填写 #RRGGBB 格式。", 400);
     texts.brand_accent = value.toLowerCase();
   }
-  for (const key of ["recruitment_poster", "recruitment_poster_mobile"]) {
+  for (const key of [
+    "recruitment_poster",
+    "recruitment_poster_mobile",
+    "productions_background",
+    "members_background",
+    "thanks_background",
+  ]) {
     if (!form.has(key)) continue;
     const value = String(form.get(key) || "");
     if (
@@ -162,7 +165,7 @@ contentRoutes.post("/admin/site", async (c) => {
           .bind(Number(value))
           .first()))
     )
-      return c.text("招新海报必须选择有展示图的已审核照片。", 400);
+      return c.text("页面图片必须选择有展示图的已审核照片。", 400);
     texts[key] = value;
   }
   if (form.has("recruitment_poster_alt"))
@@ -191,17 +194,8 @@ contentRoutes.post("/admin/site", async (c) => {
       .first())
   )
     return c.text("首页背景必须选择已审核的剧照。", 400);
-  const pageBackgroundText = String(form.get("page_background_photo") ?? "");
-  const pageBackground = pageBackgroundText ? Number(pageBackgroundText) : null;
-  if (
-    pageBackground !== null &&
-    !(await c.env.DB.prepare("SELECT id FROM resource WHERE id=? AND status='approved' AND res_type='photo'")
-      .bind(pageBackground)
-      .first())
-  )
-    return c.text("全站背景必须选择已审核的剧照。", 400);
   await c.env.DB.prepare(
-    `UPDATE site_profile SET troupe_name=?,contact_email=?,qq_group=?,recruitment=?,requirements=?,hero_photo=?,page_background_photo=?,featured_production_id=?,page_texts=? WHERE id=1`,
+    `UPDATE site_profile SET troupe_name=?,contact_email=?,qq_group=?,recruitment=?,requirements=?,hero_photo=?,featured_production_id=?,page_texts=? WHERE id=1`,
   )
     .bind(
       String(form.get("troupe_name") ?? "")
@@ -214,7 +208,6 @@ contentRoutes.post("/admin/site", async (c) => {
       String(form.get("recruitment") ?? "").trim(),
       String(form.get("requirements") ?? "").trim(),
       hero === null ? "" : String(hero),
-      pageBackground === null ? "" : String(pageBackground),
       featured,
       JSON.stringify(texts),
     )

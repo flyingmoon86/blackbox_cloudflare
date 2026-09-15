@@ -9,6 +9,7 @@ export function theatreHome(
   news: AnnouncementRow[],
   user: UserSession | null,
   backgroundId: number | null,
+  latest: ProductionRow[] = [],
 ): string {
   let texts: Record<string, string> = {};
   try {
@@ -24,7 +25,7 @@ export function theatreHome(
     ? "/site/mascot?v=" + encodeURIComponent(texts.mascot_photo)
     : assetUrl("/images/elephant-mascot-360-v1.webp");
   const feature = featured
-    ? '<aside class="stage-feature"><span class="eyebrow">ON STAGE / ' +
+    ? '<aside class="stage-feature"><span class="eyebrow">精选作品 / ' +
       e(featured.year || "精选大戏") +
       '</span><a href="/productions/' +
       featured.id +
@@ -81,8 +82,47 @@ export function theatreHome(
     "</a>" +
     (profile.qq_group ? "<span>QQ群 " + e(profile.qq_group) + "</span>" : "") +
     edit("contact_intro", "编辑联系") +
-    "</footer></div></section>";
+    '</footer><a class="hall-of-fame-link" href="/members">查看话剧队名人堂 →</a></div></section>';
   const testNotice = texts.test_notice || "网站正在测试。欢迎浏览与提交建议，测试阶段暂不支持视频上传。";
+  const playbill =
+    '<section class="stage-scene stage-playbill" id="playbill" aria-label="作品展示"><p class="eyebrow">03 / PLAYBILL</p><h2>作品档案</h2>' +
+    (featured
+      ? '<a class="playbill-feature" href="/productions/' +
+        featured.id +
+        '">' +
+        (featured.cover_id
+          ? '<img src="/resources/' +
+            featured.cover_id +
+            '/preview" alt="' +
+            e(featured.title) +
+            '封面" loading="lazy">'
+          : '<span class="playbill-empty" aria-hidden="true">剧</span>') +
+        '<div><p class="eyebrow">精选作品 · ' +
+        e(featured.year) +
+        "</p><h3>" +
+        e(featured.title) +
+        "</h3><p>" +
+        e(featured.promo || featured.synopsis) +
+        "</p><span>进入作品 →</span></div></a>"
+      : "") +
+    '<div class="playbill-list">' +
+    latest
+      .filter((p) => p.id !== featured?.id)
+      .slice(0, 3)
+      .map(
+        (p, i) =>
+          '<a href="/productions/' +
+          p.id +
+          '"><span>' +
+          String(i + 1).padStart(2, "0") +
+          "</span><strong>" +
+          e(p.title) +
+          "</strong><small>" +
+          e(p.year || "年份待补") +
+          "</small><span>↗</span></a>",
+      )
+      .join("") +
+    '</div><a class="playbill-all" href="/productions">查看全部作品 →</a></section>';
   let version = 2166136261;
   for (const ch of testNotice) version = Math.imul(version ^ ch.charCodeAt(0), 16777619);
   const dialog =
@@ -97,15 +137,16 @@ export function theatreHome(
       posterDialog +
       '<div class="theatre-stage">' +
       image +
-      '<div class="stage-shade"></div><section class="stage-scene" id="welcome" aria-label="黑匣子首页"><div class="welcome-copy"><p class="eyebrow">01 / BLACK BOX THEATRE</p><h1>黑匣子<br><span>永远是你家</span></h1></div><img class="stage-mascot" src="' +
+      '<div class="stage-shade"></div><section class="stage-scene" id="welcome" aria-label="黑匣子首页"><div class="welcome-copy"><p class="eyebrow">01 / BLACK BOX THEATRE</p><h1>黑匣子<br><span>永远是你家</span></h1></div><figure class="weekly-star"><img class="weekly-star-photo" src="' +
       e(mascot) +
-      '" alt="黑匣子毛绒小象" width="360" height="360" decoding="async">' +
+      '" alt="本周明星照片" width="360" height="360" decoding="async"><figcaption>本周明星<span aria-hidden="true">✦</span></figcaption></figure>' +
       feature +
       '<div class="stage-news">' +
       notice +
       '</div><a class="stage-explore" href="#about">探索剧团 <span>↓</span></a></section>' +
       about +
-      '<nav class="scene-nav" aria-label="首页场景"><a href="#welcome" aria-label="第一幕：首页">01 首页</a><span></span><a href="#about" aria-label="第二幕：剧团">02 剧团</a></nav></div>',
+      playbill +
+      '<nav class="scene-nav" aria-label="首页场景"><a href="#welcome" aria-label="第一幕：首页">01 入场</a><span></span><a href="#about" aria-label="第二幕：剧团">02 剧团</a><span></span><a href="#playbill" aria-label="第三幕：作品">03 作品</a></nav></div>',
     Boolean(user),
     admin,
   );

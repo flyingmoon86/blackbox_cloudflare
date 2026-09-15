@@ -13,7 +13,15 @@ import { memberApplicationPage, memberCreatePage, memberDetailPage, memberEditPa
 export type MemberRow = {
   flower_senders?: Array<{ name: string; member_id: number | null; amount: number }>;
   anonymous_flowers?: number;
-  productions?: Array<{ id: number; title: string }>;
+  productions?: Array<{
+    id: number;
+    title: string;
+    edition_id?: number;
+    edition_name?: string;
+    year?: number | null;
+    role_name?: string;
+    kind?: string;
+  }>;
   id: number;
   name: string;
   bio: string;
@@ -82,7 +90,7 @@ memberRoutes.get("/members", async (c) => {
         .bind(...params)
         .first<{ n: number }>()
     )?.n || 0;
-  const size = 24,
+  const size = 25,
     page = Math.min(pageNumber(c.req.query("page")), Math.max(1, Math.ceil(total / size)));
   const result = await c.env.DB.prepare(
     `SELECT m.id, m.name, m.bio, m.join_year, m.cohort, m.works, m.photo, EXISTS(SELECT 1 FROM site_contributor sc LEFT JOIN user cu ON cu.id=sc.user_id WHERE (sc.member_id=m.id OR cu.member_id=m.id) AND sc.revoked_at IS NULL AND sc.public_consent=1) contributor,
@@ -126,10 +134,10 @@ memberRoutes.get("/members/:id", async (c) => {
   );
   member.productions = (
     await c.env.DB.prepare(
-      "SELECT DISTINCT p.id,p.title FROM production p JOIN production_credit pc ON pc.production_id=p.id WHERE pc.member_id=? ORDER BY p.year DESC,p.id DESC",
+      "SELECT p.id,p.title,pc.edition_id,pe.name edition_name,pe.year,pc.role_name,pc.kind FROM production p JOIN production_credit pc ON pc.production_id=p.id LEFT JOIN production_edition pe ON pe.id=pc.edition_id WHERE pc.member_id=? ORDER BY pe.year DESC,p.id DESC,pc.edition_id DESC,pc.kind,pc.id",
     )
       .bind(id)
-      .all<{ id: number; title: string }>()
+      .all<NonNullable<MemberRow["productions"]>[number]>()
   ).results;
   const user = c.get("user")!;
   return c.html(
