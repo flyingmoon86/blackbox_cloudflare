@@ -24,7 +24,7 @@
 - **R2 文件存储**：保存上传的图片和文件，由网站检查权限后提供访问。
 - **Static Assets**：提供样式、脚本和静态图片。
 
-当前网站不需要 Python 或独立服务器。原 Python 网站保留在 `legacy-python/`，仅供功能对照。
+全站运行在 Cloudflare 上，不需要 Python 或独立服务器。
 
 ## 本地运行
 
@@ -51,7 +51,6 @@ migrations/      数据库增量升级
 scripts/         开发、测试与发布工具
 docs/            验收指南和发布记录
 design-proposal/ 美术与动效改造方向稿（静态 demo + 移植指南）
-legacy-python/   原网站对照
 ```
 
 依赖、运行数据和私有备份不提交 Git。页面修改约定集中在 [网站优化 Skill](.agents/skills/blackbox-optimize/SKILL.md)。

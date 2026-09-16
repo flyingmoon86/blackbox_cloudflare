@@ -62,10 +62,9 @@ const action = process.argv[2] || "check";
 if (action === "check") {
   npmRun("format:check");
   npmRun("typecheck");
-  npmRun("data:test");
   npmRun("test:backend");
   wrangler("deploy", "--env", "production", "--dry-run", "--outdir", ".wrangler/production-dry-run");
-  console.log("正式部署前代码、数据转换与配置检查通过。此命令没有发布网站。");
+  console.log("正式部署前代码与配置检查通过。此命令没有发布网站。");
 } else if (action === "migrate") {
   wrangler("d1", "migrations", "apply", database.database_name, "--remote", "--env", "production");
 } else if (action === "backup") {

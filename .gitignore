@@ -16,22 +16,12 @@ src/generated/
 # 本地临时图片素材
 image/
 
-# 旧 Python 参考项目的本地环境
-legacy-python/.env
-legacy-python/venv/
-legacy-python/__pycache__/
-legacy-python/**/*.pyc
+# 本地 Python 工具环境（字体构建）
 .venv/
 .venv-workers/
 .tools/
 python_modules/
 migration-work/
-
-# 旧站真实上传文件不得进入迁移仓库
-legacy-python/uploads/
-legacy-python/static/uploads/
-legacy-python/static/resources/
-legacy-python/static/pending/
 
 # 编辑器和系统文件
 .vscode/
