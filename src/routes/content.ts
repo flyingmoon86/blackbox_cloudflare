@@ -59,12 +59,14 @@ contentRoutes.get("/site/theme.css", async (c) => {
   const parts = ["theme-css", accent];
   const hit = await readCachedResponse(origin, parts);
   if (hit) return hit;
+  // The browser keeps revalidating (the zone may rewrite TTLs); the edge copy
+  // still serves repeat navigations without touching D1 or rebuilding the CSS.
   const headers = new Headers({
     "Content-Type": "text/css; charset=utf-8",
-    "Cache-Control": "public, max-age=60, s-maxage=300",
+    "Cache-Control": "public, no-cache, s-maxage=300",
   });
   const response = new Response(themeCss(accent), { headers });
-  await writeCachedResponse(origin, parts, response.clone(), 300, 60);
+  await writeCachedResponse(origin, parts, response.clone(), 300, "no-cache");
   return response;
 });
 const adminDenied = (c: any) => (c.get("user")?.role === "admin" ? null : c.text("没有管理员权限。", 403));

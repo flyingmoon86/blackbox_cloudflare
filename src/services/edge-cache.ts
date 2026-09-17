@@ -35,8 +35,8 @@ function cacheRequest(origin: string, parts: readonly string[]): Request {
 }
 
 /** Cache TTL follows `s-maxage`; the browser directive stays independent. */
-function cacheControl(edgeSeconds: number, browserSeconds: number): string {
-  return `public, max-age=${browserSeconds}, s-maxage=${edgeSeconds}`;
+function cacheControl(edgeSeconds: number, browser: number | "no-cache"): string {
+  return `public, ${browser === "no-cache" ? "no-cache" : `max-age=${browser}`}, s-maxage=${edgeSeconds}`;
 }
 
 export async function readCachedResponse(origin: string, parts: readonly string[]): Promise<Response | null> {
@@ -54,13 +54,13 @@ export async function writeCachedResponse(
   parts: readonly string[],
   response: Response,
   edgeSeconds: number,
-  browserSeconds = 0,
+  browser: number | "no-cache" = 0,
 ): Promise<void> {
   const cache = edgeCache();
   if (!cache || response.status !== 200 || response.body === null) return;
   try {
     const headers = new Headers(response.headers);
-    headers.set("Cache-Control", cacheControl(edgeSeconds, browserSeconds));
+    headers.set("Cache-Control", cacheControl(edgeSeconds, browser));
     await cache.put(cacheRequest(origin, parts), new Response(response.clone().body, { status: 200, headers }));
   } catch {
     // Cache writes are best effort; serving the live response stays correct.

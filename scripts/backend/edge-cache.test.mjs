@@ -109,6 +109,7 @@ test("theme stylesheet is shared from the edge cache and skips repeat settings r
   const second = await s.req(0, "/site/theme.css");
   assert.equal(second.status, 200);
   assert.equal(s.env.DB.calls, afterFirst, "cached stylesheet must not query D1 again");
+  assert.match(second.headers.get("cache-control") || "", /no-cache/);
   assert.match(second.headers.get("cache-control") || "", /s-maxage=300/);
 });
 
