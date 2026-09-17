@@ -3,6 +3,7 @@ import { turnstileWidget, verifyTurnstile } from "../services/turnstile";
 import type { AppEnv } from "../types";
 import { csrfFor, csrfValid } from "../http/cookies";
 import { visitorIdentity, publicLimit } from "../services/visitors";
+import { getSiteProfile } from "../services/site-profile";
 import { escapeHtml as e, layout } from "../views";
 export const communityRoutes = new Hono<AppEnv>();
 communityRoutes.get("/feedback", async (c) => {
@@ -75,10 +76,7 @@ communityRoutes.post("/feedback", async (c) => {
 });
 communityRoutes.get("/thanks", async (c) => {
   const user = c.get("user");
-  const profile = await c.env.DB.prepare("SELECT page_texts,troupe_name FROM site_profile WHERE id=1").first<{
-    page_texts: string;
-    troupe_name: string;
-  }>();
+  const profile = await getSiteProfile(c);
   let special = "";
   try {
     const text = JSON.parse(profile?.page_texts || "{}").special_thanks;

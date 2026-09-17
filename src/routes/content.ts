@@ -2,6 +2,8 @@ import { DEFAULT_ACCENT, validAccent, themeCss } from "../services/theme";
 import { Hono } from "hono";
 import { csrfFor, csrfValid } from "../http/cookies";
 import type { AppEnv } from "../types";
+import { cacheOrigin, readCachedResponse, writeCachedResponse } from "../services/edge-cache";
+import { getSiteProfile, invalidateSiteProfile } from "../services/site-profile";
 import { announcementDetailPage, announcementFormPage, announcementListPage, siteSettingsPage } from "../views/content";
 
 export type AnnouncementRow = { id: number; title: string; content: string; created_at: string };
@@ -37,11 +39,11 @@ contentRoutes.use("*", async (c, next) => {
 contentRoutes.get("/site/theme.css", async (c) => {
   let accent = DEFAULT_ACCENT;
   const preview = c.req.query("accent");
-  const row = await c.env.DB.prepare("SELECT page_texts FROM site_profile WHERE id=1").first<{ page_texts: string }>();
+  const profile = await getSiteProfile(c);
   if (preview && validAccent(preview) && c.get("user")?.role === "admin") accent = preview;
   else {
     try {
-      accent = JSON.parse(row?.page_texts || "{}").brand_accent || DEFAULT_ACCENT;
+      accent = JSON.parse(profile?.page_texts || "{}").brand_accent || DEFAULT_ACCENT;
     } catch {}
     const productionId = Number(c.req.query("production"));
     if (Number.isSafeInteger(productionId) && productionId > 0) {
@@ -51,9 +53,19 @@ contentRoutes.get("/site/theme.css", async (c) => {
       if (color && validAccent(color)) accent = color;
     }
   }
-  c.header("Content-Type", "text/css; charset=utf-8");
-  c.header("Cache-Control", "private, no-cache");
-  return c.body(themeCss(accent));
+  // The stylesheet is a pure function of the resolved accent, so it is safe to
+  // share; a changed accent produces a different key instead of a stale hit.
+  const origin = cacheOrigin(c.env, c.req.raw);
+  const parts = ["theme-css", accent];
+  const hit = await readCachedResponse(origin, parts);
+  if (hit) return hit;
+  const headers = new Headers({
+    "Content-Type": "text/css; charset=utf-8",
+    "Cache-Control": "public, max-age=60, s-maxage=300",
+  });
+  const response = new Response(themeCss(accent), { headers });
+  await writeCachedResponse(origin, parts, response.clone(), 300, 60);
+  return response;
 });
 const adminDenied = (c: any) => (c.get("user")?.role === "admin" ? null : c.text("没有管理员权限。", 403));
 
@@ -109,9 +121,7 @@ contentRoutes.post("/admin/announcements/:id/delete", async (c) => {
 contentRoutes.get("/admin/site", async (c) => {
   const denied = adminDenied(c);
   if (denied) return denied;
-  const profile = await c.env.DB.prepare(
-    "SELECT troupe_name,introduction,contact_email,contact_wechat,qq_group,public_account,recruitment,requirements,hero_photo,page_background_photo,featured_production_id,page_texts FROM site_profile WHERE id=1",
-  ).first<SiteProfileRow>();
+  const profile = await getSiteProfile(c);
   const productions = await c.env.DB.prepare("SELECT id,title,year FROM production ORDER BY year DESC,id DESC").all<{
     id: number;
     title: string;
@@ -212,5 +222,6 @@ contentRoutes.post("/admin/site", async (c) => {
       JSON.stringify(texts),
     )
     .run();
+  await invalidateSiteProfile(c);
   return c.redirect("/admin/site?saved=1", 303);
 });

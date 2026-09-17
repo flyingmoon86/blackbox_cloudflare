@@ -1,8 +1,9 @@
 import { serveResourceFile } from "../services/resource-files";
+import { getSiteProfile } from "../services/site-profile";
 import type { Context } from "hono";
 import type { AppEnv } from "../types";
 import { theatreHome } from "../views/home";
-import type { AnnouncementRow, SiteProfileRow } from "./content";
+import type { AnnouncementRow } from "./content";
 import type { ProductionRow } from "./productions";
 type Photo = { id: number; filename: string; original_name: string; preview_filename: string };
 export async function selectHero(c: Context<AppEnv>): Promise<Photo | null> {
@@ -12,7 +13,7 @@ export async function selectHero(c: Context<AppEnv>): Promise<Photo | null> {
 }
 export async function homePage(c: Context<AppEnv>) {
   const [profile, announcements, hero, latest] = await Promise.all([
-    c.env.DB.prepare("SELECT * FROM site_profile WHERE id=1").first<SiteProfileRow>(),
+    getSiteProfile(c),
     c.env.DB.prepare(
       "SELECT id,title,content,created_at FROM announcement ORDER BY created_at DESC,id DESC LIMIT 1",
     ).all<AnnouncementRow>(),
@@ -84,10 +85,10 @@ export async function pageBackgroundImage(c: Context<AppEnv>) {
     thanks: "thanks_background",
   };
   if (!keys[section]) return c.body(null, 204);
-  const row = await c.env.DB.prepare("SELECT page_texts FROM site_profile WHERE id=1").first<{ page_texts: string }>();
+  const profile = await getSiteProfile(c);
   let id = 0;
   try {
-    id = Number(JSON.parse(row?.page_texts || "{}")[keys[section]]);
+    id = Number(JSON.parse(profile?.page_texts || "{}")[keys[section]]);
   } catch {}
   if (!Number.isSafeInteger(id) || id <= 0) return c.body(null, 204);
   const photo = await c.env.DB.prepare(
@@ -107,10 +108,10 @@ export async function featuredCoverImage(c: Context<AppEnv>) {
   );
 }
 export async function mascotImage(c: Context<AppEnv>) {
-  const row = await c.env.DB.prepare("SELECT page_texts FROM site_profile WHERE id=1").first<{ page_texts: string }>();
+  const profile = await getSiteProfile(c);
   let id = 0;
   try {
-    id = Number(JSON.parse(row?.page_texts || "{}").mascot_photo);
+    id = Number(JSON.parse(profile?.page_texts || "{}").mascot_photo);
   } catch {}
   return photoResponse(
     c,
@@ -128,10 +129,10 @@ export function health(c: Context<AppEnv>) {
 }
 
 export async function recruitmentPosterImage(c: Context<AppEnv>) {
-  const row = await c.env.DB.prepare("SELECT page_texts FROM site_profile WHERE id=1").first<{ page_texts: string }>();
+  const profile = await getSiteProfile(c);
   let texts: Record<string, string> = {};
   try {
-    texts = JSON.parse(row?.page_texts || "{}");
+    texts = JSON.parse(profile?.page_texts || "{}");
   } catch {}
   const candidates =
     c.req.query("variant") === "mobile"

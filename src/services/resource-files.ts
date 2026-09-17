@@ -1,4 +1,8 @@
 import type { Bindings, UserSession } from "../types";
+import { readCachedResponse, writeCachedResponse } from "./edge-cache";
+
+/** Public images are immutable per (key, etag); cache their bytes for a week. */
+const FILE_CACHE_TTL_SECONDS = 60 * 60 * 24 * 7;
 
 export function canViewResource(
   resource: { status: string; uploader_id: number | null },
@@ -103,6 +107,19 @@ export async function serveResourceFile(
   }
   headers.set("Content-Length", String(range?.length ?? metadata.size));
   if (request.method === "HEAD") return new Response(null, { headers });
+  if (options.publicImage && !range && request.method === "GET") {
+    // Authorization and reference checks already ran; only the bytes are shared.
+    const origin = new URL(request.url).origin;
+    const parts = ["resource-file", options.key, metadata.httpEtag];
+    const hit = await readCachedResponse(origin, parts);
+    if (hit) return new Response(hit.body, { status: 200, headers });
+    const object = await bucket.get(options.key, { onlyIf: { etagMatches: metadata.etag } });
+    if (!object) return new Response("文件不存在。", { status: 404 });
+    if (!("body" in object)) return new Response("文件正在更新，请刷新后重试。", { status: 412 });
+    const response = new Response(object.body, { status: 200, headers });
+    await writeCachedResponse(origin, parts, response.clone(), FILE_CACHE_TTL_SECONDS);
+    return response;
+  }
   const object = await bucket.get(options.key, { onlyIf: { etagMatches: metadata.etag }, ...(range ? { range } : {}) });
   if (!object) return new Response("文件不存在。", { status: 404 });
   if (!("body" in object)) return new Response("文件正在更新，请刷新后重试。", { status: 412 });

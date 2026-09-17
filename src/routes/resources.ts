@@ -3,6 +3,7 @@ import { reviewRequest } from "../services/reviews";
 import { pageNumber } from "../views/shared";
 import { canViewResource, serveResourceFile } from "../services/resource-files";
 import { fileCleanupStatements, drainFileCleanup } from "../services/file-cleanup";
+import { invalidateSiteProfile } from "../services/site-profile";
 import { Hono } from "hono";
 import { csrfFor, csrfValid } from "../http/cookies";
 import type { AppEnv } from "../types";
@@ -161,6 +162,8 @@ for (const mode of ["download", "media", "preview"] as const) {
       key,
       filename: mode === "preview" && row.preview_filename ? "preview.jpg" : row.original_name || row.filename,
       download: mode === "download",
+      publicImage:
+        mode === "preview" && Boolean(row.preview_filename) && row.status === "approved" && row.res_type === "photo",
     });
   });
 }
@@ -276,6 +279,7 @@ resourceRoutes.post("/admin/resources/:id/delete", async (c) => {
     ...fileCleanupStatements(c.env, [row.filename, row.preview_filename]),
   ]);
   await drainFileCleanup(c.env);
+  await invalidateSiteProfile(c);
   return c.redirect("/admin/resources", 303);
 });
 
