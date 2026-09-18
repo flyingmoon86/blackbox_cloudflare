@@ -50,7 +50,12 @@ export function resourceListPage(
           const photos = group.rows.filter((row) => row.res_type === "photo");
           const others = group.rows.filter((row) => row.res_type !== "photo");
           const gallery = photos.length
-            ? `<article class="card photo-archive"><p class="eyebrow">剧照 · ${photos.length} 张</p><h3>剧照集</h3><div class="photo-grid" data-server-paged>${photos.map((photo) => `<a href="/resources/${photo.id}" title="${escapeHtml(photo.title)}"><img src="/resources/${photo.id}/preview" alt="${escapeHtml(photo.title)}" loading="lazy" decoding="async"></a>`).join("")}</div></article>`
+            ? `<article class="card photo-archive"><p class="eyebrow">剧照 · ${photos.length} 张</p><h3>剧照集</h3><div class="photo-grid" data-server-paged>${photos
+                .map((photo) => {
+                  const technical = photo.title.length >= 28 && /^[A-Za-z0-9+/_=!.-]+$/.test(photo.title);
+                  return `<a href="/resources/${photo.id}"${photo.title && !technical ? ` data-caption="${escapeHtml(photo.title)}"` : ""}><img src="/resources/${photo.id}/preview" alt="${escapeHtml(photo.title)}" loading="lazy" decoding="async"></a>`;
+                })
+                .join("")}</div></article>`
             : "";
           const entries = [
             ...(gallery ? [{ createdAt: photos[0].created_at, html: gallery }] : []),

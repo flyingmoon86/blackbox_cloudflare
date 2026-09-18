@@ -98,3 +98,35 @@
 .design-public .work-detail .edition-resources{border-top:0;padding-top:8px}
 
 @media(max-width:600px){.design-public .welcome-copy{top:52%}.design-public .stage-feature{bottom:16%}.design-public .stage-feature p{display:none}}
+
+/* 图片悬停聚焦：轻微放大、周边压暗并显示说明，不改变卡片尺寸与排版。 */
+.design-public :is(.production-card,.member-card,.photo-grid a){position:relative}
+.design-public :is(.production-card,.member-card,.photo-grid a) :is(img,.member-card-art){transition:transform .18s ease,filter .18s ease}
+.design-public .photo-grid a::before{content:"";position:absolute;inset:0;z-index:1;background:linear-gradient(0deg,rgba(15,13,10,.82),rgba(15,13,10,.06) 72%);opacity:0;transition:opacity .18s ease;pointer-events:none}
+.design-public .photo-grid a[data-caption]:not([data-caption=""])::after{content:attr(data-caption);position:absolute;right:0;bottom:0;left:0;z-index:2;display:-webkit-box;overflow:hidden;padding:10px 12px;color:#f3ead8;font-size:12px;line-height:1.4;opacity:0;transform:translateY(6px);transition:opacity .18s ease,transform .18s ease;pointer-events:none;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+.design-public :is(.production-card,.member-card):has(:focus-visible){border-color:color-mix(in srgb,var(--brand-light,#ffb547) 60%,var(--line))}
+.design-public :is(.production-card,.member-card):has(:focus-visible) :is(img,.member-card-art){transform:scale(1.04);filter:none}
+.design-public .member-card:has(:focus-visible) .member-card-shade,.design-public .production-stage-card:has(:focus-visible) .production-stage-shade{background:linear-gradient(0deg,rgba(10,8,8,.99),rgba(10,8,8,.42))}
+.design-public .photo-grid a:focus-visible{box-shadow:0 0 0 2px var(--brand-light,#ffb547)}
+.design-public .photo-grid a:focus-visible img{transform:scale(1.04);filter:none}
+.design-public .photo-grid a:focus-visible::before{opacity:1}
+.design-public .photo-grid a[data-caption]:not([data-caption=""]):focus-visible::after{opacity:1;transform:none}
+@media(hover:hover){
+.design-public :is(.production-card,.member-card,.photo-grid a):hover :is(img,.member-card-art){transform:scale(1.04);filter:none}
+.design-public :is(.production-card,.member-card):hover{border-color:color-mix(in srgb,var(--brand-light,#ffb547) 60%,var(--line))}
+.design-public .production-card:not(.production-stage-card):hover .production-cover{filter:brightness(.85)}
+.design-public .production-card:not(.production-stage-card):hover h2 a{text-decoration:underline;text-underline-offset:5px}
+.design-public .photo-grid a:hover{box-shadow:0 0 0 2px var(--brand-light,#ffb547)}
+.design-public .photo-grid a:hover::before{opacity:1}
+.design-public .photo-grid a[data-caption]:not([data-caption=""]):hover::after{opacity:1;transform:none}
+.design-public .member-card:hover .member-card-shade,.design-public .production-stage-card:hover .production-stage-shade{background:linear-gradient(0deg,rgba(10,8,8,.99),rgba(10,8,8,.42))}
+}
+@media(hover:none){
+.design-public .member-card-link:hover :is(.member-card-media,.member-card-art),.design-public .member-card-link:focus-visible :is(.member-card-media,.member-card-art),.design-public .production-stage-card:hover .production-stage-image,.design-public .production-stage-card:focus-within .production-stage-image,.design-public .photo-grid a:hover img{filter:none;transform:none}
+.design-public .member-card-link:hover .member-card-shade,.design-public .member-card-link:focus-visible .member-card-shade,.design-public .production-stage-card:hover .production-stage-shade,.design-public .production-stage-card:focus-within .production-stage-shade{background:linear-gradient(0deg,rgba(10,8,8,.96),rgba(10,8,8,.05) 78%)}
+.design-public .member-card-link:hover .member-card-copy,.design-public .member-card-link:focus-visible .member-card-copy{transform:none}
+}
+@media(prefers-reduced-motion:reduce){
+.design-public :is(.production-card,.member-card):hover :is(img,.member-card-art),.design-public :is(.production-card,.member-card):has(:focus-visible) :is(img,.member-card-art),.design-public .photo-grid a:hover img,.design-public .photo-grid a:focus-visible img{transform:none}
+.design-public .photo-grid a[data-caption]:not([data-caption=""]):hover::after,.design-public .photo-grid a[data-caption]:not([data-caption=""]):focus-visible::after{transform:none}
+}

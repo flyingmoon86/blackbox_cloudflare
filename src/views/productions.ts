@@ -120,8 +120,12 @@ export function productionDetailPage(
   const renderArchive = (collection: ProductionResourceRow[]) => {
     const photos = collection.filter((resource) => resource.res_type === "photo");
     const otherResources = collection.filter((resource) => resource.res_type !== "photo");
+    const photoCaption = (title: string, index: number) =>
+      title && !(title.length >= 28 && /^[A-Za-z0-9+/_=!.-]+$/.test(title))
+        ? title
+        : `${item.title} · 剧照 ${index + 1}`;
     const gallery = photos.length
-      ? `<article class="card photo-archive"><p class="eyebrow">剧照 · ${photos.length} 张</p><h4>剧照集</h4><p class="photo-archive-hint">点开剧照可直接浏览；仍可进入详情页查看资料信息。</p><div class="photo-grid">${photos.map((photo, index) => `<a data-photo-lightbox href="/resources/${photo.id}?origin=${photo.id}&amp;page=${resourcePage?.page || 1}" data-preview="/resources/${photo.id}/preview" data-caption="${escapeHtml(photo.title)}" title="${escapeHtml(photo.title)}" aria-label="打开《${escapeHtml(item.title)}》第 ${index + 1} 张剧照"><img src="/resources/${photo.id}/preview" alt="${escapeHtml(item.title)}剧照 ${index + 1}" loading="lazy" decoding="async"></a>`).join("")}</div></article>`
+      ? `<article class="card photo-archive"><p class="eyebrow">剧照 · ${photos.length} 张</p><h4>剧照集</h4><p class="photo-archive-hint">点开剧照可直接浏览；仍可进入详情页查看资料信息。</p><div class="photo-grid">${photos.map((photo, index) => `<a data-photo-lightbox href="/resources/${photo.id}?origin=${photo.id}&amp;page=${resourcePage?.page || 1}" data-preview="/resources/${photo.id}/preview" data-caption="${escapeHtml(photoCaption(photo.title, index))}" aria-label="打开《${escapeHtml(item.title)}》第 ${index + 1} 张剧照"><img src="/resources/${photo.id}/preview" alt="${escapeHtml(item.title)}剧照 ${index + 1}" loading="lazy" decoding="async"></a>`).join("")}</div></article>`
       : "";
     const archive = otherResources.length
       ? otherResources
