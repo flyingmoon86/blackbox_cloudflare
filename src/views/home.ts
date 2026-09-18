@@ -25,17 +25,6 @@ export function theatreHome(
   const mascot = texts.mascot_photo
     ? "/site/mascot?v=" + encodeURIComponent(texts.mascot_photo)
     : assetUrl("/images/elephant-mascot-360-v1.webp");
-  const feature = featured
-    ? '<aside class="stage-feature"><span class="eyebrow">精选作品 / ' +
-      e(featured.year || "精选大戏") +
-      '</span><a href="/productions/' +
-      featured.id +
-      '"><h2>' +
-      e(featured.title) +
-      "</h2><p>" +
-      e(featured.promo || "走进这部作品的幕后故事") +
-      "</p><span>进入作品 ↗</span></a></aside>"
-    : "";
   const notice = news[0]
     ? '<a href="/announcements/' + news[0].id + '"><span>最新公告</span> ' + e(news[0].title) + " ↗</a>"
     : '<a href="/announcements">剧团公告 ↗</a>';
@@ -146,7 +135,6 @@ export function theatreHome(
       '<div class="stage-shade"></div><section class="stage-scene" id="welcome" aria-label="黑匣子首页"><div class="welcome-copy"><p class="eyebrow">01 / BLACK BOX THEATRE</p><h1>黑匣子<br><span>永远是你家</span></h1></div><figure class="weekly-star"><img class="weekly-star-photo" src="' +
       e(mascot) +
       '" alt="本周明星照片" width="360" height="360" decoding="async"><figcaption>本周明星<span aria-hidden="true">✦</span></figcaption></figure>' +
-      feature +
       '<div class="stage-news">' +
       notice +
       '</div><a class="stage-explore" href="#playbill">浏览近期作品 <span>↓</span></a></section>' +

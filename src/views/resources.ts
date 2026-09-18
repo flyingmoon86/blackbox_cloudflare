@@ -60,10 +60,9 @@ export function resourceListPage(
         })
         .join("")
     : `<p class="card">${query ? `没有找到与“${escapeHtml(query)}”相关的资料或作品。` : "暂无资料。"}</p>`;
-  const canSubmit = true;
   return layout(
     mine ? "我的资料" : "资料库",
-    `${archiveTabs("resources")}<section class="page-heading"><p class="eyebrow">ARCHIVE</p><h1>${mine ? "我的资料与审核结果" : "资料库"}</h1><p><a href="/resources">已入库资料</a> · <a href="/my-resources">我的提交</a>${canSubmit ? ' · <a href="/resources/submit">提交资料</a>' : ""}</p>${mine ? "" : `<p class="hint">剧本、台本与其他文件在这里查找；<a href="/productions">剧照请进入作品档案查看</a>。</p><form class="filters resource-search" method="get" action="/resources" role="search"><label>搜索资料或作品<input type="search" name="q" value="${escapeHtml(query)}" maxlength="100" placeholder="输入资料标题、文件名或作品名称"></label><button>搜索</button>${query ? '<a class="button secondary" href="/resources">清除</a>' : ""}</form>${query ? `<p class="search-summary">找到 ${page?.total ?? rows.length} 项与“${escapeHtml(query)}”相关的资料。</p>` : ""}`}</section><section class="review-grid" data-server-paged>${mine ? flatCards : groupedCards}</section>${pagination(page)}`,
+    `${archiveTabs("resources")}<section class="page-heading"><p class="eyebrow">ARCHIVE</p><h1>${mine ? "我的资料与审核结果" : "资料库"}</h1><p>${mine ? '<a href="/resources">已入库资料</a> · ' : ""}<a href="/my-resources">我的提交</a> · <a href="/resources/submit">提交资料</a></p>${mine ? "" : `<p class="hint">剧本、台本与其他文件在这里查找；剧照在作品档案中查看。</p><form class="filters resource-search" method="get" action="/resources" role="search"><label>搜索资料或作品<input type="search" name="q" value="${escapeHtml(query)}" maxlength="100" placeholder="输入资料标题、文件名或作品名称"></label><button>搜索</button>${query ? '<a class="button secondary" href="/resources">清除</a>' : ""}</form>${query ? `<p class="search-summary">找到 ${page?.total ?? rows.length} 项与“${escapeHtml(query)}”相关的资料。</p>` : ""}`}</section><section class="review-grid" data-server-paged>${mine ? flatCards : groupedCards}</section>${pagination(page)}`,
     Boolean(user),
     user?.role === "admin",
   );
@@ -96,9 +95,6 @@ export function resourceDetailPage(
   const returnLabel = productionReturn
     ? `← 返回《${escapeHtml(row.production_title || "所属作品")}》剧照集`
     : "← 返回资料列表";
-  const secondaryLink = productionReturn
-    ? '<a href="/resources">查看资料库</a>'
-    : '<a href="/productions">返回作品档案</a>';
   const download =
     row.status === "approved"
       ? `<p><a class="button" href="/resources/${row.id}/download">下载文件</a></p>`
@@ -119,7 +115,7 @@ export function resourceDetailPage(
       : "";
   return layout(
     displayTitle,
-    `${archiveTabs("resources")}<nav class="back-links resource-back-links" aria-label="资料详情导航"><a href="${escapeHtml(returnHref)}">${returnLabel}</a>${secondaryLink}</nav><article class="card production-detail resource-detail"><p class="eyebrow">${escapeHtml(labels[row.res_type] || row.res_type)} · ${escapeHtml(statuses[row.status] || row.status)}</p><h1>${escapeHtml(displayTitle)}</h1>${edit}${resourceDetailPreview({ ...row, title: displayTitle }, Boolean(user))}${mediaError}${photoNavigation}<div class="resource-metadata"><p>${escapeHtml(row.description || "暂无说明")}</p><p>所属作品：${row.production_id ? `<a href="/productions/${row.production_id}">${escapeHtml(row.production_title)}</a>` : "其他资料"}</p><p>演出版本：${escapeHtml(row.edition_name || "未关联作品版本")}</p>${technicalPhotoTitle ? `<p>资料标题：<code>${escapeHtml(row.title)}</code></p>` : ""}<p>原文件名：${escapeHtml(row.original_name)}</p><p>提交人：${escapeHtml(row.uploader_name || "未知")}</p>${user && (user.id === row.uploader_id || user.role === "admin") && row.admin_note ? `<p class="alert">审核说明：${escapeHtml(row.admin_note)}</p>` : ""}${download}</div></article>`,
+    `${archiveTabs("resources")}<nav class="back-links resource-back-links" aria-label="资料详情导航"><a href="${escapeHtml(returnHref)}">${returnLabel}</a></nav><article class="card production-detail resource-detail"><p class="eyebrow">${escapeHtml(labels[row.res_type] || row.res_type)} · ${escapeHtml(statuses[row.status] || row.status)}</p><h1>${escapeHtml(displayTitle)}</h1>${edit}${resourceDetailPreview({ ...row, title: displayTitle }, Boolean(user))}${mediaError}${photoNavigation}<div class="resource-metadata"><p>${escapeHtml(row.description || "暂无说明")}</p><p>所属作品：${row.production_id ? `<a href="/productions/${row.production_id}">${escapeHtml(row.production_title)}</a>` : "其他资料"}</p><p>演出版本：${escapeHtml(row.edition_name || "未关联作品版本")}</p>${technicalPhotoTitle ? `<p>资料标题：<code>${escapeHtml(row.title)}</code></p>` : ""}<p>原文件名：${escapeHtml(row.original_name)}</p><p>提交人：${escapeHtml(row.uploader_name || "未知")}</p>${user && (user.id === row.uploader_id || user.role === "admin") && row.admin_note ? `<p class="alert">审核说明：${escapeHtml(row.admin_note)}</p>` : ""}${download}</div></article>`,
     Boolean(user),
     user?.role === "admin",
   );
@@ -193,7 +189,7 @@ export function resourceEditPage(
       .map(([value, label]) => `<option value="${value}"${row.res_type === value ? " selected" : ""}>${label}</option>`)
       .join(
         "",
-      )}</select></label><label>所属作品<select name="production_id"><option value="">其他资料</option>${productions.map((p) => `<option value="${p.id}"${row.production_id === p.id ? " selected" : ""}>${escapeHtml(p.title)}</option>`).join("")}</select></label>${editionChoice(editions, row.edition_id)}<label>说明<textarea name="description" maxlength="2000" rows="6">${escapeHtml(row.description)}</textarea></label><button>保存资料信息</button></form><hr>${row.status === "approved" ? `<form method="post" action="/admin/resources/${row.id}/revoke"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button class="secondary">撤销入库，重新审核</button></form>` : ""}<hr><form method="post" action="/admin/resources/${row.id}/delete" data-confirm="确定删除这份资料和文件吗？此操作无法撤销。"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button class="secondary">删除资料与文件</button></form></section>`,
+      )}</select></label><label>所属作品<select name="production_id"><option value="">其他资料</option>${productions.map((p) => `<option value="${p.id}"${row.production_id === p.id ? " selected" : ""}>${escapeHtml(p.title)}</option>`).join("")}</select></label>${editionChoice(editions, row.edition_id)}<label>说明<textarea name="description" maxlength="2000" rows="6">${escapeHtml(row.description)}</textarea></label><button>保存资料信息</button></form>${row.status === "approved" ? `<form class="form-sep" method="post" action="/admin/resources/${row.id}/revoke"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button class="secondary">撤销入库，重新审核</button></form>` : ""}<form class="form-sep" method="post" action="/admin/resources/${row.id}/delete" data-confirm="确定删除这份资料和文件吗？此操作无法撤销。"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button class="secondary">删除资料与文件</button></form></section>`,
     true,
     true,
   );

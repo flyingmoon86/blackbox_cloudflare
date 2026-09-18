@@ -95,6 +95,40 @@ test("photo detail keeps gallery context and offers adjacent navigation", async 
   assert.match(production, /data-photo-dialog/);
   assert.match(production, /data-photo-detail href="\/resources"/);
 });
+test("redundant duplicate entries are trimmed while primary paths stay reachable", async () => {
+  const s = await setup();
+  s.db.prepare("UPDATE site_profile SET featured_production_id=1 WHERE id=1").run();
+  const home = await (await s.req(0, "/")).text();
+  assert.doesNotMatch(home, /class="stage-feature"/);
+  assert.equal((home.match(/进入作品/g) || []).length, 1);
+
+  const production = await (await s.req(0, "/productions/1")).text();
+  assert.match(production, /← 返回作品档案/);
+  assert.doesNotMatch(production, /查看资料库/);
+
+  const resource = await (await s.req(0, "/resources/3")).text();
+  assert.match(resource, /返回资料列表/);
+  assert.doesNotMatch(resource, /查看资料库/);
+  assert.doesNotMatch(resource, /返回作品档案/);
+
+  const library = await (await s.req(0, "/resources")).text();
+  assert.doesNotMatch(library, /href="\/resources">已入库资料/);
+  assert.doesNotMatch(library, /剧照请进入作品档案查看/);
+  assert.match(library, /href="\/resources\/submit">提交资料/);
+});
+test("edit and account forms no longer render decorative rules", async () => {
+  const s = await setup();
+  for (const [id, path] of [
+    [2, "/profile"],
+    [2, "/profile/member"],
+    [1, "/admin/members/1/edit"],
+    [1, "/admin/resources/3/edit"],
+  ]) {
+    const response = await s.req(id, path);
+    assert.equal(response.status, 200, path);
+    assert.doesNotMatch(await response.text(), /<hr\b/, path);
+  }
+});
 test("guest flowers are CSRF protected, deduplicated per day and counted publicly", async () => {
   const s = await setup();
   assert.equal((await s.post(0, "/members/1/flowers", { csrf: "wrong" })).status, 400);
