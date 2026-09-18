@@ -72,7 +72,9 @@ test("photo detail keeps gallery context and offers adjacent navigation", async 
   const editionId = s.db
     .prepare("SELECT id FROM production_edition WHERE production_id=1 ORDER BY id LIMIT 1")
     .get().id;
-  s.db.prepare("UPDATE resource SET production_id=1,edition_id=? WHERE id=1").run(editionId);
+  s.db
+    .prepare("UPDATE resource SET production_id=1,edition_id=?,created_at='2026-09-17 12:00:00' WHERE id=1")
+    .run(editionId);
   const insert = s.db.prepare(
     "INSERT INTO resource(id,title,res_type,status,filename,original_name,preview_filename,uploader_id,production_id,edition_id,created_at) VALUES(?,?,'photo','approved',?,?,?,2,1,?,'2026-09-18 12:00:00')",
   );

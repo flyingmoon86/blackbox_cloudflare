@@ -242,6 +242,21 @@
     const next = photoDialog.querySelector("[data-photo-next]");
     let index = 0;
     let opener = null;
+    let scrollPosition = null;
+    const historyKey = `photo-viewer-${Date.now()}`;
+    const main = document.querySelector("main");
+    const context = document.createElement("p");
+    context.className = "photo-lightbox-context";
+    context.textContent = [
+      document.querySelector(".production-hero h1")?.textContent,
+      document.querySelector(".production-edition .edition-year")?.textContent,
+      document.querySelector(".production-edition .edition-heading h2")?.textContent,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+    photoDialog.querySelector(".photo-lightbox-bar").before(context);
+    position.setAttribute("aria-live", "polite");
+    const close = () => photoDialog.close();
     const show = (requested) => {
       index = (requested + photoLinks.length) % photoLinks.length;
       const link = photoLinks[index];
@@ -249,7 +264,7 @@
       error.hidden = true;
       image.src = link.dataset.preview;
       image.alt = link.querySelector("img")?.alt || link.dataset.caption || "剧照";
-      caption.textContent = image.alt || link.dataset.caption;
+      caption.textContent = link.dataset.caption || image.alt;
       position.textContent = `${index + 1} / ${photoLinks.length}`;
       detail.href = link.href;
       previous.disabled = next.disabled = photoLinks.length < 2;
@@ -267,23 +282,61 @@
           return;
         event.preventDefault();
         opener = link;
+        scrollPosition = { x: scrollX, y: scrollY, main: main?.scrollTop || 0 };
         show(linkIndex);
         photoDialog.showModal();
+        document.documentElement.classList.add("photo-viewing");
+        history.pushState({ ...history.state, photoViewer: historyKey }, "", location.href);
       }),
     );
     previous.addEventListener("click", () => show(index - 1));
     next.addEventListener("click", () => show(index + 1));
-    photoDialog.querySelector("[data-photo-close]").addEventListener("click", () => photoDialog.close());
+    photoDialog.querySelector("[data-photo-close]").addEventListener("click", close);
     photoDialog.addEventListener("click", (event) => {
-      if (event.target === photoDialog) photoDialog.close();
+      if (event.target === photoDialog) close();
     });
     photoDialog.addEventListener("keydown", (event) => {
+      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
       if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
         event.preventDefault();
         show(index + (event.key === "ArrowRight" ? 1 : -1));
       }
     });
-    photoDialog.addEventListener("close", () => opener?.focus());
+    window.addEventListener("popstate", () => {
+      if (photoDialog.open && history.state?.photoViewer !== historyKey) close();
+    });
+    photoDialog.addEventListener("close", () => {
+      document.documentElement.classList.remove("photo-viewing");
+      opener?.focus({ preventScroll: true });
+      if (scrollPosition) {
+        window.scrollTo({ left: scrollPosition.x, top: scrollPosition.y, behavior: "instant" });
+        if (main) main.scrollTop = scrollPosition.main;
+      }
+      if (history.state?.photoViewer === historyKey) history.back();
+    });
+    let touch = null;
+    const stage = photoDialog.querySelector(".photo-lightbox-stage");
+    stage.addEventListener(
+      "touchstart",
+      (event) => {
+        touch = event.touches.length === 1 ? { x: event.touches[0].clientX, y: event.touches[0].clientY } : null;
+      },
+      { passive: true },
+    );
+    stage.addEventListener("touchcancel", () => {
+      touch = null;
+    });
+    stage.addEventListener(
+      "touchend",
+      (event) => {
+        if (!touch || !event.changedTouches.length) return;
+        const dx = event.changedTouches[0].clientX - touch.x;
+        const dy = event.changedTouches[0].clientY - touch.y;
+        touch = null;
+        if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) show(index + (dx < 0 ? 1 : -1));
+      },
+      { passive: true },
+    );
     image.addEventListener("error", () => {
       image.hidden = true;
       error.hidden = false;

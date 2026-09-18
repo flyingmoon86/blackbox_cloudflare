@@ -130,3 +130,27 @@
 .design-public :is(.production-card,.member-card):hover :is(img,.member-card-art),.design-public :is(.production-card,.member-card):has(:focus-visible) :is(img,.member-card-art),.design-public .photo-grid a:hover img,.design-public .photo-grid a:focus-visible img{transform:none}
 .design-public .photo-grid a[data-caption]:not([data-caption=""]):hover::after,.design-public .photo-grid a[data-caption]:not([data-caption=""]):focus-visible::after{transform:none}
 }
+/* 演出时间轴：复用作品页长页浏览，年份与作品自然排列。 */
+.timeline-entry a{display:inline-flex;align-items:center;min-height:44px}
+.performance-timeline{max-width:1200px;margin:0 auto;padding-bottom:80px}
+.timeline-year{display:grid;grid-template-columns:150px minmax(0,1fr);gap:32px;margin:48px 0 72px;scroll-margin-top:90px}
+.timeline-year>h2{font-size:clamp(28px,4vw,52px);margin:0;color:var(--accent,#e6ce4e)}
+.timeline-works{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:36px 24px}
+.timeline-work{min-width:0}.timeline-link{display:block;text-decoration:none}.timeline-link:focus-visible{outline:3px solid var(--accent,#e6ce4e);outline-offset:6px}
+.timeline-link img,.timeline-placeholder{display:flex;width:100%;height:auto;aspect-ratio:8/5;object-fit:contain;align-items:center;justify-content:center;background:rgba(255,255,255,.035)}
+.timeline-placeholder{aspect-ratio:auto;min-height:44px;justify-content:flex-start;background:none;color:var(--muted,#b6ad9e);font-size:14px}
+.timeline-link h3{font-size:24px;line-height:1.4;margin:16px 0 8px;overflow-wrap:anywhere}.timeline-counts{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:14px}
+@media(max-width:600px){.timeline-year{grid-template-columns:minmax(0,1fr);gap:20px;margin:32px 0 48px}.timeline-works{grid-template-columns:minmax(0,1fr);gap:28px}}
+/* 沉浸剧照：图片区域使用剩余空间，操作区独立布局。 */
+.design-public dialog.photo-lightbox[open]{margin:8px;inset:0}
+@media(max-width:700px){.design-public dialog.photo-lightbox[open]{margin:4px}}
+html.photo-viewing,html.photo-viewing body,html.photo-viewing main{overflow:hidden!important}
+.photo-lightbox[open]{position:fixed;inset:0;transform:none;margin:auto;padding:0;box-sizing:border-box;display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;width:calc(100vw - 16px);max-width:calc(100vw - 16px);height:calc(100dvh - 16px);max-height:calc(100dvh - 16px);border:0;border-radius:4px}
+.photo-lightbox-context{margin:0;padding:12px 18px 0;color:#e6ce4e;font-size:14px;overflow-wrap:anywhere;max-height:15dvh;overflow:auto}
+.photo-lightbox .photo-lightbox-bar{border:0;padding:8px 18px}.photo-lightbox .photo-lightbox-bar p{flex:1}.photo-lightbox-close{flex-shrink:0}
+.photo-lightbox .photo-lightbox-stage{height:auto;min-height:0}.photo-lightbox-stage figure{overflow:hidden}.photo-lightbox-stage img{width:100%;height:100%;min-height:0}.photo-lightbox-stage img[hidden]{display:none}
+.photo-lightbox .photo-lightbox-actions{border:0;flex-wrap:wrap;padding:8px 18px;gap:8px}.photo-lightbox-actions a{min-height:44px}
+@media(max-width:700px){.photo-lightbox[open]{width:calc(100vw - 8px);height:calc(100dvh - 8px);max-height:calc(100dvh - 8px)}.photo-lightbox .photo-lightbox-stage{grid-template-columns:44px minmax(0,1fr) 44px}.photo-lightbox-context{padding:10px 12px 0}.photo-lightbox .photo-lightbox-bar{padding:6px 12px}}
+.design-public .edition-heading{align-items:start;row-gap:14px}.edition-supplement{grid-column:2;min-width:0;margin-top:24px;padding-top:0;border-top:0;overflow-wrap:anywhere}.edition-supplement h3{margin:0 0 12px;font-size:13px;font-weight:700;letter-spacing:.08em;color:var(--muted)}.edition-supplement dl{display:flex;flex-wrap:wrap;gap:8px 28px;margin:0}.edition-supplement dl>div{display:flex;align-items:baseline;gap:8px}.edition-supplement dt{font-size:13px;color:var(--muted)}.edition-supplement dd{margin:0}.edition-supplement>p{max-width:58ch;margin:12px 0 0;line-height:1.75;color:var(--muted)}
+@media(min-width:901px){.design-public .edition-heading .edition-year{grid-row:1 / span 2;align-self:start}}
+@media(max-width:900px){.edition-supplement{grid-column:1;margin-top:2px}}

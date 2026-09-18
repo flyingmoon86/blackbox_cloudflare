@@ -1,4 +1,5 @@
 import { serveResourceFile } from "../services/resource-files";
+import { timelinePage, type TimelineRow } from "../views/timeline";
 import { consumeAccountLimit } from "../middleware/request-limits";
 import { validAccent } from "../services/theme";
 import { pageNumber } from "../views/shared";
@@ -35,7 +36,17 @@ export type CreditRow = {
   role_name: string;
 };
 export type MemberChoice = { id: number; name: string; cohort: string };
-export type EditionRow = { id: number; production_id: number; name: string; year: number | null; description: string };
+export type EditionRow = {
+  id: number;
+  production_id: number;
+  name: string;
+  year: number | null;
+  description: string;
+  creative_keywords?: string | null;
+  rehearsal_place?: string | null;
+  duration_minutes?: number | null;
+  backstage_story?: string | null;
+};
 export type ProductionResourceRow = {
   edition_id?: number | null;
   id: number;
@@ -141,16 +152,36 @@ productionRoutes.post("/admin/productions/:id/editions/:editionId", async (c) =>
     editionId = Number(c.req.param("editionId"));
   const name = String(form.get("name") || "").trim(),
     yearText = String(form.get("year") || "").trim();
-  const previous = await c.env.DB.prepare("SELECT year FROM production_edition WHERE id=? AND production_id=?")
+  const previous = await c.env.DB.prepare("SELECT * FROM production_edition WHERE id=? AND production_id=?")
     .bind(editionId, productionId)
-    .first<{ year: number | null }>();
+    .first<EditionRow>();
   if (!previous) return c.notFound();
+  const field = (key: string, old: string | number | null | undefined) =>
+    form.has(key) ? String(form.get(key) ?? "").trim() : String(old ?? "");
+  const keywords = field("creative_keywords", previous.creative_keywords)
+    .split(/[,，、\n]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const place = field("rehearsal_place", previous.rehearsal_place);
+  const story = field("backstage_story", previous.backstage_story);
+  const minutes = field("duration_minutes", previous.duration_minutes);
+  if (
+    keywords.length > 5 ||
+    keywords.some((s) => s.length > 20) ||
+    place.length > 100 ||
+    story.length > 1000 ||
+    (minutes && (!/^\d+$/.test(minutes) || !Number.isSafeInteger(Number(minutes)) || Number(minutes) < 1))
+  )
+    return c.text(
+      "请检查幕后信息：关键词最多 5 个且每个 20 字，地点最多 100 字，故事最多 1000 字，时长为正整数分钟。",
+      400,
+    );
   const year = yearText ? Number(yearText) : previous.year;
   if (!name || name.length > 80 || (year !== null && (!Number.isInteger(year) || year < 1 || year > 9999)))
     return c.text("请检查版本名称和年份。", 400);
   try {
     const result = await c.env.DB.prepare(
-      "UPDATE production_edition SET name=?,year=?,description=? WHERE id=? AND production_id=?",
+      "UPDATE production_edition SET name=?,year=?,description=?,creative_keywords=?,rehearsal_place=?,duration_minutes=?,backstage_story=? WHERE id=? AND production_id=?",
     )
       .bind(
         name,
@@ -158,6 +189,10 @@ productionRoutes.post("/admin/productions/:id/editions/:editionId", async (c) =>
         String(form.get("description") || "")
           .trim()
           .slice(0, 10000),
+        keywords.join("、") || null,
+        place || null,
+        minutes ? Number(minutes) : null,
+        story || null,
         editionId,
         productionId,
       )
@@ -200,6 +235,30 @@ async function resourceChoices(c: Context<AppEnv>, productionId: number | null):
 }
 
 productionRoutes.get("/productions", async (c) => {
+  if (c.req.query("view") === "timeline") {
+    const rows = await c.env.DB.prepare(
+      `
+      WITH years AS (
+        SELECT p.id,p.title,e.year,COUNT(e.id) editions
+        FROM production p LEFT JOIN production_edition e ON e.production_id=p.id
+        GROUP BY p.id,e.year
+      )
+      SELECT y.*,
+        (SELECT COUNT(DISTINCT pc.member_id) FROM production_credit pc
+          JOIN production_edition e ON e.id=pc.edition_id AND e.production_id=pc.production_id
+          WHERE pc.production_id=y.id AND e.year IS y.year) people,
+        (SELECT COUNT(*) FROM resource r JOIN production_edition e ON e.id=r.edition_id AND e.production_id=r.production_id
+          WHERE r.production_id=y.id AND e.year IS y.year AND r.status='approved') resources,
+        (SELECT r.id FROM production p JOIN resource r ON r.id=p.cover_id
+          WHERE p.id=y.id AND r.production_id=p.id AND r.status='approved' AND r.res_type='photo') cover,
+        (SELECT r.id FROM resource r JOIN production_edition e ON e.id=r.edition_id AND e.production_id=r.production_id
+          WHERE r.production_id=y.id AND e.year IS y.year AND r.status='approved'
+          AND r.res_type='photo' AND r.preview_filename<>'' ORDER BY r.created_at,r.id LIMIT 1) photo
+      FROM years y ORDER BY y.year DESC,y.id DESC
+    `,
+    ).all<TimelineRow>();
+    return c.html(timelinePage(rows.results, c.get("user") || null));
+  }
   const search = (c.req.query("q") || "").trim().slice(0, 80);
   const pattern = "%" + search.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_") + "%";
   const where = search

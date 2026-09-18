@@ -5,6 +5,58 @@ import { createDatabase, d1, loadWorker, loadModule, fakeBucket, context } from 
 const worker = await loadWorker();
 const { createSession } = await loadModule("src/auth/session.ts");
 const { reviewRequest } = await loadModule("src/services/reviews.ts");
+test("backstage fields are optional, edition-scoped, escaped and administrator-only", async () => {
+  const s = await setup();
+  const path = "/admin/productions/10/editions/30";
+  const fields = {
+    name: "复排版",
+    year: "2026",
+    creative_keywords: "青春,成长",
+    rehearsal_place: "排练厅",
+    duration_minutes: "90",
+    backstage_story: "<script>真实故事</script>",
+  };
+  assert.doesNotMatch(await (await s.req(0, "/productions/10?edition=30")).text(), /class="edition-supplement"/);
+  assert.equal((await s.post(0, path, fields)).status, 302);
+  for (const id of [2, 3]) assert.equal((await s.post(id, path, fields)).status, 403);
+  assert.equal(
+    (await s.req(1, path, { method: "POST", body: new URLSearchParams(fields), headers: { "x-csrf-token": "wrong" } }))
+      .status,
+    400,
+  );
+  assert.equal((await s.post(1, "/admin/productions/20/editions/30", fields)).status, 404);
+  for (const invalid of [
+    { duration_minutes: "0" },
+    { duration_minutes: "1.5" },
+    { creative_keywords: "1,2,3,4,5,6" },
+    { backstage_story: "字".repeat(1001) },
+    { rehearsal_place: "字".repeat(101) },
+  ])
+    assert.equal((await s.post(1, path, { ...fields, ...invalid })).status, 400);
+  assert.equal((await s.post(1, path, fields)).status, 303);
+  const html = await (await s.req(0, "/productions/10?edition=30")).text();
+  assert.match(html, /90 分钟/);
+  assert.doesNotMatch(html, /创作关键词|青春、成长/);
+  assert.equal(
+    s.db.prepare("SELECT creative_keywords FROM production_edition WHERE id=30").get().creative_keywords,
+    "青春、成长",
+  );
+  assert.match(html, /&lt;script&gt;真实故事/);
+  assert.doesNotMatch(html, /<script>真实故事/);
+  const other = s.db.prepare("SELECT id FROM production_edition WHERE production_id=10 AND id<>30").get().id;
+  assert.doesNotMatch(await (await s.req(0, `/productions/10?edition=${other}`)).text(), /class="edition-supplement"/);
+  await s.post(1, path, { name: "复排版", year: "2026" });
+  assert.equal(s.db.prepare("SELECT duration_minutes FROM production_edition WHERE id=30").get().duration_minutes, 90);
+  await s.post(1, path, {
+    ...fields,
+    creative_keywords: "",
+    rehearsal_place: "",
+    duration_minutes: "",
+    backstage_story: "",
+  });
+  assert.doesNotMatch(await (await s.req(0, "/productions/10?edition=30")).text(), /class="edition-supplement"/);
+  s.db.close();
+});
 async function setup() {
   const db = createDatabase();
   db.exec(
