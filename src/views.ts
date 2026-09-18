@@ -124,7 +124,9 @@ export function layout(title: string, content: string, signedIn = false, admin =
   return (
     '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' +
     escapeHtml(title) +
-    ' · 黑匣子</title><link rel="stylesheet" href="' +
+    ' · 黑匣子</title><link rel="icon" type="image/webp" href="' +
+    assetUrl("/images/elephant-mascot-360-v1.webp") +
+    '"><link rel="stylesheet" href="' +
     assetUrl("/app.css") +
     '"><link rel="stylesheet" href="' +
     assetUrl("/experience.css") +
@@ -329,7 +331,7 @@ export function memberDetailPage(
   );
 }
 
-export function memberEditPage(member: MemberRow, csrf: string, admin: boolean, saved: boolean): string {
+export function memberEditPage(member: MemberRow, csrf: string, admin: boolean, saved: boolean, error = ""): string {
   const action = admin ? `/admin/members/${member.id}/edit` : "/profile/member";
   const identity = admin
     ? `<label>姓名<input name="name" maxlength="50" value="${escapeHtml(member.name)}" required></label><label>入队年份${yearSelect("join_year", member.join_year)}</label><label>入学年级${yearSelect("cohort", member.cohort)}</label>`
@@ -341,7 +343,7 @@ export function memberEditPage(member: MemberRow, csrf: string, admin: boolean, 
     : `<form method="post" action="/profile/member/avatar" enctype="multipart/form-data"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>更换头像<input type="file" name="avatar" accept="image/jpeg,image/png,image/webp,image/avif" required></label><span class="hint">支持 JPG、PNG、WebP、AVIF，最大 15MB。</span><button class="secondary">上传头像</button></form>`;
   return layout(
     admin ? "编辑队员档案" : "修改我的信息",
-    `<section class="card auth"><p class="eyebrow">MEMBER PROFILE</p><h1>${admin ? "编辑队员档案" : "修改我的信息"}</h1>${saved ? `<p class="notice">${admin ? "队员档案" : "个人信息"}已保存。</p>` : ""}${member.photo ? `<img class="avatar avatar-large" src="/members/${member.id}/avatar" alt="当前头像">` : ""}<form method="post" action="${action}"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}">${identity}<label>个人简介<textarea name="bio" maxlength="5000" rows="7">${escapeHtml(member.bio)}</textarea></label><p class="hint">参与作品会根据已审核的演职员关系自动展示，无需重复填写。</p><button>${admin ? "保存档案" : "保存信息"}</button></form><hr>${avatarForm}<p><a href="/members/${member.id}">返回队员档案</a></p></section>`,
+    `<section class="card auth"><p class="eyebrow">MEMBER PROFILE</p><h1>${admin ? "编辑队员档案" : "修改我的信息"}</h1>${message(error)}${saved ? `<p class="notice">${admin ? "队员档案" : "个人信息"}已保存。</p>` : ""}${member.photo ? `<img class="avatar avatar-large" src="/members/${member.id}/avatar" alt="当前头像">` : ""}<form method="post" action="${action}"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}">${identity}<label>个人简介<textarea name="bio" maxlength="5000" rows="7">${escapeHtml(member.bio)}</textarea></label><p class="hint">参与作品会根据已审核的演职员关系自动展示，无需重复填写。</p><button>${admin ? "保存档案" : "保存信息"}</button></form><hr>${avatarForm}${admin ? `<aside class="danger-zone"><p class="eyebrow">DANGER ZONE</p><h2>删除队员档案</h2><p>删除后，关联账号会解除绑定，演职员、献花和队员资料关联会一并移除，头像会进入清理队列。</p><form method="post" action="/admin/members/${member.id}/delete"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>输入档案姓名“${escapeHtml(member.name)}”确认<input name="confirm_name" autocomplete="off" required></label><button class="danger">删除这份档案</button></form></aside>` : ""}<p><a href="/members/${member.id}">返回队员档案</a></p></section>`,
     true,
     admin,
   );

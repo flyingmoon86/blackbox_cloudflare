@@ -20,6 +20,8 @@ test("theatre redesign renders three real scenes, safe titles, and preserves nat
   assert.equal(home.status, 200);
   const html = await home.text();
   for (const id of ["welcome", "about", "playbill"]) assert.match(html, new RegExp('id="' + id + '"'));
+  assert.ok(html.indexOf('id="playbill"') < html.indexOf('id="about"'));
+  assert.doesNotMatch(html, /aria-label="观众浏览入口"/);
   assert.match(html, /&lt;script&gt;舞台&lt;\/script&gt;/);
   assert.doesNotMatch(html, /<script>舞台/);
   assert.match(html, /href="\/productions\/701"/);
@@ -32,6 +34,9 @@ test("theatre redesign renders three real scenes, safe titles, and preserves nat
   for (const path of ["/productions", "/members", "/resources", "/thanks"])
     assert.equal((await req(path)).status, 200, path);
   assert.equal((await req("/admin")).status, 302);
+  const favicon = await req("/favicon.ico");
+  assert.equal(favicon.status, 302);
+  assert.equal(favicon.headers.get("location"), "/images/elephant-mascot-360-v1.webp");
   assert.equal((await req("/help")).headers.get("Location"), "/thanks");
   db.prepare("UPDATE site_profile SET featured_production_id=NULL WHERE id=1").run();
   const noFeature = await (await req("/")).text();

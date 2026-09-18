@@ -54,6 +54,14 @@ function validImage(bytes: Uint8Array, type: string): boolean {
   return false;
 }
 
+async function memberNameTaken(db: D1Database, name: string, excludeId?: number): Promise<boolean> {
+  const row = await db
+    .prepare(`SELECT id FROM member WHERE lower(trim(name)) = lower(trim(?))${excludeId ? " AND id <> ?" : ""} LIMIT 1`)
+    .bind(...(excludeId ? [name, excludeId] : [name]))
+    .first<{ id: number }>();
+  return Boolean(row);
+}
+
 memberRoutes.use("*", async (c, next) => {
   if (
     !c.req.path.startsWith("/members") &&
@@ -243,6 +251,8 @@ memberRoutes.post("/admin/members/new", async (c) => {
     (year !== null && (!Number.isInteger(year) || year < 1 || year > 9999))
   )
     return c.html(memberCreatePage(await csrfFor(c), "请检查姓名、年份和文字长度。"), 400);
+  if (await memberNameTaken(c.env.DB, name))
+    return c.html(memberCreatePage(await csrfFor(c), "已有同名队员档案，请核对后再建立。"), 409);
   const result = await c.env.DB.prepare("INSERT INTO member(name,bio,join_year,cohort) VALUES(?,?,?,?)")
     .bind(name, bio, year, cohort)
     .run();
@@ -282,7 +292,27 @@ memberRoutes.post("/admin/members/:id/edit", async (c) => {
     bio.length > 5000 ||
     (year !== null && (!Number.isInteger(year) || year < 1 || year > 9999))
   )
-    return c.text("请检查队员档案内容。", 400);
+    return c.html(
+      memberEditPage(
+        { id, name, bio, join_year: year, cohort, works: "", photo: "", flower_count: 0 },
+        await csrfFor(c),
+        true,
+        false,
+        "请检查队员档案内容。",
+      ),
+      400,
+    );
+  if (await memberNameTaken(c.env.DB, name, id))
+    return c.html(
+      memberEditPage(
+        { id, name, bio, join_year: year, cohort, works: "", photo: "", flower_count: 0 },
+        await csrfFor(c),
+        true,
+        false,
+        "已有同名队员档案，请修改姓名后再保存。",
+      ),
+      409,
+    );
   const result = await c.env.DB.prepare(
     "UPDATE member SET name=?,join_year=COALESCE(?,join_year),cohort=CASE WHEN ?='' THEN cohort ELSE ? END,bio=? WHERE id=?",
   )
@@ -290,6 +320,24 @@ memberRoutes.post("/admin/members/:id/edit", async (c) => {
     .run();
   if (result.meta.changes !== 1) return c.text("未找到队员档案。", 404);
   return c.redirect(`/admin/members/${id}/edit?saved=1`, 303);
+});
+
+memberRoutes.post("/admin/members/:id/delete", async (c) => {
+  const user = c.get("user")!;
+  if (user.role !== "admin") return c.text("没有管理员权限。", 403);
+  const form = await c.req.formData();
+  if (!csrfValid(c, form.get("csrf"))) return c.text("请求已失效，请刷新页面后重试。", 400);
+  const id = Number(c.req.param("id"));
+  if (!Number.isInteger(id) || id < 1) return c.text("未找到队员档案。", 404);
+  const confirmName = String(form.get("confirm_name") ?? "").trim();
+  const member = await c.env.DB.prepare("SELECT id,name FROM member WHERE id=?")
+    .bind(id)
+    .first<{ id: number; name: string }>();
+  if (!member) return c.text("未找到队员档案。", 404);
+  if (confirmName !== member.name.trim()) return c.text("请输入完全一致的档案姓名以确认删除。", 400);
+  await c.env.DB.batch([queueCurrentAvatar(c.env, id), c.env.DB.prepare("DELETE FROM member WHERE id=?").bind(id)]);
+  await drainFileCleanup(c.env);
+  return c.redirect("/members?deleted=1", 303);
 });
 
 memberRoutes.post("/admin/members/:id/avatar/delete", async (c) => {

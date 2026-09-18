@@ -180,6 +180,25 @@ test("cohort input is numeric and unrelated profile edits preserve old data", as
   await s.post(1, "/admin/members/1/edit", { name: "测试队员", cohort: "", join_year: "2025", bio: "新版简介" });
   assert.equal(s.db.prepare("SELECT cohort FROM member WHERE id=1").get().cohort, "旧记录");
 });
+
+test("administrators cannot create or rename duplicate member profiles and can delete with confirmation", async () => {
+  const s = await setup();
+  s.db.exec(
+    "INSERT INTO member(id,name) VALUES(20,'重复档案'),(21,'待删档案'); UPDATE user SET member_id=20,role='member' WHERE id=2;",
+  );
+  assert.equal(
+    (await s.post(1, "/admin/members/new", { name: " 重复档案 ", join_year: "", cohort: "", bio: "" })).status,
+    409,
+  );
+  assert.equal(
+    (await s.post(1, "/admin/members/21/edit", { name: "重复档案", join_year: "", cohort: "", bio: "" })).status,
+    409,
+  );
+  assert.equal((await s.post(2, "/admin/members/21/delete", { confirm_name: "待删档案" })).status, 403);
+  assert.equal((await s.post(1, "/admin/members/21/delete", { confirm_name: "错误" })).status, 400);
+  assert.equal((await s.post(1, "/admin/members/21/delete", { confirm_name: "待删档案" })).status, 303);
+  assert.equal(s.db.prepare("SELECT id FROM member WHERE id=21").get(), undefined);
+});
 test("ordinary account uploads stay pending; member uploads record system approval once", async () => {
   const s = await setup(),
     bytes = new Uint8Array([255, 216, 255, 224, 0, 16, 74, 70, 73, 70, 0, 1, 0, 0, 255, 217]);

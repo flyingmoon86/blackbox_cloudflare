@@ -41,6 +41,7 @@ app.use("*", adminPortalGate);
 app.use("*", reviewResponse);
 
 app.get("/", homePage);
+app.get("/favicon.ico", (c) => c.redirect("/images/elephant-mascot-360-v1.webp", 302));
 app.get("/_design/theme", (c) => (c.env.ENVIRONMENT === "development" ? c.redirect("/") : c.notFound()));
 app.get("/site/hero", heroImage);
 app.get("/site/poster", recruitmentPosterImage);

@@ -62,7 +62,7 @@ export function theatreHome(
       '"></div><p>点击图片切换放大，放大后可滚动查看。</p></dialog>'
     : "";
   const about =
-    '<section class="stage-scene stage-about" id="about" aria-label="剧团介绍"><div class="about-copy"><span class="eyebrow">02 / OUR STORY</span><h2 class="preline">' +
+    '<section class="stage-scene stage-about" id="about" aria-label="剧团介绍"><div class="about-copy"><span class="eyebrow">03 / OUR STORY</span><h2 class="preline">' +
     e(heading) +
     "</h2>" +
     edit("about_heading", "编辑标题") +
@@ -86,7 +86,7 @@ export function theatreHome(
     '</footer><a class="hall-of-fame-link" href="/members">查看话剧队名人堂 →</a></div></section>';
   const testNotice = texts.test_notice || "网站正在测试。欢迎浏览与提交建议，测试阶段暂不支持视频上传。";
   const playbill =
-    '<section class="stage-scene stage-playbill" id="playbill" aria-label="作品展示"><p class="eyebrow">03 / PLAYBILL</p><h2>作品档案</h2>' +
+    '<section class="stage-scene stage-playbill" id="playbill" aria-label="近期作品"><p class="eyebrow">02 / RECENT WORKS</p><h2>近期作品</h2>' +
     (featured
       ? '<a class="playbill-feature" href="/productions/' +
         featured.id +
@@ -149,10 +149,10 @@ export function theatreHome(
       feature +
       '<div class="stage-news">' +
       notice +
-      '</div><a class="stage-explore" href="#about">探索剧团 <span>↓</span></a></section>' +
-      about +
+      '</div><a class="stage-explore" href="#playbill">浏览近期作品 <span>↓</span></a></section>' +
       playbill +
-      '<nav class="scene-nav" aria-label="首页场景"><a href="#welcome" aria-label="第一幕：首页">01 入场</a><span></span><a href="#about" aria-label="第二幕：剧团">02 剧团</a><span></span><a href="#playbill" aria-label="第三幕：作品">03 作品</a></nav></div>',
+      about +
+      '<nav class="scene-nav" aria-label="首页场景"><a href="#welcome" aria-label="第一幕：首页">01 入场</a><span></span><a href="#playbill" aria-label="第二幕：近期作品">02 作品</a><span></span><a href="#about" aria-label="第三幕：剧团">03 剧团</a></nav></div>',
     Boolean(user),
     admin,
   );

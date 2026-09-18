@@ -95,3 +95,5 @@
 .design-public .production-edition .credit-panel>header{border-bottom:0;padding-bottom:8px}
 .design-public .production-edition .role-credit:not(:has(a)){border-bottom:0}
 .design-public .work-detail .edition-resources{border-top:0;padding-top:8px}
+
+@media(max-width:600px){.design-public .welcome-copy{top:13%}.design-public .stage-feature{bottom:16%}.design-public .stage-feature p{display:none}}
