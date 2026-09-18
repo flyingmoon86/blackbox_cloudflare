@@ -124,6 +124,8 @@ test("multi-edition creation is atomic and lists one work by latest edition", as
   const html = await (await s.req(0, "/productions/" + production)).text();
   assert.equal((html.match(/class="production-edition"/g) || []).length, 1);
   assert.match(html, /<h2>校园版/);
+  assert.match(html, /class="edition-tabs"/);
+  assert.match(html, /aria-current="page"/);
   const first = s.db
     .prepare("SELECT id FROM production_edition WHERE production_id=? AND name='首演版'")
     .get(production).id;

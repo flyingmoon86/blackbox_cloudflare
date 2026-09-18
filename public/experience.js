@@ -229,6 +229,66 @@
     list.after(pager);
     render();
   });
+
+  const photoDialog = document.querySelector("[data-photo-dialog]");
+  const photoLinks = [...document.querySelectorAll("a[data-photo-lightbox]")];
+  if (photoDialog instanceof HTMLDialogElement && photoLinks.length && typeof photoDialog.showModal === "function") {
+    const image = photoDialog.querySelector("[data-photo-image]");
+    const caption = photoDialog.querySelector("[data-photo-caption]");
+    const position = photoDialog.querySelector("[data-photo-position]");
+    const detail = photoDialog.querySelector("[data-photo-detail]");
+    const error = photoDialog.querySelector("[data-photo-error]");
+    const previous = photoDialog.querySelector("[data-photo-prev]");
+    const next = photoDialog.querySelector("[data-photo-next]");
+    let index = 0;
+    let opener = null;
+    const show = (requested) => {
+      index = (requested + photoLinks.length) % photoLinks.length;
+      const link = photoLinks[index];
+      image.hidden = false;
+      error.hidden = true;
+      image.src = link.dataset.preview;
+      image.alt = link.querySelector("img")?.alt || link.dataset.caption || "剧照";
+      caption.textContent = image.alt || link.dataset.caption;
+      position.textContent = `${index + 1} / ${photoLinks.length}`;
+      detail.href = link.href;
+      previous.disabled = next.disabled = photoLinks.length < 2;
+    };
+    photoLinks.forEach((link, linkIndex) =>
+      link.addEventListener("click", (event) => {
+        if (
+          event.defaultPrevented ||
+          event.button !== 0 ||
+          event.metaKey ||
+          event.ctrlKey ||
+          event.shiftKey ||
+          event.altKey
+        )
+          return;
+        event.preventDefault();
+        opener = link;
+        show(linkIndex);
+        photoDialog.showModal();
+      }),
+    );
+    previous.addEventListener("click", () => show(index - 1));
+    next.addEventListener("click", () => show(index + 1));
+    photoDialog.querySelector("[data-photo-close]").addEventListener("click", () => photoDialog.close());
+    photoDialog.addEventListener("click", (event) => {
+      if (event.target === photoDialog) photoDialog.close();
+    });
+    photoDialog.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        event.preventDefault();
+        show(index + (event.key === "ArrowRight" ? 1 : -1));
+      }
+    });
+    photoDialog.addEventListener("close", () => opener?.focus());
+    image.addEventListener("error", () => {
+      image.hidden = true;
+      error.hidden = false;
+    });
+  }
 })();
 
 // Preserve the native POST when JavaScript is unavailable. Update only after the

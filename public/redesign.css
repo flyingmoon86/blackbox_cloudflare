@@ -78,3 +78,20 @@
 
 .dashboard-task-alert{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 24px;margin:0 0 18px;border:2px solid #a23e16;background:#fff1dd;color:#702906;border-radius:4px}.dashboard-task-alert strong{font-size:1.2rem}.dashboard-task-alert a{color:inherit;font-weight:700;min-height:44px;display:flex;align-items:center}.admin-pending-indicator{display:inline-flex;align-items:center;min-height:44px;padding:8px 14px;background:#ffc65b;color:#241704!important;border-radius:5px;font-weight:800;text-decoration:none;white-space:nowrap}.admin-notification-host{display:flex;align-items:center;gap:8px}.announcement-update{position:fixed;z-index:90;top:90px;left:50%;transform:translateX(-50%);width:min(610px,calc(100vw - 24px));display:flex;align-items:center;gap:16px;padding:18px 22px;background:#fff5df;color:#261c0f;border:1px solid var(--amber);border-radius:6px;box-shadow:0 8px 28px #0005}.announcement-update>div{flex:1;min-width:0}.announcement-update strong{font-size:1.1rem}.announcement-update p{margin:5px 0 0;overflow-wrap:anywhere;max-height:4.5em;overflow:auto}.announcement-update a{color:#633d08;white-space:nowrap;min-height:44px;display:flex;align-items:center;font-weight:700}.announcement-update button{background:#312414;color:#fff5df;white-space:nowrap}.dashboard-task-alert[hidden],.announcement-update[hidden]{display:none}@media(max-width:600px){.announcement-update{top:76px;flex-wrap:wrap;padding:14px 18px;gap:8px 16px}.announcement-update>div{flex-basis:100%}.dashboard-task-alert{padding:12px 16px}.dashboard-task-alert strong{font-size:1rem}.admin-pending-indicator{padding:8px;font-size:.85rem}}
 .admin-notification-status{display:flex;align-items:center;gap:8px;min-height:44px;padding:6px 8px 6px 12px;border:1px solid #d28b73;border-radius:5px;background:#2b1b17;color:#ffe9df;font-size:.82rem;white-space:nowrap}.admin-notification-status :is(a,button){display:inline-flex;align-items:center;min-height:32px;padding:4px 8px;border:0;border-radius:3px;background:#ffe9df;color:#5f2116;font:inherit;font-weight:800;text-decoration:none}.admin-notification-status :is(a,button):hover{background:#fff;transform:none;filter:none}@media(max-width:600px){.admin-notification-status{position:absolute;z-index:62;top:58px;right:8px;box-shadow:0 12px 28px #0008}}
+
+/* 作品首屏沿用已发布初版：单列原图，下接简洁标题区。 */
+.design-public .work-detail .production-hero{display:grid;grid-template-columns:minmax(0,1fr);min-height:0;padding:0;background:var(--stage,#0f0d0a);border:0}
+.design-public .work-detail .production-hero>.production-cover{display:block;position:relative;inset:auto;grid-column:1;grid-row:1;width:100%;height:auto;min-height:0;max-height:85vh;margin:0;object-fit:contain;object-position:center;background:transparent}
+.design-public .work-detail .production-hero-copy{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;width:auto;margin:0;padding:24px 5vw 32px;border:0;background:transparent}
+.design-public .production-hero-copy h1{max-width:none;margin:10px 0;font-size:clamp(36px,5vw,70px);line-height:1.08;overflow-wrap:anywhere}
+.design-public .production-hero-copy .lead{max-width:50ch;margin:0;color:#d8cdbb;line-height:1.8}
+.design-public .production-hero-next{max-width:620px;margin-top:28px}
+@media(max-width:900px){.design-public .work-detail .production-hero>.production-cover{max-height:80svh}.design-public .work-detail .production-hero-copy{padding:24px 6vw 30px}.design-public .production-hero-copy h1{font-size:clamp(32px,8vw,48px)}.design-public .production-hero-next{max-width:none;margin-top:24px}}
+
+/* 版本详情以留白分区，避免横线重复切割页面。 */
+.design-public .work-detail .edition-nav{border-bottom:0;padding-bottom:8px}
+.design-public .work-detail .production-edition{border:0;padding-top:28px}
+.design-public .work-detail .edition-heading{border-bottom:0;padding-bottom:20px}
+.design-public .production-edition .credit-panel>header{border-bottom:0;padding-bottom:8px}
+.design-public .production-edition .role-credit:not(:has(a)){border-bottom:0}
+.design-public .work-detail .edition-resources{border-top:0;padding-top:8px}

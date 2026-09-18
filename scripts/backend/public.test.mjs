@@ -91,7 +91,9 @@ test("photo detail keeps gallery context and offers adjacent navigation", async 
   assert.match(detail, /data-resource-media-error hidden/);
 
   const production = await (await s.req(0, `/productions/1?edition=${editionId}`)).text();
-  assert.match(production, /href="\/resources\/9\?origin=9&amp;page=1"/);
+  assert.match(production, /data-photo-lightbox href="\/resources\/9\?origin=9&amp;page=1"/);
+  assert.match(production, /data-photo-dialog/);
+  assert.match(production, /data-photo-detail href="\/resources"/);
 });
 test("guest flowers are CSRF protected, deduplicated per day and counted publicly", async () => {
   const s = await setup();
