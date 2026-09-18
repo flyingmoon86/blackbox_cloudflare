@@ -35,7 +35,9 @@ export function layout(title: string, content: string, signedIn = false, admin =
               ? icon("help")
               : href === "/thanks"
                 ? icon("thanks")
-                : "") +
+                : href === "/login" || href === "/profile"
+                  ? icon("account")
+                  : "") +
     label +
     "</a>";
   const menu = (label: string, items: string) =>
@@ -155,7 +157,7 @@ export function layout(title: string, content: string, signedIn = false, admin =
         : /^\/(thanks|feedback)(?:\/|$)/.test(context?.req.path || "")
           ? "thanks"
           : "") +
-    '"><a class="skip-link" href="#main-content">跳到内容</a><header class="top"><a href="/" class="brand">黑匣子<span>BLACK BOX THEATRE</span></a><button class="menu-toggle" aria-expanded="false" aria-controls="main-navigation">菜单 ＋</button><nav id="main-navigation" class="desktop-nav" aria-label="主导航">' +
+    '"><a class="skip-link" href="#main-content">跳到内容</a><header class="top"><a href="/" class="brand">黑匣子<span>BLACK BOX THEATRE</span></a><button class="menu-toggle" aria-label="菜单" aria-expanded="false" aria-controls="main-navigation"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button><nav id="main-navigation" class="desktop-nav" aria-label="主导航">' +
     nav +
     "</nav>" +
     account +

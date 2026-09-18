@@ -100,12 +100,10 @@ export function theatreHome(
       .filter((p) => p.id !== featured?.id)
       .slice(0, 3)
       .map(
-        (p, i) =>
+        (p) =>
           '<a href="/productions/' +
           p.id +
-          '"><span>' +
-          String(i + 1).padStart(2, "0") +
-          "</span><strong>" +
+          '"><strong>' +
           e(p.title) +
           "</strong><small>" +
           e(p.year || "年份待补") +

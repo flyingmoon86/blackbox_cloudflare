@@ -11,6 +11,8 @@ export function archiveTabs(active: "productions" | "resources"): string {
 export function icon(name: string): string {
   const paths: Record<string, string> = {
     home: '<path d="m3 10 9-7 9 7v10H3Z"/><path d="M9 20v-7h6v7"/>',
+    account:
+      '<circle cx="12" cy="8" r="3.25"/><path d="M5.5 20v-1.5a6.5 6.5 0 0 1 13 0V20"/><circle cx="12" cy="12" r="10"/>',
     productions: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 5l3 5m3-5 3 5"/>',
     resources: '<path d="M3 7h7l2 3h9v10H3Z"/><path d="M3 7V4h7l2 3h8v3"/>',
     members:

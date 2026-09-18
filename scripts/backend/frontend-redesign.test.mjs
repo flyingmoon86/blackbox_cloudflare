@@ -25,6 +25,9 @@ test("theatre redesign renders three real scenes, safe titles, and preserves nat
   assert.match(html, /&lt;script&gt;舞台&lt;\/script&gt;/);
   assert.doesNotMatch(html, /<script>舞台/);
   assert.match(html, /href="\/productions\/701"/);
+  assert.doesNotMatch(html, /<span>0\d<\/span><strong>/);
+  assert.match(html, /<a href="\/login"><svg class="nav-icon"[\s\S]*?<\/svg>登录<\/a>/);
+  assert.match(html, /<button class="menu-toggle" aria-label="菜单"[^>]*><svg/);
   assert.match(html, /design-public/);
   const login = await (await req("/login?next=%2Fresources")).text();
   assert.match(login, /检票入场/);

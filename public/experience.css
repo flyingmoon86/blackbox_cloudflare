@@ -79,9 +79,9 @@ body.navigation-open .nav-scrim{opacity:1;visibility:visible;pointer-events:auto
 @media(max-width:1100px) and (min-width:901px){.top{gap:18px}.top .desktop-nav{gap:16px}.top .nav-panel{gap:44px}}
 @media(max-width:900px){
 body .top{height:56px;min-height:56px;gap:14px;padding:0 20px}
-.top .menu-toggle{order:4;margin-left:0;font-size:0;width:28px;padding:0;background:transparent;transform:none}
-.menu-toggle::before{content:"";display:block;width:17px;height:7px;border-top:1.5px solid currentColor;border-bottom:1.5px solid currentColor}
-.top .account-link{margin-left:auto}.top .desktop-nav{top:55px;background:var(--nav-surface);max-height:calc(100dvh - 130px)}
+.top .menu-toggle{order:4;margin-left:0;font-size:0;width:44px;height:44px;padding:0;background:transparent;transform:none;display:grid;place-items:center}
+.menu-toggle::before{content:none}
+.top .account-link{margin-left:auto;margin-right:6px;min-width:44px;height:44px}.top .desktop-nav{top:55px;background:var(--nav-surface);max-height:calc(100dvh - 130px)}
 body:has(.theatre-stage) .nav-menu>summary,body:has(.theatre-stage) .desktop-nav>a{color:var(--nav-text)!important}
 .top .nav-panel{position:static;min-height:0;max-height:none;overflow:visible;display:grid;gap:24px;padding:12px 12px 28px}
 .nav-caption{margin-bottom:8px;font-size:11px}.top .nav-group h2 a{font-size:22px}.nav-group h2{margin-bottom:12px}
