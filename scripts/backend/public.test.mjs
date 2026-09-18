@@ -66,6 +66,33 @@ test("guests browse public pages but cannot fetch originals, pending files or ad
   const help = await (await s.req(0, "/help")).text();
   assert.ok(!help.includes('id="captain-guide"'));
 });
+
+test("photo detail keeps gallery context and offers adjacent navigation", async () => {
+  const s = await setup();
+  const editionId = s.db
+    .prepare("SELECT id FROM production_edition WHERE production_id=1 ORDER BY id LIMIT 1")
+    .get().id;
+  s.db.prepare("UPDATE resource SET production_id=1,edition_id=? WHERE id=1").run(editionId);
+  const insert = s.db.prepare(
+    "INSERT INTO resource(id,title,res_type,status,filename,original_name,preview_filename,uploader_id,production_id,edition_id,created_at) VALUES(?,?,'photo','approved',?,?,?,2,1,?,'2026-09-18 12:00:00')",
+  );
+  for (let id = 4; id <= 10; id++) {
+    const title = id === 9 ? "fba8aaea93f64e67b08f05639314dc49.jpg" : `剧照 ${id}`;
+    insert.run(id, title, `photo-${id}.jpg`, `photo-${id}.jpg`, `photo-${id}-preview.jpg`, editionId);
+  }
+
+  const detail = await (await s.req(0, "/resources/9?origin=9&page=2")).text();
+  assert.match(detail, /<h1>测试作品 · 剧照 2<\/h1>/);
+  assert.match(detail, /data-photo-previous href="\/resources\/10\?origin=9&amp;page=2"/);
+  assert.match(detail, /data-photo-next href="\/resources\/8\?origin=9&amp;page=2"/);
+  assert.match(detail, /<strong>2<\/strong> \/ 8/);
+  assert.match(detail, /href="\/productions\/1\?edition=\d+&amp;page=2&amp;photo=9#edition-\d+-resources"/);
+  assert.match(detail, /资料标题：<code>fba8aaea93f64e67b08f05639314dc49\.jpg<\/code>/);
+  assert.match(detail, /data-resource-media-error hidden/);
+
+  const production = await (await s.req(0, `/productions/1?edition=${editionId}`)).text();
+  assert.match(production, /href="\/resources\/9\?origin=9&amp;page=1"/);
+});
 test("guest flowers are CSRF protected, deduplicated per day and counted publicly", async () => {
   const s = await setup();
   assert.equal((await s.post(0, "/members/1/flowers", { csrf: "wrong" })).status, 400);

@@ -72,6 +72,27 @@ test("portal is private, public admin links redirect and normal site stays publi
   assert.equal((await s.req("/productions", 0, {}, s.env.PUBLIC_ORIGIN)).status, 200);
   assert.equal((await s.req("/admin", 0, {}, "https://other.test")).status, 302);
   assert.equal((await s.post("/admin/site", {})).status, 401);
+  for (const origin of [s.env.ADMIN_ORIGIN, s.env.PUBLIC_ORIGIN]) {
+    const signedOutNotifications = await s.req("/admin/notifications", 0, {}, origin);
+    assert.equal(signedOutNotifications.status, 401);
+    assert.match(signedOutNotifications.headers.get("content-type"), /application\/json/);
+    assert.equal(signedOutNotifications.headers.get("location"), null);
+    const deniedNotifications = await s.req("/admin/notifications", 2, {}, origin);
+    assert.equal(deniedNotifications.status, 403);
+    assert.match(deniedNotifications.headers.get("content-type"), /application\/json/);
+    const expiredDismiss = await s.req(
+      "/admin/notifications/dismiss",
+      0,
+      {
+        method: "POST",
+        headers: { Origin: origin },
+        body: new URLSearchParams({ csrf: "portal-csrf", key: "resource:1" }),
+      },
+      origin,
+    );
+    assert.equal(expiredDismiss.status, 401);
+    assert.match(expiredDismiss.headers.get("content-type"), /application\/json/);
+  }
   const html = await (await s.req("/admin", 1)).text();
   assert.match(html, /工作台/);
   assert.match(html, /查看正式网站/);

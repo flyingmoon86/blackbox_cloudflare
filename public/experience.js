@@ -58,11 +58,14 @@
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;
     const current = menus.find((m) => m.open);
+    const mobileOpen = nav?.classList.contains("is-open");
+    if (!current && !mobileOpen) return;
     close();
     nav?.classList.remove("is-open");
     toggle?.setAttribute("aria-expanded", "false");
     restoringFocus = true;
-    current?.querySelector("summary").focus();
+    if (mobileOpen) toggle?.focus();
+    else current?.querySelector("summary").focus();
     restoringFocus = false;
   });
   document.addEventListener("click", (event) => {
@@ -181,27 +184,31 @@
   lists.forEach((list) => {
     if (list.closest("[data-server-paged]") || list.closest(".production-archive")) return;
     const items = [...list.children];
+    const photoGrid = list.classList.contains("photo-grid");
     const size =
       Number(list.dataset.paginate) ||
-      (list.classList.contains("production-grid")
-        ? 2
-        : list.classList.contains("photo-grid")
-          ? 6
-          : list.querySelector(".archive-group")
-            ? 1
-            : 6);
+      (list.classList.contains("production-grid") ? 2 : photoGrid ? 6 : list.querySelector(".archive-group") ? 1 : 6);
     if (items.length <= size) return;
-    let page = 0;
+    const requestedPhoto = photoGrid ? new URLSearchParams(location.search).get("photo") : "";
+    const requestedIndex = requestedPhoto
+      ? items.findIndex((item) => new URL(item.href, location.href).pathname === "/resources/" + requestedPhoto)
+      : -1;
+    let page = requestedIndex >= 0 ? Math.floor(requestedIndex / size) : 0;
     const pager = document.createElement("nav");
     pager.className = "pagination";
-    pager.setAttribute("aria-label", "内容分页");
+    pager.setAttribute("aria-label", photoGrid ? "剧照分页" : "内容分页");
     const prev = document.createElement("button"),
       next = document.createElement("button"),
       status = document.createElement("span");
     prev.type = next.type = "button";
     prev.textContent = "上一页";
     next.textContent = "下一页";
+    if (photoGrid) {
+      prev.setAttribute("aria-label", "上一页剧照");
+      next.setAttribute("aria-label", "下一页剧照");
+    }
     status.setAttribute("aria-live", "polite");
+    status.setAttribute("aria-atomic", "true");
     const render = () => {
       items.forEach((item, i) => {
         item.hidden = i < page * size || i >= (page + 1) * size;

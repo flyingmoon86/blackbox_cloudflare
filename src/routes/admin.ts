@@ -43,12 +43,32 @@ type NotificationGroup = {
   newest_id: number;
 };
 
+type NotificationSnapshot = {
+  member_count: number;
+  member_newest_id: number;
+  production_join_count: number;
+  production_join_newest_id: number;
+  resource_count: number;
+  resource_newest_id: number;
+  production_create_count: number;
+  production_create_newest_id: number;
+  suggestion_count: number;
+  suggestion_newest_id: number;
+  feedback_count: number;
+  feedback_newest_id: number;
+};
+
 export const adminRoutes = new Hono<AppEnv>();
 
 const requireAdmin = async (c: any, next: () => Promise<void>) => {
   const user = c.get("user");
-  if (!user) return c.redirect(`/login?next=${encodeURIComponent(c.req.path)}`);
-  if (user.role !== "admin") return c.text("没有管理员权限。", 403);
+  const notificationRequest = c.req.path.startsWith("/admin/notifications");
+  if (!user)
+    return notificationRequest
+      ? c.json({ error: "登录状态已失效，请重新登录。" }, 401)
+      : c.redirect(`/login?next=${encodeURIComponent(c.req.path)}`);
+  if (user.role !== "admin")
+    return notificationRequest ? c.json({ error: "没有管理员权限。" }, 403) : c.text("没有管理员权限。", 403);
   await next();
 };
 
@@ -95,19 +115,44 @@ adminRoutes.get("/admin", async (c) => {
 
 adminRoutes.get("/admin/notifications", async (c) => {
   const user = c.get("user")!;
-  const [groups, reads] = await Promise.all([
+  const [snapshot, reads] = await Promise.all([
     c.env.DB.prepare(
-      `SELECT 'member' kind,COUNT(*) count,COALESCE(MAX(id),0) newest_id FROM join_request WHERE status='pending'
-      UNION ALL SELECT 'production-join',COUNT(*),COALESCE(MAX(id),0) FROM production_join_request WHERE status='pending'
-      UNION ALL SELECT 'resource',COUNT(*),COALESCE(MAX(id),0) FROM resource WHERE status='pending'
-      UNION ALL SELECT 'production-create',COUNT(*),COALESCE(MAX(id),0) FROM suggestion WHERE status='open' AND category='production'
-      UNION ALL SELECT 'suggestion',COUNT(*),COALESCE(MAX(id),0) FROM suggestion WHERE status='open' AND category='website'
-      UNION ALL SELECT 'feedback',COUNT(*),COALESCE(MAX(id),0) FROM website_feedback WHERE status='open'`,
-    ).all<NotificationGroup>(),
+      `SELECT
+      (SELECT COUNT(*) FROM join_request WHERE status='pending') member_count,
+      (SELECT COALESCE(MAX(id),0) FROM join_request WHERE status='pending') member_newest_id,
+      (SELECT COUNT(*) FROM production_join_request WHERE status='pending') production_join_count,
+      (SELECT COALESCE(MAX(id),0) FROM production_join_request WHERE status='pending') production_join_newest_id,
+      (SELECT COUNT(*) FROM resource WHERE status='pending') resource_count,
+      (SELECT COALESCE(MAX(id),0) FROM resource WHERE status='pending') resource_newest_id,
+      (SELECT COUNT(*) FROM suggestion WHERE status='open' AND category='production') production_create_count,
+      (SELECT COALESCE(MAX(id),0) FROM suggestion WHERE status='open' AND category='production') production_create_newest_id,
+      (SELECT COUNT(*) FROM suggestion WHERE status='open' AND category='website') suggestion_count,
+      (SELECT COALESCE(MAX(id),0) FROM suggestion WHERE status='open' AND category='website') suggestion_newest_id,
+      (SELECT COUNT(*) FROM website_feedback WHERE status='open') feedback_count,
+      (SELECT COALESCE(MAX(id),0) FROM website_feedback WHERE status='open') feedback_newest_id`,
+    ).first<NotificationSnapshot>(),
     c.env.DB.prepare("SELECT notification_key FROM admin_notification_read WHERE user_id=?")
       .bind(user.id)
       .all<{ notification_key: string }>(),
   ]);
+  const groups: NotificationGroup[] = snapshot
+    ? [
+        { kind: "member", count: snapshot.member_count, newest_id: snapshot.member_newest_id },
+        {
+          kind: "production-join",
+          count: snapshot.production_join_count,
+          newest_id: snapshot.production_join_newest_id,
+        },
+        { kind: "resource", count: snapshot.resource_count, newest_id: snapshot.resource_newest_id },
+        {
+          kind: "production-create",
+          count: snapshot.production_create_count,
+          newest_id: snapshot.production_create_newest_id,
+        },
+        { kind: "suggestion", count: snapshot.suggestion_count, newest_id: snapshot.suggestion_newest_id },
+        { kind: "feedback", count: snapshot.feedback_count, newest_id: snapshot.feedback_newest_id },
+      ]
+    : [];
   const seen = new Set(reads.results.map((row) => row.notification_key));
   const labels: Record<NotificationGroup["kind"], { title: string; href: string }> = {
     member: { title: "新队员认证申请", href: "/admin#member-requests" },
@@ -117,7 +162,7 @@ adminRoutes.get("/admin/notifications", async (c) => {
     suggestion: { title: "旧网站建议", href: "/admin/suggestions" },
     feedback: { title: "新网站建议", href: "/admin/community" },
   };
-  const pending = groups.results
+  const pending = groups
     .filter((group) => group.count > 0)
     .map((group) => ({
       key: `${group.kind}:${group.newest_id}`,

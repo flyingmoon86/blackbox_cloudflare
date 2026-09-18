@@ -69,19 +69,73 @@ if (notificationHost) {
   let running = false,
     timer,
     signature = "",
-    lastAttempt = 0;
+    lastAttempt = 0,
+    lastFailure = "";
+  async function notificationJson(url, options = {}) {
+    const response = await fetch(url, {
+      credentials: "same-origin",
+      cache: "no-store",
+      ...options,
+      headers: { accept: "application/json", ...options.headers },
+    });
+    const contentType = response.headers.get("content-type") || "";
+    if (!response.ok || response.redirected || !contentType.includes("application/json")) {
+      const error = new Error("后台待办请求未返回有效 JSON");
+      error.status = response.status;
+      error.kind = response.status === 401 || response.status === 403 || response.redirected ? "auth" : "request";
+      throw error;
+    }
+    try {
+      return await response.json();
+    } catch {
+      const error = new Error("后台待办响应无法解析");
+      error.status = response.status;
+      error.kind = "parse";
+      throw error;
+    }
+  }
+  function clearNotificationFailure() {
+    notificationHost.querySelector("[data-notification-status]")?.remove();
+    lastFailure = "";
+  }
+  function showNotificationFailure(error) {
+    const statusCode = Number(error?.status) || 0;
+    const kind = error?.kind || (error?.name === "TimeoutError" ? "timeout" : "network");
+    const failure = `${kind}:${statusCode}`;
+    if (failure !== lastFailure) {
+      console.warn("后台待办同步失败", { kind, status: statusCode || undefined });
+      lastFailure = failure;
+    }
+    notificationHost.querySelector("[data-notification-status]")?.remove();
+    const status = document.createElement("div");
+    status.className = "admin-notification-status";
+    status.dataset.notificationStatus = kind;
+    status.setAttribute("role", "status");
+    const message = document.createElement("span");
+    message.textContent =
+      kind === "auth" ? "登录状态已失效" : `待办同步失败${statusCode ? `（HTTP ${statusCode}）` : ""}`;
+    const action = document.createElement(kind === "auth" ? "a" : "button");
+    if (action instanceof HTMLAnchorElement) {
+      action.href = "/login?next=/admin";
+      action.textContent = "重新登录";
+    } else {
+      action.type = "button";
+      action.textContent = "重试";
+      action.addEventListener("click", refreshNotifications);
+    }
+    status.append(message, action);
+    notificationHost.append(status);
+  }
   async function refreshNotifications() {
     if (running || document.hidden) return;
     clearTimeout(timer);
     running = true;
     lastAttempt = Date.now();
     try {
-      const response = await fetch("/admin/notifications", {
-        headers: { accept: "application/json" },
+      const data = await notificationJson("/admin/notifications", {
         signal: AbortSignal.timeout(15000),
       });
-      if (!response.ok) throw new Error("notification request failed");
-      const data = await response.json();
+      clearNotificationFailure();
       const count = Number(data.pendingTotal) || 0;
       const alert = document.querySelector("[data-pending-alert]");
       if (alert) {
@@ -124,16 +178,16 @@ if (notificationHost) {
         action.addEventListener("click", async () => {
           action.disabled = true;
           try {
-            const result = await fetch("/admin/notifications/dismiss", {
+            await notificationJson("/admin/notifications/dismiss", {
               method: "POST",
               body: new URLSearchParams({ csrf: data.csrf, key: item.key }),
               signal: AbortSignal.timeout(15000),
             });
-            if (!result.ok) throw new Error("dismiss failed");
             location.assign(item.href);
-          } catch {
+          } catch (error) {
             action.disabled = false;
             description.textContent = "提醒状态未确认，请刷新核对或稍后再试";
+            showNotificationFailure(error);
           }
         });
         card.append(copy, action);
@@ -148,13 +202,8 @@ if (notificationHost) {
       }
       details.append(summary, stack);
       notificationHost.append(details);
-    } catch {
-      if (!notificationHost.childElementCount) {
-        const retry = document.createElement("a");
-        retry.href = "/admin";
-        retry.textContent = "待办暂未更新，查看工作台";
-        notificationHost.append(retry);
-      }
+    } catch (error) {
+      showNotificationFailure(error);
     } finally {
       running = false;
       if (!document.hidden) timer = setTimeout(refreshNotifications, 60000);
@@ -528,3 +577,41 @@ document.querySelectorAll("[data-move-resources]").forEach((form) => {
   target.addEventListener("change", update);
   update();
 });
+
+const photoNavigation = document.querySelector("[data-photo-navigation]");
+if (photoNavigation) {
+  document.addEventListener("keydown", (event) => {
+    if (
+      event.defaultPrevented ||
+      event.repeat ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.shiftKey ||
+      event.target.closest("input,textarea,select,button,a,summary,video,audio,[contenteditable]")
+    )
+      return;
+    const link =
+      event.key === "ArrowLeft"
+        ? photoNavigation.querySelector("[data-photo-previous]")
+        : event.key === "ArrowRight"
+          ? photoNavigation.querySelector("[data-photo-next]")
+          : null;
+    if (link) {
+      event.preventDefault();
+      location.assign(link.href);
+    }
+  });
+}
+
+const resourceMedia = document.querySelector(".resource-detail-preview>img,.resource-detail-preview>video");
+const resourceMediaError = document.querySelector("[data-resource-media-error]");
+if (resourceMedia && resourceMediaError) {
+  const showResourceMediaError = () => {
+    resourceMedia.closest(".resource-detail-preview")?.classList.add("is-unavailable");
+    resourceMediaError.hidden = false;
+  };
+  resourceMedia.addEventListener("error", showResourceMediaError);
+  if (resourceMedia instanceof HTMLImageElement && resourceMedia.complete && !resourceMedia.naturalWidth)
+    showResourceMediaError();
+}

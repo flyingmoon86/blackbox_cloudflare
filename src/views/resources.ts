@@ -3,7 +3,7 @@ import type { EditionRow } from "../routes/productions";
 import { editionChoice } from "./edition-choice";
 import { archiveTabs, pagination, type PageInfo, yearSelect } from "./shared";
 import { assetUrl } from "./assets";
-import type { ResourceRow } from "../routes/resources";
+import type { PhotoNavigation, ResourceRow } from "../routes/resources";
 import type { UserSession } from "../types";
 import { escapeHtml, layout } from "../views";
 import { resourceCardArtwork, resourceDetailPreview } from "./resource-preview";
@@ -68,7 +68,37 @@ export function resourceListPage(
     user?.role === "admin",
   );
 }
-export function resourceDetailPage(row: ResourceRow, user: UserSession | null): string {
+export function resourceDetailPage(
+  row: ResourceRow,
+  user: UserSession | null,
+  navigation: PhotoNavigation | null = null,
+  context: { origin: number; page: number } | null = null,
+): string {
+  const technicalPhotoTitle =
+    row.res_type === "photo" &&
+    row.production_title &&
+    row.title.length >= 28 &&
+    /^[A-Za-z0-9+/_=!.-]+$/.test(row.title);
+  const displayTitle = technicalPhotoTitle
+    ? `${row.production_title} · 剧照${navigation?.position ? ` ${navigation.position}` : ""}`
+    : row.title;
+  const returnQuery = new URLSearchParams();
+  if (row.edition_id) returnQuery.set("edition", String(row.edition_id));
+  if (context) {
+    returnQuery.set("page", String(context.page));
+    returnQuery.set("photo", String(context.origin));
+  }
+  const productionReturn =
+    row.res_type === "photo" && row.production_id
+      ? `/productions/${row.production_id}${returnQuery.size ? `?${returnQuery.toString()}` : ""}${row.edition_id ? `#edition-${row.edition_id}-resources` : ""}`
+      : "";
+  const returnHref = productionReturn || (user?.id === row.uploader_id ? "/my-resources" : "/resources");
+  const returnLabel = productionReturn
+    ? `← 返回《${escapeHtml(row.production_title || "所属作品")}》剧照集`
+    : "← 返回资料列表";
+  const secondaryLink = productionReturn
+    ? '<a href="/resources">查看资料库</a>'
+    : '<a href="/productions">返回作品档案</a>';
   const download =
     row.status === "approved"
       ? `<p><a class="button" href="/resources/${row.id}/download">下载文件</a></p>`
@@ -79,9 +109,17 @@ export function resourceDetailPage(row: ResourceRow, user: UserSession | null): 
     user?.role === "admin"
       ? `<p><a class="edit-link" href="/admin/resources/${row.id}/edit">编辑或删除这份资料</a></p>`
       : "";
+  const navigationQuery = context ? `?origin=${context.origin}&amp;page=${context.page}` : "";
+  const photoNavigation = navigation
+    ? `<nav class="photo-detail-navigation" data-photo-navigation aria-label="剧照浏览">${navigation.previous_id ? `<a rel="prev" data-photo-previous href="/resources/${navigation.previous_id}${navigationQuery}">← 上一张</a>` : '<span aria-disabled="true">← 已是第一张</span>'}<span class="photo-position"><strong>${navigation.position}</strong> / ${navigation.total}</span>${navigation.next_id ? `<a rel="next" data-photo-next href="/resources/${navigation.next_id}${navigationQuery}">下一张 →</a>` : '<span aria-disabled="true">已是最后一张 →</span>'}</nav>`
+    : "";
+  const mediaError =
+    row.res_type === "photo"
+      ? `<p class="alert resource-media-error" data-resource-media-error hidden role="status">剧照暂时无法显示。<a href="${escapeHtml(returnHref)}">返回剧照集</a>，或稍后重试。</p>`
+      : "";
   return layout(
-    row.title,
-    `${archiveTabs("resources")}<p class="back-links"><a href="${user?.id === row.uploader_id ? "/my-resources" : "/resources"}">← 返回资料列表</a><a href="/productions">返回作品档案</a></p><article class="card production-detail resource-detail"><p class="eyebrow">${escapeHtml(labels[row.res_type] || row.res_type)} · ${escapeHtml(statuses[row.status] || row.status)}</p><h1>${escapeHtml(row.title)}</h1>${edit}${resourceDetailPreview(row, Boolean(user))}<div class="resource-metadata"><p>${escapeHtml(row.description || "暂无说明")}</p><p>所属作品：${row.production_id ? `<a href="/productions/${row.production_id}">${escapeHtml(row.production_title)}</a>` : "其他资料"}</p><p>演出版本：${escapeHtml(row.edition_name || "未关联作品版本")}</p><p>原文件名：${escapeHtml(row.original_name)}</p><p>提交人：${escapeHtml(row.uploader_name || "未知")}</p>${user && (user.id === row.uploader_id || user.role === "admin") && row.admin_note ? `<p class="alert">审核说明：${escapeHtml(row.admin_note)}</p>` : ""}${download}</div></article>`,
+    displayTitle,
+    `${archiveTabs("resources")}<nav class="back-links resource-back-links" aria-label="资料详情导航"><a href="${escapeHtml(returnHref)}">${returnLabel}</a>${secondaryLink}</nav><article class="card production-detail resource-detail"><p class="eyebrow">${escapeHtml(labels[row.res_type] || row.res_type)} · ${escapeHtml(statuses[row.status] || row.status)}</p><h1>${escapeHtml(displayTitle)}</h1>${edit}${resourceDetailPreview({ ...row, title: displayTitle }, Boolean(user))}${mediaError}${photoNavigation}<div class="resource-metadata"><p>${escapeHtml(row.description || "暂无说明")}</p><p>所属作品：${row.production_id ? `<a href="/productions/${row.production_id}">${escapeHtml(row.production_title)}</a>` : "其他资料"}</p><p>演出版本：${escapeHtml(row.edition_name || "未关联作品版本")}</p>${technicalPhotoTitle ? `<p>资料标题：<code>${escapeHtml(row.title)}</code></p>` : ""}<p>原文件名：${escapeHtml(row.original_name)}</p><p>提交人：${escapeHtml(row.uploader_name || "未知")}</p>${user && (user.id === row.uploader_id || user.role === "admin") && row.admin_note ? `<p class="alert">审核说明：${escapeHtml(row.admin_note)}</p>` : ""}${download}</div></article>`,
     Boolean(user),
     user?.role === "admin",
   );

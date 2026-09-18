@@ -34,6 +34,12 @@ export type ResourceRow = {
   uploader_id: number | null;
   uploader_name: string | null;
 };
+export type PhotoNavigation = {
+  previous_id: number | null;
+  next_id: number | null;
+  position: number;
+  total: number;
+};
 export const resourceRoutes = new Hono<AppEnv>();
 resourceRoutes.use("*", async (c, next) => {
   if (
@@ -135,7 +141,29 @@ resourceRoutes.get("/resources/:id", async (c) => {
     .first<ResourceRow>();
   if (!row) return c.text("资料不存在。", 404);
   if (!canViewResource(row, u)) return c.text("没有权限查看这份资料。", 403);
-  return c.html(resourceDetailPage(row, u));
+  const navigation =
+    row.res_type === "photo" && row.production_id && row.edition_id
+      ? await c.env.DB.prepare(
+          `WITH photos AS (
+            SELECT id,
+              LAG(id) OVER (ORDER BY created_at DESC,id DESC) previous_id,
+              LEAD(id) OVER (ORDER BY created_at DESC,id DESC) next_id,
+              ROW_NUMBER() OVER (ORDER BY created_at DESC,id DESC) position,
+              COUNT(*) OVER () total
+            FROM resource
+            WHERE production_id=? AND edition_id=? AND status='approved' AND res_type='photo'
+          ) SELECT previous_id,next_id,position,total FROM photos WHERE id=?`,
+        )
+          .bind(row.production_id, row.edition_id, row.id)
+          .first<PhotoNavigation>()
+      : null;
+  const origin = Number(c.req.query("origin"));
+  return c.html(
+    resourceDetailPage(row, u, navigation, {
+      origin: Number.isSafeInteger(origin) && origin > 0 ? origin : row.id,
+      page: pageNumber(c.req.query("page")),
+    }),
+  );
 });
 for (const mode of ["download", "media", "preview"] as const) {
   resourceRoutes.on(["GET", "HEAD"], "/resources/:id/" + mode, async (c) => {
