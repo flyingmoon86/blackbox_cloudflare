@@ -305,33 +305,47 @@
   let closeTimer,
     restoringFocus = false;
   const sync = () => {
-    menus.forEach((m) => m.querySelector("summary").setAttribute("aria-expanded", String(m.open)));
+    menus.forEach((m) => {
+      const expanded = m.classList.contains("is-open");
+      const toggleMenu = m.querySelector(".nav-menu-toggle");
+      toggleMenu.setAttribute("aria-expanded", String(expanded));
+      toggleMenu.setAttribute(
+        "aria-label",
+        (expanded ? "收起" : "展开") + m.querySelector(".nav-menu-link").textContent.trim() + "子菜单",
+      );
+      m.querySelector(".nav-panel").hidden = !expanded;
+    });
     document.body.classList.toggle(
       "navigation-open",
-      menus.some((m) => m.open),
+      menus.some((m) => m.classList.contains("is-open")),
     );
   };
   const close = () => {
     clearTimeout(closeTimer);
-    menus.forEach((m) => (m.open = false));
+    menus.forEach((m) => m.classList.remove("is-open"));
     sync();
   };
   const open = (m) => {
     clearTimeout(closeTimer);
-    menus.forEach((other) => (other.open = other === m));
+    menus.forEach((other) => other.classList.toggle("is-open", other === m));
     sync();
   };
   menus.forEach((m) => {
-    const summary = m.querySelector("summary");
-    summary.setAttribute("aria-expanded", "false");
-    m.addEventListener("toggle", sync);
+    const toggleMenu = m.querySelector(".nav-menu-toggle");
+    toggleMenu.setAttribute("aria-expanded", "false");
+    toggleMenu.addEventListener("click", () => (m.classList.contains("is-open") ? close() : open(m)));
     m.addEventListener("pointerenter", (event) => {
       if (event.pointerType !== "touch" && matchMedia("(min-width:901px)").matches) open(m);
     });
-    m.addEventListener("focusin", () => {
-      if (!restoringFocus && matchMedia("(min-width:901px)").matches && summary.matches(":focus-visible")) open(m);
+    m.addEventListener("focusin", (event) => {
+      if (
+        !restoringFocus &&
+        matchMedia("(min-width:901px)").matches &&
+        event.target.matches(".nav-menu-link:focus-visible,.nav-menu-toggle:focus-visible")
+      )
+        open(m);
     });
-    summary.addEventListener("keydown", (event) => {
+    toggleMenu.addEventListener("keydown", (event) => {
       if (event.key === "ArrowDown") {
         event.preventDefault();
         open(m);
@@ -347,7 +361,7 @@
     if (!header.contains(event.relatedTarget)) close();
   });
   header
-    ?.querySelectorAll(".desktop-nav>a,.account-link,.brand")
+    ?.querySelectorAll(".desktop-nav>a:not(.nav-menu-link),.account-link,.brand")
     .forEach((a) => a.addEventListener("pointerenter", close));
   toggle?.addEventListener("click", () => {
     const expanded = nav.classList.toggle("is-open");
@@ -356,7 +370,7 @@
   });
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;
-    const current = menus.find((m) => m.open);
+    const current = menus.find((m) => m.classList.contains("is-open"));
     const mobileOpen = nav?.classList.contains("is-open");
     if (!current && !mobileOpen) return;
     close();
@@ -364,7 +378,7 @@
     toggle?.setAttribute("aria-expanded", "false");
     restoringFocus = true;
     if (mobileOpen) toggle?.focus();
-    else current?.querySelector("summary").focus();
+    else current?.querySelector(".nav-menu-toggle").focus();
     restoringFocus = false;
   });
   document.addEventListener("click", (event) => {

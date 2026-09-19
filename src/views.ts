@@ -40,19 +40,21 @@ export function layout(title: string, content: string, signedIn = false, admin =
                   : "") +
     label +
     "</a>";
-  const menu = (label: string, items: string) =>
-    '<details class="nav-menu"><summary>' +
-    (label === "作品与资料"
-      ? icon("productions")
-      : label === "队员与剧团"
-        ? icon("members")
-        : label === "鸣谢"
-          ? icon("help")
-          : "") +
+  const menu = (label: string, href: string, id: string, items: string) =>
+    '<div class="nav-menu"><a class="nav-menu-link" href="' +
+    href +
+    '">' +
+    (href === "/productions" ? icon("productions") : href === "/members" ? icon("members") : icon("help")) +
     label +
-    '</summary><div class="nav-panel">' +
+    '</a><button class="nav-menu-toggle" type="button" aria-label="展开' +
+    label +
+    '子菜单" aria-expanded="false" aria-controls="' +
+    id +
+    '"></button><div class="nav-panel" id="' +
+    id +
+    '" hidden>' +
     items +
-    "</div></details>";
+    "</div></div>";
   const group = (caption: string, href: string, label: string, children: string) =>
     '<section class="nav-group"><p class="nav-caption">' +
     caption +
@@ -66,6 +68,8 @@ export function layout(title: string, content: string, signedIn = false, admin =
     link("/", "首页") +
     menu(
       "作品与资料",
+      "/productions",
+      "productions-menu",
       group(
         "走进舞台",
         "/productions",
@@ -81,6 +85,8 @@ export function layout(title: string, content: string, signedIn = false, admin =
     ) +
     menu(
       "队员与剧团",
+      "/members",
+      "members-menu",
       group(
         "台前与幕后",
         "/members",
@@ -88,7 +94,12 @@ export function layout(title: string, content: string, signedIn = false, admin =
         child("/profile/member", "修改我的信息") + child("/profile/member-application", "申请队员认证"),
       ) + group("认识我们", "/#about", "剧团介绍", child("/#contact", "联系我们")),
     ) +
-    menu("鸣谢", group("一起完善黑匣子", "/thanks", "网站贡献者", child("/feedback", "提交网站建议"))) +
+    menu(
+      "鸣谢",
+      "/thanks",
+      "thanks-menu",
+      group("一起完善黑匣子", "/thanks", "网站贡献者", child("/feedback", "提交网站建议")),
+    ) +
     (admin ? link("/admin", "管理") : "");
   const account =
     '<a class="account-link" href="' +

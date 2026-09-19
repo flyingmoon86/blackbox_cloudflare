@@ -47,7 +47,7 @@ export function themeCss(input: string): string {
  .danger{background:#b42318}.danger:hover{background:#8f190f}
  .link-button,.link-button:hover{background:transparent;color:var(--wine)}
  .top{--nav-surface:var(--panel);--nav-text:var(--ink);--nav-muted:var(--muted);background:${panel}f2;color:var(--ink)}
- .top .brand,.top .desktop-nav>a,.top .nav-menu>summary{color:var(--nav-text)}
+ .top .brand,.top .desktop-nav>a,.top .nav-menu-link,.top .nav-menu-toggle{color:var(--nav-text)}
  .top .nav-panel,.top .desktop-nav.is-open{background:var(--nav-surface)}
  .top nav a:hover{color:var(--amber)}
  .top .menu-toggle,.top .menu-toggle:hover{background:transparent;color:var(--nav-text)}
@@ -77,7 +77,7 @@ export function themeCss(input: string): string {
  .stage-scene{color:var(--panel)}
  .stage-welcome,.stage-feature p,.about-columns p,.theatre-stage .edit-link,.stage-news span{color:var(--brand-light)}
  .stage-feature,.stage-contact{border-color:${light}66}
- .theatre-stage .top .brand,body:has(.theatre-stage) .brand,body:has(.theatre-stage) .desktop-nav>a,body:has(.theatre-stage) .nav-menu>summary{color:var(--nav-text)}
+ .theatre-stage .top .brand,body:has(.theatre-stage) .brand,body:has(.theatre-stage) .desktop-nav>a,body:has(.theatre-stage) .nav-menu-link,body:has(.theatre-stage) .nav-menu-toggle{color:var(--nav-text)}
  body:has(.theatre-stage) .top nav a:hover{color:var(--brand-light)}
  .nav-scrim{background:${stage}2c}dialog::backdrop{background:${stage}99}
  a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--amber);outline-offset:3px}

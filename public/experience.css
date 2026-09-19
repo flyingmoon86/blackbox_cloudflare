@@ -117,3 +117,20 @@ body:has(.theatre-stage) .nav-menu>summary,body:has(.theatre-stage) .desktop-nav
 .production-grid>.production-year-heading{grid-column:1/-1;margin:20px 0 0;padding:12px 0;border-bottom:1px solid var(--line);font-size:clamp(24px,3vw,36px)}
 .credit-row{display:grid;grid-template-columns:minmax(120px,1fr) minmax(140px,1fr) 120px minmax(150px,1fr) auto;gap:12px;align-items:end;padding:18px 0;border-bottom:1px solid var(--line)}.credit-row label{min-width:0;margin:0}.batch-credit-form>button{margin:18px 12px 0 0}
 @media(max-width:900px){.credit-row{grid-template-columns:1fr 1fr}.credit-row>[data-remove-credit]{grid-column:1/-1}}
+
+/* Top-level archive labels navigate; the adjacent control reveals their submenus. */
+.top .desktop-nav>.nav-menu{display:flex;align-items:center;gap:2px}
+.top .nav-menu-link{display:flex;align-items:center;min-height:44px}
+.top .nav-menu-toggle{display:grid;place-items:center;width:24px;min-height:44px;padding:0;border:0;border-radius:2px;background:transparent!important;color:var(--nav-text);box-shadow:none;transform:none;cursor:pointer}
+.top .nav-menu-toggle::after{content:"⌄";font-size:12px}
+.top .nav-menu-toggle:hover,.top .nav-menu-toggle:focus-visible{background:transparent!important;color:var(--amber);box-shadow:none;transform:none}
+.nav-menu.is-open .nav-panel{animation:nav-reveal .28s cubic-bezier(.22,.61,.36,1) both}
+.nav-menu.is-open .nav-group{animation:nav-content .32s ease-out both}
+.nav-menu.is-open .nav-group:nth-child(2){animation-delay:45ms}
+@media(max-width:900px){
+  .top .desktop-nav>.nav-menu{display:grid;grid-template-columns:minmax(0,1fr) 44px;align-items:center}
+  .top .nav-menu-link{grid-column:1;grid-row:1;padding:12px 0;color:var(--ink)!important}
+  .top .nav-menu-toggle{grid-column:2;grid-row:1;width:44px;color:var(--ink)!important}
+  .top .nav-menu-toggle:hover,.top .nav-menu-toggle:focus-visible{color:var(--amber)!important}
+  .top .nav-menu .nav-panel{grid-column:1/-1;grid-row:2}
+}

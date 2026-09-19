@@ -9,6 +9,7 @@
 .design-public .top .brand,.design-public .top nav a,.design-public .top .nav-menu>summary{color:var(--ink)}
 .design-public .brand span{color:var(--muted)}.design-public .top nav a:hover,.design-public .account-link{color:var(--brand-light,#ffb547)}
 .design-public .top .menu-toggle,.design-public .top .menu-toggle:hover,.design-public .top .menu-toggle:focus,.design-public .top .menu-toggle:focus-visible,.design-public .top .menu-toggle:active{background:transparent;color:var(--brand-light,#ffb547);box-shadow:none;filter:none;transform:none}
+.design-public .top .nav-menu-toggle{color:var(--ink);filter:none;transform:none}.design-public .top .nav-menu-toggle:is(:hover,:focus-visible){color:var(--brand-light,#ffb547);filter:none;transform:none}
 .design-public .top .nav-panel,.design-public .top .desktop-nav.is-open{background:#15120ff7}.design-public .top .nav-panel{border-color:var(--line)}
 .design-public :is(.card,.card .card,.table-wrap,.guide-jumps,.section-tabs,.notification-card,dialog){background:var(--panel);color:var(--ink);border-color:var(--line);box-shadow:none;border-radius:4px}
 .design-public :is(input,textarea,select){background:#211d17;color:var(--ink);border-color:#756958}
