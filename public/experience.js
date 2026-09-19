@@ -1,3 +1,302 @@
+// Reveal the work after its cover and fonts are ready; never trap navigation.
+(() => {
+  const work = document.querySelector(".work-detail");
+  const cover = work?.querySelector("img[data-curtain-src]");
+  const coverUrl = cover?.dataset.curtainSrc;
+  const nativeCover = () => {
+    if (cover) {
+      cover.src = coverUrl;
+      cover.hidden = false;
+    }
+  };
+  const motion = matchMedia("(prefers-reduced-motion: reduce)");
+  if (
+    !work ||
+    motion.matches ||
+    location.search ||
+    location.hash ||
+    performance.getEntriesByType("navigation")[0]?.type === "back_forward"
+  ) {
+    nativeCover();
+    return;
+  }
+  const curtain = document.createElement("div");
+  curtain.className = "work-curtain";
+  // Each fold has its own carrier: the leading edge gathers fabric before the stack exits.
+  const svgNS = "http://www.w3.org/2000/svg";
+  const cloth = document.createElementNS(svgNS, "svg");
+  cloth.setAttribute("class", "curtain-cloth");
+  cloth.setAttribute("viewBox", "0 0 1200 1000");
+  cloth.setAttribute("preserveAspectRatio", "none");
+  cloth.setAttribute("aria-hidden", "true");
+  cloth.innerHTML = `<defs>
+    <linearGradient id="curtain-fold"><stop stop-color="#160209"/><stop offset=".12" stop-color="#3b0716"/><stop offset=".31" stop-color="#8e142e"/><stop offset=".47" stop-color="#c52c4a"/><stop offset=".61" stop-color="#95162f"/><stop offset=".84" stop-color="#410816"/><stop offset="1" stop-color="#110106"/></linearGradient>
+    <linearGradient id="curtain-weight" x2="0" y2="1"><stop stop-color="#000" stop-opacity=".54"/><stop offset=".16" stop-color="#ff9b8e" stop-opacity=".12"/><stop offset=".55" stop-color="#530815" stop-opacity=".14"/><stop offset="1" stop-color="#000" stop-opacity=".58"/></linearGradient>
+    <filter id="curtain-nap" x="-3%" y="-1%" width="106%" height="102%">
+      <feTurbulence type="fractalNoise" baseFrequency="16 .42" numOctaves="2" seed="19" stitchTiles="stitch" result="fiber"/>
+      <feColorMatrix in="fiber" type="matrix" values="0 0 0 0 .82 0 0 0 0 .05 0 0 0 0 .08 0 0 0 .16 0" result="redFiber"/>
+      <feBlend in="SourceGraphic" in2="redFiber" mode="screen" result="velvet"/>
+      <feDisplacementMap in="velvet" in2="fiber" scale="2.2" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </defs>`;
+  const folds = [];
+  const foldCount = matchMedia("(max-width:600px)").matches ? 6 : 10;
+  for (let side = 0; side < 2; side++) {
+    const group = document.createElementNS(svgNS, "g");
+    if (side) group.setAttribute("transform", "translate(1200 0) scale(-1 1)");
+    for (let index = 0; index < foldCount; index++) {
+      const path = document.createElementNS(svgNS, "path");
+      path.setAttribute("fill", "url(#curtain-fold)");
+      path.setAttribute("filter", "url(#curtain-nap)");
+      const shade = document.createElementNS(svgNS, "path");
+      shade.setAttribute("fill", "url(#curtain-weight)");
+      group.append(path, shade);
+      folds.push({ path, shade, index, side });
+    }
+    cloth.append(group);
+  }
+  const clamp = (value) => Math.max(0, Math.min(1, value));
+  const drawCloth = (progress) => {
+    for (const { path, shade, index, side } of folds) {
+      const edge = (i, depth) => {
+        const delayed = clamp((progress - depth * 0.045) / (1 - depth * 0.045));
+        const lead = 604 - 760 * delayed;
+        const rest = i * (604 / foldCount) + (i > 0 && i < foldCount ? Math.sin(i * 1.4) * 6 : 0);
+        const packed = 11 + Math.sin(i * 1.7) * 1.2;
+        const x = Math.min(rest, lead - (foldCount - i) * packed);
+        const slack = Math.sin(Math.PI * delayed);
+        const drape = x + Math.sin(i * 1.3 + side * 0.6 + depth * 2) * (3 + 5 * slack) * depth + 12 * slack * depth;
+        return i === 0 ? Math.min(-8, drape) : drape;
+      };
+      const a = [edge(index, 0), edge(index, 0.35), edge(index, 0.7), edge(index, 1)];
+      const b = [edge(index + 1, 0), edge(index + 1, 0.35), edge(index + 1, 0.7), edge(index + 1, 1)];
+      const d = `M ${a[0]} -8 C ${a[1]} 260 ${a[2]} 700 ${a[3]} 1010 L ${b[3] + 1} 1010 C ${b[2] + 1} 700 ${b[1] + 1} 260 ${b[0] + 1} -8 Z`;
+      path.setAttribute("d", d);
+      shade.setAttribute("d", d);
+    }
+  };
+  drawCloth(0);
+  curtain.append(cloth);
+  let clothFrame;
+  const panel = document.createElement("div");
+  panel.className = "curtain-progress";
+  const bell = document.createElement("span");
+  bell.className = "curtain-bell";
+  bell.textContent = "🔔";
+  bell.setAttribute("aria-hidden", "true");
+  const label = document.createElement("p");
+  label.setAttribute("role", "status");
+  label.textContent = "正在准备封面";
+  const progress = document.createElement("div");
+  progress.className = "curtain-meter";
+  progress.setAttribute("role", "progressbar");
+  progress.setAttribute("aria-label", "封面下载进度");
+  progress.setAttribute("aria-valuemin", "0");
+  progress.setAttribute("aria-valuemax", "100");
+  const fill = document.createElement("span");
+  progress.append(fill);
+  const detail = document.createElement("p");
+  detail.className = "curtain-transfer";
+  detail.textContent = cover ? "等待服务器响应" : "此作品暂无封面";
+  let fillAnimation;
+  const updateBytes = (loaded, total) => {
+    const formatBytes = (n) => (n >= 1048576 ? (n / 1048576).toFixed(1) + " MB" : Math.floor(n / 1024) + " KB");
+    detail.textContent = total
+      ? Math.floor(Math.min(loaded / total, 1) * 100) + "% · " + formatBytes(loaded) + " / " + formatBytes(total)
+      : "已接收 " + formatBytes(loaded);
+    if (total > 0) {
+      const fraction = Math.min(loaded / total, 1);
+      progress.setAttribute("aria-valuenow", String(Math.floor(fraction * 100)));
+      const previous = getComputedStyle(fill).transform;
+      fillAnimation?.cancel();
+      fillAnimation = fill.animate(
+        [{ transform: previous === "none" ? "scaleX(0)" : previous }, { transform: "scaleX(" + fraction + ")" }],
+        { duration: 260, easing: "ease-out", fill: "forwards" },
+      );
+    }
+  };
+  const sound = document.createElement("button");
+  sound.type = "button";
+  sound.textContent = "开启铃声";
+  let audio;
+  try {
+    audio = new (window.AudioContext || window.webkitAudioContext)();
+  } catch {
+    /* Visual feedback remains available. */
+  }
+  if (!audio) {
+    sound.disabled = true;
+    sound.textContent = "铃声不可用";
+  }
+  sound.onclick = async () => {
+    try {
+      if (audio?.state === "running") {
+        await audio.suspend();
+      } else {
+        await audio?.resume();
+      }
+      sound.textContent = audio?.state === "running" ? "关闭铃声" : "开启铃声";
+    } catch {
+      sound.textContent = "铃声不可用";
+    }
+  };
+  if (audio?.state === "running") sound.textContent = "关闭铃声";
+  const ring = () => {
+    bell.classList.remove("is-ringing");
+    void bell.offsetWidth;
+    bell.classList.add("is-ringing");
+    if (audio?.state !== "running") return;
+    const now = audio.currentTime;
+    for (const [frequency, volume] of [
+      [880, 0.045],
+      [1760, 0.018],
+    ]) {
+      const oscillator = audio.createOscillator();
+      const gain = audio.createGain();
+      oscillator.frequency.value = frequency;
+      gain.gain.setValueAtTime(volume, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
+      oscillator.connect(gain).connect(audio.destination);
+      oscillator.start(now);
+      oscillator.stop(now + 0.3);
+    }
+  };
+  const skip = document.createElement("button");
+  skip.type = "button";
+  skip.textContent = "直接查看";
+  panel.append(bell, label, progress, detail, sound, skip);
+  curtain.append(panel);
+  document.body.append(curtain);
+  let opened = false;
+  let deadline;
+  let cleanup;
+  const remove = () => {
+    clearTimeout(deadline);
+    clearTimeout(cleanup);
+    const focused = curtain.contains(document.activeElement);
+    curtain.remove();
+    cancelAnimationFrame(clothFrame);
+    fillAnimation?.cancel();
+    audio?.close().catch(() => {});
+    if (focused) document.querySelector("#main-content")?.focus({ preventScroll: true });
+    window.removeEventListener("pagehide", remove);
+    document.removeEventListener("keydown", onKey);
+    motion.removeEventListener("change", remove);
+  };
+  const onKey = (event) => {
+    if (event.key === "Escape") remove();
+    if (event.key === "Tab" && !opened) {
+      event.preventDefault();
+      const controls = [sound, skip].filter((button) => !button.disabled);
+      const current = controls.indexOf(document.activeElement);
+      const next =
+        current < 0
+          ? event.shiftKey
+            ? controls.length - 1
+            : 0
+          : (current + (event.shiftKey ? -1 : 1) + controls.length) % controls.length;
+      controls[next].focus({ preventScroll: true });
+    }
+  };
+  const open = () => {
+    if (opened || !curtain.isConnected) return;
+    opened = true;
+    clearTimeout(deadline);
+    if (curtain.contains(document.activeElement))
+      document.querySelector("#main-content")?.focus({ preventScroll: true });
+    panel.hidden = true;
+    curtain.classList.add("is-opening");
+    const started = performance.now();
+    const animateCloth = (now) => {
+      const elapsed = clamp((now - started) / 4200);
+      // Smooth traction and braking, with no elastic bounce.
+      drawCloth(elapsed * elapsed * (3 - 2 * elapsed));
+      if (elapsed < 1 && curtain.isConnected) clothFrame = requestAnimationFrame(animateCloth);
+      else remove();
+    };
+    clothFrame = requestAnimationFrame(animateCloth);
+    cleanup = setTimeout(remove, 4700);
+  };
+  skip.onclick = remove;
+  document.addEventListener("keydown", onKey);
+  window.addEventListener("pagehide", remove);
+  motion.addEventListener("change", remove);
+  // A single image request supplies both actual transfer progress and the displayed cover.
+  // No synthetic percentages for HTML, font loading, decode or unknown response lengths.
+  const imageReady = cover
+    ? new Promise((resolve, reject) => {
+        const request = new XMLHttpRequest();
+        request.open("GET", coverUrl);
+        request.responseType = "blob";
+        request.onprogress = (event) => {
+          if (!curtain.isConnected || opened) return;
+          label.textContent = "封面加载中";
+          updateBytes(event.loaded, event.lengthComputable ? event.total : 0);
+        };
+        request.onerror = () => reject(new Error("封面加载失败"));
+        request.onload = async () => {
+          if (request.status < 200 || request.status >= 300) {
+            reject(new Error("封面加载失败"));
+            return;
+          }
+          const blob = request.response;
+          const url = URL.createObjectURL(blob);
+          window.addEventListener(
+            "pagehide",
+            (event) => {
+              if (!event.persisted) URL.revokeObjectURL(url);
+            },
+            { once: true },
+          );
+          cover.src = url;
+          cover.hidden = false;
+          try {
+            if (curtain.isConnected) {
+              updateBytes(blob.size, blob.size);
+              label.textContent = "封面已接收，正在显示";
+            }
+            await cover.decode();
+            resolve();
+          } catch {
+            URL.revokeObjectURL(url);
+            reject(new Error("封面无法显示"));
+          }
+        };
+        request.send();
+      })
+    : Promise.resolve();
+  const fontsReady = (document.fonts?.ready || Promise.resolve()).then(() => {
+    if (document.fonts && [...document.fonts].some((font) => font.status === "error")) return false;
+    return true;
+  });
+  deadline = setTimeout(() => {
+    if (!opened && curtain.isConnected) detail.textContent += " · 加载较慢，可直接查看";
+  }, 8000);
+  (async () => {
+    ring();
+    try {
+      await imageReady;
+      if (!curtain.isConnected) return;
+      ring();
+      label.textContent = "封面已就绪，正在准备字体";
+      const fontsLoaded = await fontsReady;
+      if (!curtain.isConnected) return;
+      label.textContent = fontsLoaded ? "舞台已就绪" : "字体加载失败，使用系统字体";
+      ring();
+      // Let the last measured byte update settle before the separate opening animation.
+      await new Promise((resolve) => setTimeout(resolve, 280));
+      open();
+    } catch (error) {
+      if (cover) {
+        cover.hidden = false;
+        cover.alt = "封面暂时无法加载";
+      }
+      clearTimeout(deadline);
+      if (curtain.isConnected) label.textContent = error.message + "，可刷新重试或直接查看";
+    }
+  })();
+})();
+
 (() => {
   const nav = document.querySelector("#main-navigation"),
     toggle = document.querySelector(".menu-toggle"),
@@ -539,4 +838,54 @@
   };
   openLegacy();
   window.addEventListener("hashchange", openLegacy);
+})();
+
+// A single, decorative cue after a native edition-link navigation.
+(() => {
+  const nav = document.querySelector(".edition-tabs");
+  const heading = document.querySelector(".production-edition > .edition-heading");
+  if (!nav || !heading) return;
+  const key = "blackbox-edition-light";
+  const motion = matchMedia("(prefers-reduced-motion: reduce)");
+  const clear = () => heading.classList.remove("edition-light-enter");
+  try {
+    const pending = JSON.parse(sessionStorage.getItem(key) || "null");
+    sessionStorage.removeItem(key);
+    const navigation = performance.getEntriesByType("navigation")[0];
+    if (
+      !motion.matches &&
+      navigation?.type === "navigate" &&
+      pending?.url === location.href &&
+      Date.now() - pending.time < 15000 &&
+      location.hash === `#${heading.parentElement.id}`
+    ) {
+      heading.classList.add("edition-light-enter");
+      setTimeout(clear, 450);
+    }
+  } catch {
+    /* Storage restrictions leave native navigation intact. */
+  }
+  nav.addEventListener("click", (event) => {
+    const link = event.target.closest("a");
+    if (
+      !link ||
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey ||
+      link.target ||
+      link.getAttribute("aria-current") === "page" ||
+      motion.matches
+    )
+      return;
+    try {
+      sessionStorage.setItem(key, JSON.stringify({ url: link.href, time: Date.now() }));
+    } catch {
+      /* The effect is optional. */
+    }
+  });
+  window.addEventListener("pagehide", clear);
+  motion.addEventListener("change", clear);
 })();

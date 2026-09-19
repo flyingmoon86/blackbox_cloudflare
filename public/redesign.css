@@ -154,3 +154,26 @@ html.photo-viewing,html.photo-viewing body,html.photo-viewing main{overflow:hidd
 .design-public .edition-heading{align-items:start;row-gap:14px}.edition-supplement{grid-column:2;min-width:0;margin-top:24px;padding-top:0;border-top:0;overflow-wrap:anywhere}.edition-supplement h3{margin:0 0 12px;font-size:13px;font-weight:700;letter-spacing:.08em;color:var(--muted)}.edition-supplement dl{display:flex;flex-wrap:wrap;gap:8px 28px;margin:0}.edition-supplement dl>div{display:flex;align-items:baseline;gap:8px}.edition-supplement dt{font-size:13px;color:var(--muted)}.edition-supplement dd{margin:0}.edition-supplement>p{max-width:58ch;margin:12px 0 0;line-height:1.75;color:var(--muted)}
 @media(min-width:901px){.design-public .edition-heading .edition-year{grid-row:1 / span 2;align-self:start}}
 @media(max-width:900px){.edition-supplement{grid-column:1;margin-top:2px}}
+/* Original velvet drawing: rounded irregular folds, soft nap and overhead light. */
+.design-public .work-detail .production-hero>.production-cover[hidden]{display:none}
+@media(scripting:none){.production-hero>noscript{display:contents}}
+.design-public .work-detail .production-hero>noscript>.production-cover{display:block;grid-column:1;grid-row:1;width:100%;height:auto;max-height:85vh;object-fit:contain;margin:0;border-radius:0;background:transparent}
+@media(max-width:900px){.design-public .work-detail .production-hero>noscript>.production-cover{max-height:80svh}}
+.work-curtain{position:fixed;inset:0;z-index:80;display:grid;place-content:center;text-align:center;pointer-events:none;color:#f3ead8}
+.curtain-cloth{position:absolute;inset:0;width:100%;height:100%;z-index:-1;overflow:hidden}
+.work-curtain p{margin:0 0 16px;font:500 18px var(--serif);letter-spacing:.2em}.design-public .work-curtain button{pointer-events:auto;background:none;border:0;color:#f3ead8;text-decoration:underline;font-size:14px;min-height:44px}
+.work-curtain:not(.is-opening){pointer-events:auto}
+.curtain-progress{position:absolute;bottom:max(8vh,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:min(320px,calc(100% - 48px))}.curtain-progress[hidden]{display:none}.curtain-bell{display:block;font-size:28px;margin-bottom:12px;transform-origin:50% 0}.curtain-progress p{font-family:inherit;font-size:14px;letter-spacing:.04em;line-height:1.6}.curtain-progress progress{display:block;width:100%;height:4px;border:0;margin:0 0 12px;accent-color:#e6ce4e}.curtain-progress progress::-webkit-progress-bar{background:#f3ead826}.curtain-progress progress::-webkit-progress-value{background:#e6ce4e}.design-public .curtain-progress button{font-size:12px;padding:8px 12px}.curtain-bell.is-ringing{animation:curtain-bell-ring 280ms ease-out}@keyframes curtain-bell-ring{0%,100%{transform:rotate(0)}25%{transform:rotate(16deg)}70%{transform:rotate(-12deg)}}
+.work-curtain.is-opening .curtain-progress{opacity:0;transition:opacity 150ms}
+.curtain-progress{filter:drop-shadow(0 2px 10px #000);bottom:max(7vh,env(safe-area-inset-bottom))}
+.curtain-meter{height:3px;margin:0 0 12px;overflow:hidden;border-radius:3px;background:#f3ead826}
+.curtain-meter>span{display:block;height:100%;background:#e6ce4e;transform:scaleX(0);transform-origin:left center;border-radius:inherit}
+.curtain-progress .curtain-transfer{font-size:12px;font-variant-numeric:tabular-nums;letter-spacing:.02em;opacity:.85;min-height:20px;margin-bottom:8px}
+.design-public .curtain-progress button:is(:hover,:focus-visible){background:#18090dc9;color:#f3ead8;outline-color:#e6ce4e;transform:none}
+@media(prefers-reduced-motion:reduce){.work-curtain{display:none}}
+@media(prefers-reduced-motion:no-preference){
+.edition-heading.edition-light-enter{position:relative;isolation:isolate;animation:edition-light-reveal 400ms ease-out both}
+.edition-heading.edition-light-enter::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(ellipse at 38% 0%,#e6ce4e26,transparent 72%);animation:edition-light-glow 400ms ease-out both}
+@keyframes edition-light-reveal{from{opacity:.65}to{opacity:1}}
+@keyframes edition-light-glow{from{opacity:1}to{opacity:0}}
+}
