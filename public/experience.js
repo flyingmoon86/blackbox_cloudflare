@@ -10,14 +10,18 @@
     }
   };
   const motion = matchMedia("(prefers-reduced-motion: reduce)");
+  const boot = window.blackboxCurtainBoot;
   if (
     !work ||
+    !boot ||
+    boot?.cancelled ||
     motion.matches ||
     location.search ||
     location.hash ||
     performance.getEntriesByType("navigation")[0]?.type === "back_forward"
   ) {
     nativeCover();
+    boot?.release();
     return;
   }
   const curtain = document.createElement("div");
@@ -30,13 +34,14 @@
   cloth.setAttribute("preserveAspectRatio", "none");
   cloth.setAttribute("aria-hidden", "true");
   cloth.innerHTML = `<defs>
-    <linearGradient id="curtain-fold"><stop stop-color="#160209"/><stop offset=".12" stop-color="#3b0716"/><stop offset=".31" stop-color="#8e142e"/><stop offset=".47" stop-color="#c52c4a"/><stop offset=".61" stop-color="#95162f"/><stop offset=".84" stop-color="#410816"/><stop offset="1" stop-color="#110106"/></linearGradient>
+    <linearGradient id="curtain-fold"><stop stop-color="#210508"/><stop offset=".13" stop-color="#4e0b12"/><stop offset=".32" stop-color="#901d29"/><stop offset=".48" stop-color="#b93640"/><stop offset=".64" stop-color="#951d29"/><stop offset=".85" stop-color="#4b0911"/><stop offset="1" stop-color="#210508"/></linearGradient>
     <linearGradient id="curtain-weight" x2="0" y2="1"><stop stop-color="#000" stop-opacity=".54"/><stop offset=".16" stop-color="#ff9b8e" stop-opacity=".12"/><stop offset=".55" stop-color="#530815" stop-opacity=".14"/><stop offset="1" stop-color="#000" stop-opacity=".58"/></linearGradient>
     <filter id="curtain-nap" x="-3%" y="-1%" width="106%" height="102%">
       <feTurbulence type="fractalNoise" baseFrequency="16 .42" numOctaves="2" seed="19" stitchTiles="stitch" result="fiber"/>
       <feColorMatrix in="fiber" type="matrix" values="0 0 0 0 .82 0 0 0 0 .05 0 0 0 0 .08 0 0 0 .16 0" result="redFiber"/>
       <feBlend in="SourceGraphic" in2="redFiber" mode="screen" result="velvet"/>
-      <feDisplacementMap in="velvet" in2="fiber" scale="2.2" xChannelSelector="R" yChannelSelector="G"/>
+      <feComposite in="velvet" in2="SourceGraphic" operator="in" result="clippedVelvet"/>
+      <feDisplacementMap in="clippedVelvet" in2="fiber" scale="1.2" xChannelSelector="R" yChannelSelector="G"/>
     </filter>
   </defs>`;
   const folds = [];
@@ -167,6 +172,8 @@
   panel.append(bell, label, progress, detail, sound, skip);
   curtain.append(panel);
   document.body.append(curtain);
+  // Swap both curtains in one task, before the browser can paint the stage.
+  boot?.release();
   let opened = false;
   let deadline;
   let cleanup;
@@ -269,6 +276,27 @@
     if (document.fonts && [...document.fonts].some((font) => font.status === "error")) return false;
     return true;
   });
+  // Eager images and scripts; lazy off-screen gallery images must not delay entry.
+  const pageReady =
+    document.readyState === "complete"
+      ? Promise.resolve()
+      : new Promise((resolve) => window.addEventListener("load", resolve, { once: true }));
+  // CSS backgrounds may only start after the initially hidden body becomes visible.
+  const backdropUrl = getComputedStyle(document.body, "::before").backgroundImage.match(
+    /url\(["']?([^"')]+)["']?\)/,
+  )?.[1];
+  const backdropReady = backdropUrl
+    ? new Promise((resolve) => {
+        const backdrop = new Image();
+        backdrop.onload = () =>
+          backdrop.decode().then(
+            () => resolve(true),
+            () => resolve(false),
+          );
+        backdrop.onerror = () => resolve(false);
+        backdrop.src = backdropUrl;
+      })
+    : Promise.resolve(true);
   deadline = setTimeout(() => {
     if (!opened && curtain.isConnected) detail.textContent += " · 加载较慢，可直接查看";
   }, 8000);
@@ -281,7 +309,15 @@
       label.textContent = "封面已就绪，正在准备字体";
       const fontsLoaded = await fontsReady;
       if (!curtain.isConnected) return;
-      label.textContent = fontsLoaded ? "舞台已就绪" : "字体加载失败，使用系统字体";
+      label.textContent = "正在准备页面资源";
+      await pageReady;
+      const backdropLoaded = await backdropReady;
+      if (!curtain.isConnected) return;
+      label.textContent = !fontsLoaded
+        ? "字体加载失败，使用系统字体"
+        : !backdropLoaded
+          ? "背景加载失败，使用纯色舞台"
+          : "舞台已就绪";
       ring();
       // Let the last measured byte update settle before the separate opening animation.
       await new Promise((resolve) => setTimeout(resolve, 280));

@@ -149,7 +149,11 @@ export function layout(title: string, content: string, signedIn = false, admin =
     assetUrl("/redesign.css") +
     '"><link rel="stylesheet" href="' +
     assetUrl("/fonts.css") +
-    '"><script src="' +
+    '">' +
+    (content.includes('class="card production-detail work-detail')
+      ? '<script src="' + assetUrl("/curtain-boot.js") + '"></script>'
+      : "") +
+    '<script src="' +
     assetUrl("/app.js") +
     '" defer></script><script src="' +
     assetUrl("/experience.js") +

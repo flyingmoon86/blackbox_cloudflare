@@ -191,7 +191,13 @@ html.photo-viewing,html.photo-viewing body,html.photo-viewing main{overflow:hidd
 @media(scripting:none){.production-hero>noscript{display:contents}}
 .design-public .work-detail .production-hero>noscript>.production-cover{display:block;grid-column:1;grid-row:1;width:100%;height:auto;max-height:85vh;object-fit:contain;margin:0;border-radius:0;background:transparent}
 @media(max-width:900px){.design-public .work-detail .production-hero>noscript>.production-cover{max-height:80svh}}
+html.curtain-pending{background:#210508;--curtain-fold-width:5vw}
+html.curtain-pending body{visibility:hidden}
+html.curtain-pending::before{content:"";position:fixed;inset:0;z-index:1000;background:linear-gradient(180deg,#0009,transparent 20%,#22040730 55%,#0008),repeating-linear-gradient(90deg,#210508 0,#4e0b12 calc(var(--curtain-fold-width)*.13),#901d29 calc(var(--curtain-fold-width)*.32),#b93640 calc(var(--curtain-fold-width)*.48),#951d29 calc(var(--curtain-fold-width)*.64),#4b0911 calc(var(--curtain-fold-width)*.85),#210508 var(--curtain-fold-width))}
+@media(max-width:600px){html.curtain-pending{--curtain-fold-width:8.333333vw}}
+html.curtain-pending::after{content:"正在准备舞台 · 点击或按 Esc 直接查看";position:fixed;z-index:1001;bottom:8vh;inset-inline:20px;text-align:center;color:#f3ead8;font:14px/1.6 sans-serif;letter-spacing:.08em}
 .work-curtain{position:fixed;inset:0;z-index:80;display:grid;place-content:center;text-align:center;pointer-events:none;color:#f3ead8}
+.work-curtain:not(.is-opening){background:#210508}
 .curtain-cloth{position:absolute;inset:0;width:100%;height:100%;z-index:-1;overflow:hidden}
 .work-curtain p{margin:0 0 16px;font:500 18px var(--serif);letter-spacing:.2em}.design-public .work-curtain button{pointer-events:auto;background:none;border:0;color:#f3ead8;text-decoration:underline;font-size:14px;min-height:44px}
 .work-curtain:not(.is-opening){pointer-events:auto}
