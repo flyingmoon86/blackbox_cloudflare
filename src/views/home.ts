@@ -91,6 +91,7 @@ export function theatreHome(
         e(featured.year) +
         "</p><h3>" +
         e(featured.title) +
+        (admin && featured.is_hidden ? " · 已隐藏" : "") +
         "</h3><p>" +
         e(featured.promo || featured.synopsis) +
         "</p><span>进入作品 →</span></div></a>"
@@ -105,6 +106,7 @@ export function theatreHome(
           p.id +
           '"><strong>' +
           e(p.title) +
+          (admin && p.is_hidden ? " · 已隐藏" : "") +
           "</strong><small>" +
           e(p.year || "年份待补") +
           "</small><span>↗</span></a>",

@@ -3,6 +3,7 @@ import { pageNumber, YEARS } from "../views/shared";
 import { replaceAvatar, queueCurrentAvatar } from "../services/avatars";
 import { drainFileCleanup } from "../services/file-cleanup";
 import { serveResourceFile } from "../services/resource-files";
+import { productionVisible } from "../services/production-visibility";
 import { consumeAccountLimit } from "../middleware/request-limits";
 import { readBoundedBody } from "../http/validation";
 import { Hono } from "hono";
@@ -82,7 +83,7 @@ memberRoutes.get("/members", async (c) => {
   const params: Array<string | number> = [];
   if (search) {
     where.push(
-      "(m.name LIKE ? ESCAPE '\\' OR m.cohort LIKE ? ESCAPE '\\' OR EXISTS(SELECT 1 FROM production_credit pc JOIN production p ON p.id=pc.production_id WHERE pc.member_id=m.id AND p.title LIKE ? ESCAPE '\\'))",
+      `(m.name LIKE ? ESCAPE '\\' OR m.cohort LIKE ? ESCAPE '\\' OR EXISTS(SELECT 1 FROM production_credit pc JOIN production p ON p.id=pc.production_id WHERE pc.member_id=m.id AND ${productionVisible(c, "p")} AND p.title LIKE ? ESCAPE '\\'))`,
     );
     const escaped = `%${search.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_")}%`;
     params.push(escaped, escaped, escaped);
@@ -142,7 +143,7 @@ memberRoutes.get("/members/:id", async (c) => {
   );
   member.productions = (
     await c.env.DB.prepare(
-      "SELECT p.id,p.title,pc.edition_id,pe.name edition_name,pe.year,pc.role_name,pc.kind FROM production p JOIN production_credit pc ON pc.production_id=p.id LEFT JOIN production_edition pe ON pe.id=pc.edition_id WHERE pc.member_id=? ORDER BY pe.year DESC,p.id DESC,pc.edition_id DESC,pc.kind,pc.id",
+      `SELECT p.id,p.title,pc.edition_id,pe.name edition_name,pe.year,pc.role_name,pc.kind FROM production p JOIN production_credit pc ON pc.production_id=p.id LEFT JOIN production_edition pe ON pe.id=pc.edition_id WHERE pc.member_id=? AND ${productionVisible(c, "p")} ORDER BY pe.year DESC,p.id DESC,pc.edition_id DESC,pc.kind,pc.id`,
     )
       .bind(id)
       .all<NonNullable<MemberRow["productions"]>[number]>()

@@ -27,6 +27,7 @@ export type PageInfo = {
   total: number;
   size: number;
   path: string;
+  visibility?: string;
   query?: string;
   year?: number | null;
   edition?: number;
@@ -42,6 +43,7 @@ export function pagination(info?: PageInfo): string {
     "?" +
     new URLSearchParams({
       ...(info.query ? { q: info.query } : {}),
+      ...(info.visibility ? { visibility: info.visibility } : {}),
       ...(info.year ? { year: String(info.year) } : {}),
       ...(info.edition ? { edition: String(info.edition) } : {}),
       page: String(page),

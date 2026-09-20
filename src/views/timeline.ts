@@ -3,6 +3,7 @@ import { archiveTabs } from "./shared";
 import type { UserSession } from "../types";
 
 export type TimelineRow = {
+  is_hidden?: number;
   id: number;
   title: string;
   year: number | null;
@@ -29,7 +30,7 @@ export function timelinePage(rows: TimelineRow[], user: UserSession | null): str
                   : item.photo
                     ? `/resources/${item.photo}/preview`
                     : "";
-                return `<article class="timeline-work"><a href="/productions/${item.id}" class="timeline-link">${image ? `<img src="${image}" alt="" loading="lazy" width="640" height="400">` : '<span class="timeline-placeholder">影像待补</span>'}<h3>${escapeHtml(item.title)}</h3></a><p class="timeline-counts"><span>${item.editions} 个版本</span><span>${item.people} 位演职员</span><span>${item.resources ? `${item.resources} 份资料` : "暂无入库资料"}</span></p></article>`;
+                return `<article class="timeline-work"><a href="/productions/${item.id}" class="timeline-link">${image ? `<img src="${image}" alt="" loading="lazy" width="640" height="400">` : '<span class="timeline-placeholder">影像待补</span>'}<h3>${escapeHtml(item.title)}</h3>${user?.role === "admin" && item.is_hidden ? '<span class="role-badge">已隐藏 · 仅管理员可见</span>' : ""}</a><p class="timeline-counts"><span>${item.editions} 个版本</span><span>${item.people} 位演职员</span><span>${item.resources ? `${item.resources} 份资料` : "暂无入库资料"}</span></p></article>`;
               })
               .join("")}</div></section>`,
         )

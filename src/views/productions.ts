@@ -13,11 +13,19 @@ import type { UserSession } from "../types";
 import { escapeHtml, layout } from "../views";
 import { resourceCardArtwork } from "./resource-preview";
 
+function visibilityControl(item: ProductionRow, csrf: string): string {
+  return `<form class="production-visibility" method="post" action="/admin/productions/${item.id}/visibility"><span class="role-badge">${item.is_hidden ? "已隐藏 · 仅管理员可见" : "公开"}</span><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button class="secondary" name="is_hidden" value="${item.is_hidden ? 0 : 1}">${item.is_hidden ? "取消隐藏" : "设为隐藏"}</button></form>`;
+}
+function visibilityFields(item: ProductionRow | null): string {
+  return `<fieldset><legend>作品可见性</legend><label><input type="radio" name="is_hidden" value="0"${!item?.is_hidden ? " checked" : ""}>公开</label><label><input type="radio" name="is_hidden" value="1"${item?.is_hidden ? " checked" : ""}>隐藏作品（仅管理员可见）</label><p class="hint">隐藏后，普通用户（包括上传者）无法查看作品和关联资料；取消隐藏后恢复原有访问规则。资料和演职员记录不会删除。</p></fieldset>`;
+}
+
 export function productionListPage(
   items: ProductionRow[],
   user: UserSession | null,
   deleted = false,
   page?: PageInfo,
+  csrf = "",
 ): string {
   const admin = user?.role === "admin";
   const contributionActions = (item: ProductionRow): string => {
@@ -26,7 +34,7 @@ export function productionListPage(
       : admin
         ? `<a class="button secondary" href="/productions/${item.id}#manage-credits">管理主创</a>`
         : "";
-    return `<div class="production-actions">${joinLink}<a class="button" href="/resources/submit?production_id=${item.id}">我要补充资料！</a></div>`;
+    return `${admin ? visibilityControl(item, csrf) : ""}<div class="production-actions">${joinLink}<a class="button" href="/resources/submit?production_id=${item.id}">我要补充资料！</a></div>`;
   };
   let groupKey = "";
   const cards = items.length
@@ -56,7 +64,20 @@ export function productionListPage(
   return layout(
     "作品",
     '<p class="timeline-entry"><a href="/productions?view=timeline">按年份浏览 · 演出时间轴 →</a></p>' +
-      `${archiveTabs("productions")}<section class="page-heading"><p class="eyebrow">PRODUCTIONS</p><h1>作品档案</h1><form method="get" action="/productions" class="filters" role="search"><input type="search" name="q" maxlength="80" aria-label="搜索作品" value="${escapeHtml(page?.query || "")}" placeholder="搜索作品名称、简介、版本或年份"><button>查找</button>${page?.query ? '<a href="/productions">清除搜索</a>' : ""}</form>${deleted ? '<p class="notice">作品已删除，原有资料已转入“其他资料”。</p>' : ""}<p>浏览剧团作品，进入作品可查看演职员与已经审核入库的相关资料。</p>${admin ? '<a class="button" href="/admin/productions/new">＋ 创建作品</a>' : !admin ? '<a class="button" href="/suggestions?type=production&source=productions">申请创建作品</a>' : ""}</section><section class="card-grid production-grid" data-server-paged>${cards}</section>${pagination(page)}`,
+      `${archiveTabs("productions")}<section class="page-heading"><p class="eyebrow">PRODUCTIONS</p><h1>作品档案</h1><form method="get" action="/productions" class="filters" role="search"><input type="search" name="q" maxlength="80" aria-label="搜索作品" value="${escapeHtml(page?.query || "")}" placeholder="搜索作品名称、简介、版本或年份">${
+        admin
+          ? `<label>可见性<select name="visibility">${[
+              ["all", "全部"],
+              ["public", "公开"],
+              ["hidden", "隐藏"],
+            ]
+              .map(
+                ([value, label]) =>
+                  `<option value="${value}"${(page?.visibility || "all") === value ? " selected" : ""}>${label}</option>`,
+              )
+              .join("")}</select></label>`
+          : ""
+      }<button>查找</button>${page?.query ? '<a href="/productions">清除搜索</a>' : ""}</form>${deleted ? '<p class="notice">作品已删除，原有资料已转入“其他资料”。</p>' : ""}<p>浏览剧团作品，进入作品可查看演职员与已经审核入库的相关资料。</p>${admin ? '<a class="button" href="/admin/productions/new">＋ 创建作品</a>' : !admin ? '<a class="button" href="/suggestions?type=production&source=productions">申请创建作品</a>' : ""}</section><section class="card-grid production-grid" data-server-paged>${cards}</section>${pagination(page)}`,
     Boolean(user),
     admin,
   );
@@ -168,7 +189,7 @@ export function productionDetailPage(
   }
   return layout(
     item.title,
-    `<p class="back-links"><a href="/productions">← 返回作品档案</a></p><article class="card production-detail work-detail ratio-${item.cover_ratio === "portrait" ? "portrait" : "landscape"}"><header class="production-hero">${item.cover_id ? `<img class="production-cover" hidden decoding="async" data-curtain-src="/productions/${item.id}/cover?v=${item.cover_id}" alt="${escapeHtml(item.title)}封面"><noscript><img class="production-cover" src="/productions/${item.id}/cover?v=${item.cover_id}" alt="${escapeHtml(item.title)}封面"></noscript>` : ""}<div class="production-hero-copy"><p class="eyebrow">${escapeHtml(item.year || "PRODUCTION")} · ${editions.length} 个版本</p><h1>${escapeHtml(item.title)}</h1><p class="lead">${escapeHtml(item.promo)}</p><a class="production-hero-next" href="#versions">查看演出版本 <span aria-hidden="true">↓</span></a></div></header><p class="production-synopsis">${escapeHtml(item.synopsis || "暂无剧情介绍")}</p>
+    `${admin ? visibilityControl(item, csrf) : ""}<p class="back-links"><a href="/productions">← 返回作品档案</a></p><article class="card production-detail work-detail ratio-${item.cover_ratio === "portrait" ? "portrait" : "landscape"}"><header class="production-hero">${item.cover_id ? `<img class="production-cover" hidden decoding="async" data-curtain-src="/productions/${item.id}/cover?v=${item.cover_id}" alt="${escapeHtml(item.title)}封面"><noscript><img class="production-cover" src="/productions/${item.id}/cover?v=${item.cover_id}" alt="${escapeHtml(item.title)}封面"></noscript>` : ""}<div class="production-hero-copy"><p class="eyebrow">${escapeHtml(item.year || "PRODUCTION")} · ${editions.length} 个版本</p><h1>${escapeHtml(item.title)}</h1><p class="lead">${escapeHtml(item.promo)}</p><a class="production-hero-next" href="#versions">查看演出版本 <span aria-hidden="true">↓</span></a></div></header><p class="production-synopsis">${escapeHtml(item.synopsis || "暂无剧情介绍")}</p>
     <nav class="edition-nav" id="versions" aria-label="演出版本"><span class="edition-nav-label">选择演出版本</span><div class="edition-tabs">${editions.map((v) => `<a href="/productions/${item.id}?edition=${v.id}#edition-${v.id}"${v.id === (resourcePage?.edition || editions[0]?.id) ? ' aria-current="page"' : ""}>${escapeHtml(editionLabel(v.id))}</a>`).join("")}</div></nav>
     ${editions
       .filter((v) => v.id === (resourcePage?.edition || editions[0]?.id))
@@ -210,7 +231,7 @@ export function productionFormPage(
     : '<p class="muted">当前没有可导入的已审核资料。</p>';
   return layout(
     item ? "编辑作品" : "创建作品",
-    `<section class="card auth wide"><p class="eyebrow">PRODUCTION EDITOR</p><h1>${item ? "编辑作品" : "创建作品"}</h1><form method="post" action="${action}"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>作品名称<input name="title" maxlength="100" value="${escapeHtml(item?.title)}" required></label>${item ? `<p>版本年份请在作品详情的版本区域管理，列表按最新版本排序。</p>` : `<fieldset data-edition-fields><legend>演出版本</legend><p>每个版本独立演职人员，同一年可添加多个版本。</p><div data-edition-row><label>版本名称<input name="edition_name" maxlength="80" value="首演版" required></label><label>年份${yearSelect("edition_year", 2026)}</label></div><button type="button" data-add-edition>＋ 添加一个版本</button></fieldset>`}<label>首页短介绍<input name="promo" maxlength="300" value="${escapeHtml(item?.promo)}"></label><label>剧情与作品介绍<textarea name="synopsis" rows="8">${escapeHtml(item?.synopsis)}</textarea></label>${coverSelect}${resourceImport}<label>作品主题色<input name="theme_color" value="${escapeHtml(item?.theme_color || "")}" pattern="#[0-9a-fA-F]{6}" maxlength="7" placeholder="留空沿用全站"><span class="hint">仅作用于该作品详情页，留空沿用网站颜色。</span></label><label>选择作品颜色<input type="color" data-production-color value="${escapeHtml(item?.theme_color || "#536c57")}"></label><label>封面比例<select name="cover_ratio"><option value="landscape"${item?.cover_ratio !== "portrait" ? " selected" : ""}>横版</option><option value="portrait"${item?.cover_ratio === "portrait" ? " selected" : ""}>竖版</option></select></label><label>作品卡片布局<select name="feature_layout"><option value="split"${item?.feature_layout !== "overlay" ? " selected" : ""}>图文并列</option><option value="overlay"${item?.feature_layout === "overlay" ? " selected" : ""}>文字叠加</option></select><span class="hint">同时用于作品档案列表和首页精选区。图文并列保持现有排版；文字叠加使用剧照卡片，悬停展开简介和操作，手机直接显示。需要先选择展示图。</span></label><button>保存作品</button></form>${item ? `<aside class="danger-zone"><p class="eyebrow">DANGER ZONE</p><h2>删除作品</h2><p>演职员和待审核加入申请会一并移除；已上传资料不会删除，而会转入“其他资料”。</p><form method="post" action="/admin/productions/${item.id}/delete"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>输入作品名“${escapeHtml(item.title)}”确认<input name="confirm_title" autocomplete="off" required></label><button class="danger">删除这部作品</button></form></aside>` : ""}</section>`,
+    `<section class="card auth wide"><p class="eyebrow">PRODUCTION EDITOR</p><h1>${item ? "编辑作品" : "创建作品"}</h1><form method="post" action="${action}"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>作品名称<input name="title" maxlength="100" value="${escapeHtml(item?.title)}" required></label>${item ? `<p>版本年份请在作品详情的版本区域管理，列表按最新版本排序。</p>` : `<fieldset data-edition-fields><legend>演出版本</legend><p>每个版本独立演职人员，同一年可添加多个版本。</p><div data-edition-row><label>版本名称<input name="edition_name" maxlength="80" value="首演版" required></label><label>年份${yearSelect("edition_year", 2026)}</label></div><button type="button" data-add-edition>＋ 添加一个版本</button></fieldset>`}${visibilityFields(item)}<label>首页短介绍<input name="promo" maxlength="300" value="${escapeHtml(item?.promo)}"></label><label>剧情与作品介绍<textarea name="synopsis" rows="8">${escapeHtml(item?.synopsis)}</textarea></label>${coverSelect}${resourceImport}<label>作品主题色<input name="theme_color" value="${escapeHtml(item?.theme_color || "")}" pattern="#[0-9a-fA-F]{6}" maxlength="7" placeholder="留空沿用全站"><span class="hint">仅作用于该作品详情页，留空沿用网站颜色。</span></label><label>选择作品颜色<input type="color" data-production-color value="${escapeHtml(item?.theme_color || "#536c57")}"></label><label>封面比例<select name="cover_ratio"><option value="landscape"${item?.cover_ratio !== "portrait" ? " selected" : ""}>横版</option><option value="portrait"${item?.cover_ratio === "portrait" ? " selected" : ""}>竖版</option></select></label><label>作品卡片布局<select name="feature_layout"><option value="split"${item?.feature_layout !== "overlay" ? " selected" : ""}>图文并列</option><option value="overlay"${item?.feature_layout === "overlay" ? " selected" : ""}>文字叠加</option></select><span class="hint">同时用于作品档案列表和首页精选区。图文并列保持现有排版；文字叠加使用剧照卡片，悬停展开简介和操作，手机直接显示。需要先选择展示图。</span></label><button>保存作品</button></form>${item ? `<aside class="danger-zone"><p class="eyebrow">DANGER ZONE</p><h2>删除作品</h2><p>演职员和待审核加入申请会一并移除；已上传资料不会删除，而会转入“其他资料”。</p><form method="post" action="/admin/productions/${item.id}/delete"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>输入作品名“${escapeHtml(item.title)}”确认<input name="confirm_title" autocomplete="off" required></label><button class="danger">删除这部作品</button></form></aside>` : ""}</section>`,
     true,
     true,
   );

@@ -110,7 +110,33 @@ test("theme stylesheet is shared from the edge cache and skips repeat settings r
   assert.equal(second.status, 200);
   assert.equal(s.env.DB.calls, afterFirst, "cached stylesheet must not query D1 again");
   assert.match(second.headers.get("cache-control") || "", /no-cache/);
-  assert.match(second.headers.get("cache-control") || "", /s-maxage=300/);
+  assert.match(second.headers.get("cache-control") || "", /private/);
+  assert.doesNotMatch(second.headers.get("cache-control") || "", /s-maxage/);
+});
+
+test("hiding a work denies already-warmed public image caches before HEAD or 304", async () => {
+  const s = await setup();
+  try {
+    s.db.exec(
+      "INSERT INTO production(id,title,cover_id) VALUES(1,'cache work',1); UPDATE resource SET production_id=1 WHERE id=1; UPDATE site_profile SET featured_production_id=1 WHERE id=1",
+    );
+    for (const path of ["/resources/1/preview", "/productions/1/cover", "/site/featured-cover"])
+      assert.equal((await s.req(0, path)).status, 200);
+    assert.ok(s.cache.store.size);
+    assert.equal((await s.post(1, "/admin/productions/1/visibility", { is_hidden: "1" })).status, 303);
+    for (const path of ["/resources/1/preview", "/productions/1/cover", "/site/featured-cover"]) {
+      for (const method of ["GET", "HEAD"])
+        assert.equal(
+          (await s.req(2, path, { method, headers: { "If-None-Match": "*", Range: "bytes=0-1" } })).status,
+          404,
+        );
+      assert.equal((await s.req(1, path)).status, 200);
+    }
+    assert.equal((await s.post(1, "/admin/productions/1/visibility", { is_hidden: "0" })).status, 303);
+    assert.equal((await s.req(0, "/resources/1/preview")).status, 200);
+  } finally {
+    s.db.close();
+  }
 });
 
 test("admin settings saves invalidate the cached settings row", async () => {

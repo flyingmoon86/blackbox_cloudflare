@@ -1,4 +1,5 @@
 import type { EditionRow } from "./productions";
+import { productionVisible, resourceVisible } from "../services/production-visibility";
 import { reviewRequest } from "../services/reviews";
 import { pageNumber } from "../views/shared";
 import { canViewResource, serveResourceFile } from "../services/resource-files";
@@ -42,6 +43,17 @@ export type PhotoNavigation = {
 };
 export const resourceRoutes = new Hono<AppEnv>();
 resourceRoutes.use("*", async (c, next) => {
+  const target = /^\/resources\/([^/]+)(?:\/|$)/.exec(c.req.path);
+  // Check the parent before login redirects, uploader access, HEAD, Range or cached bytes.
+  if (
+    target &&
+    target[1] !== "submit" &&
+    (!Number.isSafeInteger(Number(target[1])) ||
+      !(await c.env.DB.prepare(`SELECT id FROM resource WHERE id=? AND ${resourceVisible(c)}`)
+        .bind(Number(target[1]))
+        .first()))
+  )
+    return c.text("资料不存在。", 404);
   if (
     !c.req.path.startsWith("/resources") &&
     c.req.path !== "/my-resources" &&
@@ -61,7 +73,7 @@ resourceRoutes.get("/resources", async (c) => {
   const query = (c.req.query("q") || "").trim().slice(0, 100);
   const base = `SELECT r.edition_id,(SELECT COALESCE(year,'')||' · '||name FROM production_edition WHERE id=r.edition_id) edition_name,r.id,r.title,r.res_type,r.description,r.original_name,r.preview_filename,r.status,r.admin_note,r.created_at,r.production_id,p.title production_title,r.uploader_id,u.username uploader_name
     FROM resource r LEFT JOIN production p ON p.id=r.production_id LEFT JOIN user u ON u.id=r.uploader_id
-    WHERE r.status='approved' AND r.res_type<>'photo'`;
+    WHERE r.status='approved' AND r.res_type<>'photo' AND ${resourceVisible(c, "r")}`;
   const order = ` ORDER BY CASE WHEN r.production_id IS NULL THEN 1 ELSE 0 END,
     COALESCE(p.year,0) DESC,p.id DESC,r.created_at DESC,r.id DESC`;
   const filter = query
@@ -70,7 +82,7 @@ resourceRoutes.get("/resources", async (c) => {
   const params = query ? Array(4).fill(`%${query.replace(/[\\%_]/g, "\\$&")}%`) : [];
   const total =
     (await c.env.DB.prepare(
-      "SELECT COUNT(*) n FROM resource r LEFT JOIN production p ON p.id=r.production_id WHERE r.status='approved' AND r.res_type<>'photo'" +
+      `SELECT COUNT(*) n FROM resource r LEFT JOIN production p ON p.id=r.production_id WHERE r.status='approved' AND r.res_type<>'photo' AND ${resourceVisible(c, "r")}` +
         filter,
     )
       .bind(...params)
@@ -93,11 +105,13 @@ resourceRoutes.get("/resources", async (c) => {
 resourceRoutes.get("/my-resources", async (c) => {
   const u = c.get("user")!;
   const total =
-    (await c.env.DB.prepare("SELECT COUNT(*) n FROM resource WHERE uploader_id=?").bind(u.id).first<number>("n")) || 0;
+    (await c.env.DB.prepare(`SELECT COUNT(*) n FROM resource WHERE uploader_id=? AND ${resourceVisible(c)}`)
+      .bind(u.id)
+      .first<number>("n")) || 0;
   const size = 24,
     page = Math.min(pageNumber(c.req.query("page")), Math.max(1, Math.ceil(total / size)));
   const rows = await c.env.DB.prepare(
-    `SELECT r.edition_id,(SELECT COALESCE(year,'')||' · '||name FROM production_edition WHERE id=r.edition_id) edition_name,r.id,r.title,r.res_type,r.description,r.original_name,r.preview_filename,r.status,r.admin_note,r.created_at,r.production_id,p.title production_title,r.uploader_id,u.username uploader_name FROM resource r LEFT JOIN production p ON p.id=r.production_id LEFT JOIN user u ON u.id=r.uploader_id WHERE r.uploader_id=? ORDER BY r.id DESC LIMIT ? OFFSET ?`,
+    `SELECT r.edition_id,(SELECT COALESCE(year,'')||' · '||name FROM production_edition WHERE id=r.edition_id) edition_name,r.id,r.title,r.res_type,r.description,r.original_name,r.preview_filename,r.status,r.admin_note,r.created_at,r.production_id,p.title production_title,r.uploader_id,u.username uploader_name FROM resource r LEFT JOIN production p ON p.id=r.production_id LEFT JOIN user u ON u.id=r.uploader_id WHERE r.uploader_id=? AND ${resourceVisible(c, "r")} ORDER BY r.id DESC LIMIT ? OFFSET ?`,
   )
     .bind(u.id, size, (page - 1) * size)
     .all<ResourceRow>();
@@ -107,7 +121,9 @@ resourceRoutes.get("/my-resources", async (c) => {
 });
 resourceRoutes.get("/resources/submit", async (c) => {
   const u = c.get("user")!;
-  const productions = await c.env.DB.prepare("SELECT id,title FROM production ORDER BY year DESC,id DESC").all<{
+  const productions = await c.env.DB.prepare(
+    `SELECT id,title FROM production WHERE ${productionVisible(c)} ORDER BY year DESC,id DESC`,
+  ).all<{
     id: number;
     title: string;
   }>();
@@ -121,7 +137,11 @@ resourceRoutes.get("/resources/submit", async (c) => {
       await csrfFor(c),
       u.role === "admin",
       selectedProductionId,
-      (await c.env.DB.prepare("SELECT * FROM production_edition ORDER BY year DESC,id DESC").all<EditionRow>()).results,
+      (
+        await c.env.DB.prepare(
+          `SELECT e.* FROM production_edition e JOIN production p ON p.id=e.production_id WHERE ${productionVisible(c, "p")} ORDER BY e.year DESC,e.id DESC`,
+        ).all<EditionRow>()
+      ).results,
       Number(c.req.query("edition_id")) || null,
     ),
   );
@@ -135,7 +155,7 @@ resourceRoutes.post("/resources/submit", async (c) => {
 resourceRoutes.get("/resources/:id", async (c) => {
   const u = c.get("user")!;
   const row = await c.env.DB.prepare(
-    `SELECT r.edition_id,(SELECT COALESCE(year,'')||' · '||name FROM production_edition WHERE id=r.edition_id) edition_name,r.id,r.title,r.res_type,r.description,r.original_name,r.preview_filename,r.status,r.admin_note,r.created_at,r.production_id,p.title production_title,r.uploader_id,u.username uploader_name FROM resource r LEFT JOIN production p ON p.id=r.production_id LEFT JOIN user u ON u.id=r.uploader_id WHERE r.id=?`,
+    `SELECT r.edition_id,(SELECT COALESCE(year,'')||' · '||name FROM production_edition WHERE id=r.edition_id) edition_name,r.id,r.title,r.res_type,r.description,r.original_name,r.preview_filename,r.status,r.admin_note,r.created_at,r.production_id,p.title production_title,r.uploader_id,u.username uploader_name FROM resource r LEFT JOIN production p ON p.id=r.production_id LEFT JOIN user u ON u.id=r.uploader_id WHERE r.id=? AND ${resourceVisible(c, "r")}`,
   )
     .bind(Number(c.req.param("id")))
     .first<ResourceRow>();
@@ -168,7 +188,7 @@ resourceRoutes.get("/resources/:id", async (c) => {
 for (const mode of ["download", "media", "preview"] as const) {
   resourceRoutes.on(["GET", "HEAD"], "/resources/:id/" + mode, async (c) => {
     const row = await c.env.DB.prepare(
-      "SELECT filename,original_name,preview_filename,res_type,status,uploader_id FROM resource WHERE id=?",
+      `SELECT filename,original_name,preview_filename,res_type,status,uploader_id FROM resource WHERE id=? AND ${resourceVisible(c)}`,
     )
       .bind(Number(c.req.param("id")))
       .first<{

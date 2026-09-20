@@ -215,3 +215,13 @@ html.curtain-pending::after{content:"正在准备舞台 · 点击或按 Esc 直�
 @keyframes edition-light-reveal{from{opacity:.65}to{opacity:1}}
 @keyframes edition-light-glow{from{opacity:1}to{opacity:0}}
 }
+.production-visibility {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-block: 1rem;
+}
+.production-visibility button {
+  min-height: 44px;
+}

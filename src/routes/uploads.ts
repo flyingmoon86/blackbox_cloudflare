@@ -1,4 +1,5 @@
 import { Hono, type Context } from "hono";
+import { canAccessProduction, resourceVisible } from "../services/production-visibility";
 import { HTTPException } from "hono/http-exception";
 import { csrfValid } from "../http/cookies";
 import { createDirectUpload, presignDirectPart, usesDirectR2 } from "../storage/r2-s3";
@@ -53,6 +54,16 @@ async function jsonBody(c: Context<AppEnv>): Promise<Record<string, unknown>> {
 async function ownedTask(c: Context<AppEnv>, writable = false): Promise<UploadTask> {
   const task = await getUploadTask(c.env, c.req.param("id")!);
   if (!task || task.user_id !== c.get("user")!.id) throw new HTTPException(404, { message: "上传任务不存在。" });
+  if (task.production_id && !(await canAccessProduction(c, task.production_id)))
+    throw new HTTPException(404, { message: "上传任务不存在。" });
+  // A completed file may since have been moved into a hidden work by an admin.
+  if (
+    task.resource_id &&
+    (await c.env.DB.prepare(`SELECT id FROM resource WHERE id=? AND NOT (${resourceVisible(c)})`)
+      .bind(task.resource_id)
+      .first())
+  )
+    throw new HTTPException(404, { message: "上传任务不存在。" });
   if (writable) assertTaskWritable(task);
   return task;
 }
@@ -79,11 +90,9 @@ uploadRoutes.post("/api/uploads", async (c) => {
   validateUpload(resType, mime, original, size);
   if (
     production !== null &&
-    (!Number.isSafeInteger(production) ||
-      production < 1 ||
-      !(await c.env.DB.prepare("SELECT id FROM production WHERE id=?").bind(production).first()))
+    (!Number.isSafeInteger(production) || production < 1 || !(await canAccessProduction(c, production)))
   )
-    throw new HTTPException(400, { message: "作品不存在。" });
+    throw new HTTPException(404, { message: "作品不存在。" });
   const edition = body.editionId ? Number(body.editionId) : null;
   if (production && edition === null) throw new HTTPException(400, { message: "请选择资料所属的演出版本。" });
   if (resType === "photo" && !production) throw new HTTPException(400, { message: "剧照请先选择作品和演出版本。" });

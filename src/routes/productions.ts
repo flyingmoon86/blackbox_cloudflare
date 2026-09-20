@@ -1,4 +1,6 @@
 import { serveResourceFile } from "../services/resource-files";
+import { canAccessProduction, productionVisible, resourceVisible } from "../services/production-visibility";
+import { invalidateSiteProfile } from "../services/site-profile";
 import { timelinePage, type TimelineRow } from "../views/timeline";
 import { consumeAccountLimit } from "../middleware/request-limits";
 import { validAccent } from "../services/theme";
@@ -15,6 +17,7 @@ import {
 } from "../views/productions";
 
 export type ProductionRow = {
+  is_hidden?: number;
   featured?: number;
   edition_count?: number;
   theme_color?: string;
@@ -207,6 +210,8 @@ productionRoutes.post("/admin/productions/:id/editions/:editionId", async (c) =>
 
 productionRoutes.use("*", async (c, next) => {
   if (!c.req.path.startsWith("/productions") && !c.req.path.startsWith("/admin/production")) return next();
+  const target = /^\/productions\/([^/]+)(?:\/|$)/.exec(c.req.path);
+  if (target && !(await canAccessProduction(c, Number(target[1])))) return c.text("未找到这部作品。", 404);
   if (!c.get("user") && !(c.req.method === "GET" && /^\/productions(?:\/\d+(?:\/cover)?)?$/.test(c.req.path)))
     return c.redirect(`/login?next=${encodeURIComponent(c.req.path)}`);
   await next();
@@ -235,12 +240,19 @@ async function resourceChoices(c: Context<AppEnv>, productionId: number | null):
 }
 
 productionRoutes.get("/productions", async (c) => {
+  const visibility =
+    c.get("user")?.role === "admin" && ["public", "hidden"].includes(c.req.query("visibility") || "")
+      ? c.req.query("visibility")!
+      : "all";
+  const visible =
+    productionVisible(c, "p") + (visibility === "all" ? "" : ` AND p.is_hidden=${visibility === "hidden" ? 1 : 0}`);
   if (c.req.query("view") === "timeline") {
     const rows = await c.env.DB.prepare(
       `
       WITH years AS (
-        SELECT p.id,p.title,e.year,COUNT(e.id) editions
+        SELECT p.id,p.title,p.is_hidden,e.year,COUNT(e.id) editions
         FROM production p LEFT JOIN production_edition e ON e.production_id=p.id
+        WHERE ${visible}
         GROUP BY p.id,e.year
       )
       SELECT y.*,
@@ -261,10 +273,11 @@ productionRoutes.get("/productions", async (c) => {
   }
   const search = (c.req.query("q") || "").trim().slice(0, 80);
   const pattern = "%" + search.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_") + "%";
-  const where = search
+  const searchWhere = search
     ? "WHERE (p.title LIKE ? ESCAPE '\\' OR p.promo LIKE ? ESCAPE '\\' OR p.synopsis LIKE ? ESCAPE '\\' OR EXISTS(SELECT 1 FROM production_edition e WHERE e.production_id=p.id AND (e.name LIKE ? ESCAPE '\\' OR CAST(e.year AS TEXT) LIKE ? ESCAPE '\\')))"
     : "";
   const params = search ? [pattern, pattern, pattern, pattern, pattern] : [];
+  const where = `WHERE ${visible}` + (searchWhere ? " AND " + searchWhere.slice(6) : "");
   const total =
     (await c.env.DB.prepare(`SELECT COUNT(*) n FROM production p ${where}`)
       .bind(...params)
@@ -272,18 +285,25 @@ productionRoutes.get("/productions", async (c) => {
   const size = 12,
     page = Math.min(pageNumber(c.req.query("page")), Math.max(1, Math.ceil(total / size)));
   const result = await c.env.DB.prepare(
-    `SELECT p.id,(p.id=(SELECT featured_production_id FROM site_profile WHERE id=1)) featured,title,synopsis,promo,COALESCE((SELECT MAX(year) FROM production_edition WHERE production_id=p.id),p.year) year,cover_id,cover_ratio,feature_layout,theme_color,(SELECT COUNT(*) FROM production_edition WHERE production_id=p.id) edition_count FROM production p ${where} ORDER BY CASE WHEN p.id=(SELECT featured_production_id FROM site_profile WHERE id=1) THEN 0 ELSE 1 END,year DESC,p.id DESC LIMIT ? OFFSET ?`,
+    `SELECT p.id,p.is_hidden,(p.id=(SELECT featured_production_id FROM site_profile WHERE id=1)) featured,title,synopsis,promo,COALESCE((SELECT MAX(year) FROM production_edition WHERE production_id=p.id),p.year) year,cover_id,cover_ratio,feature_layout,theme_color,(SELECT COUNT(*) FROM production_edition WHERE production_id=p.id) edition_count FROM production p ${where} ORDER BY CASE WHEN p.id=(SELECT featured_production_id FROM site_profile WHERE id=1) THEN 0 ELSE 1 END,year DESC,p.id DESC LIMIT ? OFFSET ?`,
   )
     .bind(...params, size, (page - 1) * size)
     .all<ProductionRow>();
   return c.html(
-    productionListPage(result.results, c.get("user")!, c.req.query("deleted") === "1", {
-      page,
-      total,
-      size,
-      path: "/productions",
-      query: search,
-    }),
+    productionListPage(
+      result.results,
+      c.get("user")!,
+      c.req.query("deleted") === "1",
+      {
+        page,
+        total,
+        size,
+        path: "/productions",
+        query: search,
+        visibility: c.get("user")?.role === "admin" ? visibility : undefined,
+      },
+      await csrfFor(c),
+    ),
   );
 });
 
@@ -291,7 +311,7 @@ productionRoutes.get("/productions/:id/cover", async (c) => {
   const id = Number(c.req.param("id"));
   if (!Number.isSafeInteger(id) || id <= 0) return c.notFound();
   const photo = await c.env.DB.prepare(
-    "SELECT r.filename,r.original_name FROM production p JOIN resource r ON r.id=p.cover_id WHERE p.id=? AND r.status='approved' AND r.res_type='photo'",
+    `SELECT r.filename,r.original_name FROM production p JOIN resource r ON r.id=p.cover_id WHERE p.id=? AND ${productionVisible(c, "p")} AND ${resourceVisible(c, "r")} AND r.status='approved' AND r.res_type='photo'`,
   )
     .bind(id)
     .first<{ filename: string; original_name: string }>();
@@ -306,11 +326,12 @@ productionRoutes.get("/productions/:id/cover", async (c) => {
 productionRoutes.get("/productions/:id", async (c) => {
   const id = Number(c.req.param("id"));
   const production = await c.env.DB.prepare(
-    "SELECT id,title,synopsis,promo,year,cover_id,cover_ratio,feature_layout,theme_color FROM production WHERE id=?",
+    `SELECT id,title,synopsis,promo,year,cover_id,cover_ratio,feature_layout,theme_color,is_hidden FROM production WHERE id=? AND ${productionVisible(c)}`,
   )
     .bind(id)
     .first<ProductionRow>();
   if (!production) return c.text("未找到这部作品。", 404);
+  if (production.is_hidden) c.header("X-Robots-Tag", "noindex, nofollow");
   const credits = await c.env.DB.prepare(
     `SELECT pc.id,pc.edition_id,pc.member_id,m.name AS member_name,pc.kind,pc.role_name FROM production_credit pc
     JOIN member m ON m.id=pc.member_id WHERE pc.production_id=? ORDER BY pc.kind,pc.id`,
@@ -417,10 +438,36 @@ productionRoutes.get("/admin/productions/new", async (c) => {
   return c.html(productionFormPage(null, await csrfFor(c), [], await resourceChoices(c, null)));
 });
 
+function hiddenValue(form: FormData): number | null {
+  if (!form.has("is_hidden")) return null; // Old forms must not silently unhide a work.
+  const values = form.getAll("is_hidden");
+  if (values.length !== 1 || !["0", "1"].includes(String(values[0]))) return NaN;
+  return Number(values[0]);
+}
+
+productionRoutes.post("/admin/productions/:id/visibility", async (c) => {
+  const denied = adminOnly(c);
+  if (denied) return denied;
+  const form = await c.req.formData();
+  if (!csrfValid(c, form.get("csrf"))) return c.text("请求已失效，请刷新后重试。", 400);
+  const hidden = hiddenValue(form);
+  if (hidden === null || Number.isNaN(hidden)) return c.text("可见性无效。", 400);
+  if (!Number.isSafeInteger(Number(c.req.param("id"))) || Number(c.req.param("id")) <= 0)
+    return c.text("未找到这部作品。", 404);
+  const result = await c.env.DB.prepare("UPDATE production SET is_hidden=? WHERE id=?")
+    .bind(hidden, Number(c.req.param("id")))
+    .run();
+  if (!result.meta.changes) return c.text("未找到这部作品。", 404);
+  await invalidateSiteProfile(c);
+  return c.redirect("/productions", 303);
+});
+
 productionRoutes.post("/admin/productions/new", async (c) => {
   const denied = adminOnly(c);
   if (denied) return denied;
   const form = await c.req.formData();
+  const hidden = hiddenValue(form);
+  if (Number.isNaN(hidden)) return c.text("可见性无效。", 400);
   if (!csrfValid(c, form.get("csrf"))) return c.text("请求已失效，请刷新页面后重试。", 400);
   const theme = String(form.get("theme_color") || "").trim();
   if (theme && !validAccent(theme)) return c.text("作品颜色请填写 #RRGGBB 格式。", 400);
@@ -449,7 +496,7 @@ productionRoutes.post("/admin/productions/new", async (c) => {
   const allowedIds = new Set(allowed.map((resource) => resource.id));
   if (!resourceIds.every((id) => allowedIds.has(id))) return c.text("选择的资料已被其他作品使用。", 409);
   const insert = c.env.DB.prepare(
-    "INSERT INTO production(title,synopsis,promo,year,cover_ratio,feature_layout,theme_color) VALUES(?,?,?,?,?,?,?)",
+    "INSERT INTO production(title,synopsis,promo,year,cover_ratio,feature_layout,theme_color,is_hidden) VALUES(?,?,?,?,?,?,?,?)",
   ).bind(
     title,
     String(form.get("synopsis") ?? "").trim(),
@@ -460,6 +507,7 @@ productionRoutes.post("/admin/productions/new", async (c) => {
     form.get("cover_ratio") === "portrait" ? "portrait" : "landscape",
     form.get("feature_layout") === "overlay" ? "overlay" : "split",
     theme,
+    hidden ?? 0,
   );
   const statements = [insert];
   if (versionNames.length)
@@ -492,7 +540,7 @@ productionRoutes.get("/admin/productions/:id/edit", async (c) => {
   if (denied) return denied;
   const id = Number(c.req.param("id"));
   const production = await c.env.DB.prepare(
-    "SELECT id,title,synopsis,promo,year,cover_id,cover_ratio,feature_layout,theme_color FROM production WHERE id=?",
+    "SELECT id,title,synopsis,promo,year,cover_id,cover_ratio,feature_layout,theme_color,is_hidden FROM production WHERE id=?",
   )
     .bind(id)
     .first<ProductionRow>();
@@ -509,6 +557,8 @@ productionRoutes.post("/admin/productions/:id/edit", async (c) => {
   const denied = adminOnly(c);
   if (denied) return denied;
   const form = await c.req.formData();
+  const hidden = hiddenValue(form);
+  if (Number.isNaN(hidden)) return c.text("可见性无效。", 400);
   if (!csrfValid(c, form.get("csrf"))) return c.text("请求已失效，请刷新页面后重试。", 400);
   const theme = form.has("theme_color") ? String(form.get("theme_color") || "").trim() : null;
   if (theme && !validAccent(theme)) return c.text("作品颜色请填写 #RRGGBB 格式。", 400);
@@ -541,7 +591,7 @@ productionRoutes.post("/admin/productions/:id/edit", async (c) => {
   )
     return c.text("封面必须选择该作品已审核的剧照。", 400);
   const result = await c.env.DB.prepare(
-    "UPDATE production SET title=?,synopsis=?,promo=?,year=COALESCE(?,year),cover_ratio=?,feature_layout=?,cover_id=?,theme_color=COALESCE(?,theme_color) WHERE id=?",
+    "UPDATE production SET title=?,synopsis=?,promo=?,year=COALESCE(?,year),cover_ratio=?,feature_layout=?,cover_id=?,theme_color=COALESCE(?,theme_color),is_hidden=COALESCE(?,is_hidden) WHERE id=?",
   )
     .bind(
       title,
@@ -554,10 +604,12 @@ productionRoutes.post("/admin/productions/:id/edit", async (c) => {
       form.get("feature_layout") === "overlay" ? "overlay" : "split",
       cover,
       theme,
+      hidden,
       id,
     )
     .run();
   if (result.meta.changes !== 1) return c.text("未找到这部作品。", 404);
+  await invalidateSiteProfile(c);
   const detach = resourceIds.length
     ? c.env.DB.prepare(
         `UPDATE resource SET production_id=NULL WHERE production_id=? AND id NOT IN (${resourceIds.map(() => "?").join(",")})`,

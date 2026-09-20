@@ -1,4 +1,5 @@
 import { serveResourceFile } from "../services/resource-files";
+import { productionVisible, resourceVisible } from "../services/production-visibility";
 import { getSiteProfile } from "../services/site-profile";
 import type { Context } from "hono";
 import type { AppEnv } from "../types";
@@ -8,7 +9,7 @@ import type { ProductionRow } from "./productions";
 type Photo = { id: number; filename: string; original_name: string; preview_filename: string };
 export async function selectHero(c: Context<AppEnv>): Promise<Photo | null> {
   return c.env.DB.prepare(
-    "SELECT r.id,r.filename,r.original_name,r.preview_filename FROM resource r CROSS JOIN site_profile s LEFT JOIN production p ON p.id=s.featured_production_id WHERE s.id=1 AND r.status='approved' AND r.res_type='photo' AND r.preview_filename IS NOT NULL AND r.preview_filename<>'' ORDER BY CASE WHEN CAST(r.id AS TEXT)=s.hero_photo THEN 0 WHEN r.id=p.cover_id THEN 1 ELSE 2 END,r.created_at DESC,r.id DESC LIMIT 1",
+    `SELECT r.id,r.filename,r.original_name,r.preview_filename FROM resource r CROSS JOIN site_profile s LEFT JOIN production p ON p.id=s.featured_production_id WHERE s.id=1 AND ${resourceVisible(c, "r")} AND r.status='approved' AND r.res_type='photo' AND r.preview_filename IS NOT NULL AND r.preview_filename<>'' ORDER BY CASE WHEN CAST(r.id AS TEXT)=s.hero_photo THEN 0 WHEN r.id=p.cover_id THEN 1 ELSE 2 END,r.created_at DESC,r.id DESC LIMIT 1`,
   ).first<Photo>();
 }
 export async function homePage(c: Context<AppEnv>) {
@@ -19,13 +20,13 @@ export async function homePage(c: Context<AppEnv>) {
     ).all<AnnouncementRow>(),
     selectHero(c),
     c.env.DB.prepare(
-      "SELECT id,title,promo,synopsis,year,cover_id FROM production ORDER BY year DESC,id DESC LIMIT 4",
+      `SELECT id,title,promo,synopsis,year,cover_id,is_hidden FROM production WHERE ${productionVisible(c)} ORDER BY year DESC,id DESC LIMIT 4`,
     ).all<ProductionRow>(),
   ]);
   if (!profile) return c.text("剧团信息暂不可用，请稍后重试。", 503);
   const featured = profile.featured_production_id
     ? await c.env.DB.prepare(
-        "SELECT id,title,synopsis,promo,year,cover_id,cover_ratio,feature_layout FROM production WHERE id=?",
+        `SELECT id,title,synopsis,promo,year,cover_id,cover_ratio,feature_layout,is_hidden FROM production WHERE id=? AND ${productionVisible(c)}`,
       )
         .bind(profile.featured_production_id)
         .first<ProductionRow>()
@@ -41,7 +42,7 @@ export async function homePage(c: Context<AppEnv>) {
         !Number.isSafeInteger(id) ||
         id <= 0 ||
         !(await c.env.DB.prepare(
-          "SELECT id FROM resource WHERE id=? AND status='approved' AND res_type='photo' AND preview_filename IS NOT NULL AND preview_filename<>''",
+          `SELECT id FROM resource WHERE id=? AND ${resourceVisible(c)} AND status='approved' AND res_type='photo' AND preview_filename IS NOT NULL AND preview_filename<>''`,
         )
           .bind(id)
           .first())
@@ -92,7 +93,7 @@ export async function pageBackgroundImage(c: Context<AppEnv>) {
   } catch {}
   if (!Number.isSafeInteger(id) || id <= 0) return c.body(null, 204);
   const photo = await c.env.DB.prepare(
-    "SELECT id,filename,original_name,preview_filename FROM resource WHERE id=? AND status='approved' AND res_type='photo' AND preview_filename IS NOT NULL AND preview_filename<>''",
+    `SELECT id,filename,original_name,preview_filename FROM resource WHERE id=? AND ${resourceVisible(c)} AND status='approved' AND res_type='photo' AND preview_filename IS NOT NULL AND preview_filename<>''`,
   )
     .bind(id)
     .first<Photo>();
@@ -103,7 +104,7 @@ export async function featuredCoverImage(c: Context<AppEnv>) {
   return photoResponse(
     c,
     await c.env.DB.prepare(
-      "SELECT r.id,r.filename,r.original_name,r.preview_filename FROM site_profile s JOIN production p ON p.id=s.featured_production_id JOIN resource r ON r.id=p.cover_id WHERE s.id=1 AND r.status='approved' AND r.res_type='photo'",
+      `SELECT r.id,r.filename,r.original_name,r.preview_filename FROM site_profile s JOIN production p ON p.id=s.featured_production_id JOIN resource r ON r.id=p.cover_id WHERE s.id=1 AND ${productionVisible(c, "p")} AND ${resourceVisible(c, "r")} AND r.status='approved' AND r.res_type='photo'`,
     ).first<Photo>(),
   );
 }
@@ -117,7 +118,7 @@ export async function mascotImage(c: Context<AppEnv>) {
     c,
     Number.isSafeInteger(id) && id > 0
       ? await c.env.DB.prepare(
-          "SELECT id,filename,original_name,preview_filename FROM resource WHERE id=? AND status='approved' AND res_type='photo'",
+          `SELECT id,filename,original_name,preview_filename FROM resource WHERE id=? AND ${resourceVisible(c)} AND status='approved' AND res_type='photo'`,
         )
           .bind(id)
           .first<Photo>()
@@ -142,7 +143,7 @@ export async function recruitmentPosterImage(c: Context<AppEnv>) {
     const id = Number(value);
     if (!Number.isSafeInteger(id) || id <= 0) continue;
     const photo = await c.env.DB.prepare(
-      "SELECT id,filename,original_name,preview_filename FROM resource WHERE id=? AND status='approved' AND res_type='photo'",
+      `SELECT id,filename,original_name,preview_filename FROM resource WHERE id=? AND ${resourceVisible(c)} AND status='approved' AND res_type='photo'`,
     )
       .bind(id)
       .first<Photo>();

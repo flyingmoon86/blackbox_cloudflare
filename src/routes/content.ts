@@ -1,4 +1,5 @@
 import { DEFAULT_ACCENT, validAccent, themeCss } from "../services/theme";
+import { productionVisible } from "../services/production-visibility";
 import { Hono } from "hono";
 import { csrfFor, csrfValid } from "../http/cookies";
 import type { AppEnv } from "../types";
@@ -47,7 +48,7 @@ contentRoutes.get("/site/theme.css", async (c) => {
     } catch {}
     const productionId = Number(c.req.query("production"));
     if (Number.isSafeInteger(productionId) && productionId > 0) {
-      const color = await c.env.DB.prepare("SELECT theme_color FROM production WHERE id=?")
+      const color = await c.env.DB.prepare(`SELECT theme_color FROM production WHERE id=? AND ${productionVisible(c)}`)
         .bind(productionId)
         .first<string>("theme_color");
       if (color && validAccent(color)) accent = color;
@@ -58,12 +59,16 @@ contentRoutes.get("/site/theme.css", async (c) => {
   const origin = cacheOrigin(c.env, c.req.raw);
   const parts = ["theme-css", accent];
   const hit = await readCachedResponse(origin, parts);
-  if (hit) return hit;
+  if (hit) {
+    const response = new Response(hit.body, hit);
+    response.headers.set("Cache-Control", "private, no-cache");
+    return response;
+  }
   // The browser keeps revalidating (the zone may rewrite TTLs); the edge copy
   // still serves repeat navigations without touching D1 or rebuilding the CSS.
   const headers = new Headers({
     "Content-Type": "text/css; charset=utf-8",
-    "Cache-Control": "public, no-cache, s-maxage=300",
+    "Cache-Control": "private, no-cache",
   });
   const response = new Response(themeCss(accent), { headers });
   await writeCachedResponse(origin, parts, response.clone(), 300, "no-cache");

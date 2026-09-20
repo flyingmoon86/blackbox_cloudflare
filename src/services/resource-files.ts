@@ -69,7 +69,7 @@ export async function serveResourceFile(
     ETag: metadata.httpEtag,
     "Last-Modified": metadata.uploaded.toUTCString(),
     // Revalidate authorization/reference even if the browser has cached the bytes.
-    "Cache-Control": options.publicImage ? "public, no-cache" : "private, no-cache",
+    "Cache-Control": "private, no-cache",
     "Content-Disposition":
       (options.download || type === "application/octet-stream" ? "attachment" : "inline") +
       "; filename*=UTF-8''" +
