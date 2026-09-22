@@ -108,7 +108,11 @@ export async function evaluate(
     const wantsCreate = r.choice === "create";
     if (wantsCreate) {
       if (byName.length || byExternal) {
-        fail(r, "exists", "已有同名或相同外部ID档案，请关联已有档案");
+        fail(
+          r,
+          "exists",
+          r.external_id ? "已有同名或相同外部ID档案，请关联已有档案" : "已有同名档案，请核对并关联已有档案",
+        );
         continue;
       }
       r.resolution = "create";
@@ -166,7 +170,7 @@ export async function evaluate(
     const ids = new Set(related.map((s) => s.matched_member_id).filter(Boolean));
     const names = new Set(related.filter((s) => s.person_key === r.person_key).map((s) => identityKey(s.member_name)));
     if (external.size > 1 || ids.size > 1 || names.size > 1)
-      fail(r, "identity_conflict", "同一人员的姓名、外部ID或档案选择相互冲突，请修正表格/选择");
+      fail(r, "identity_conflict", "同一人员的信息或档案选择相互冲突，请核对表格与关联选择");
   }
   const seen = new Set<string>();
   for (const r of rows) {
@@ -236,12 +240,13 @@ export async function createPreview(
   filename: string,
   hash: string,
   input: ImportRow[],
+  templateVersion: number = IMPORT_SCHEMA.version,
 ) {
   const existing = await db
     .prepare(
       "SELECT id FROM credit_import_batch WHERE production_id=? AND edition_id=? AND file_sha256=? AND template_version=? AND status IN ('preview','ready','committing','committed')",
     )
-    .bind(t.id, t.edition_id, hash, IMPORT_SCHEMA.version)
+    .bind(t.id, t.edition_id, hash, templateVersion)
     .first<string>("id");
   if (existing) return existing;
   const rows = await evaluate(db, t.id, t.edition_id, input),
@@ -261,7 +266,7 @@ export async function createPreview(
           actor.username,
           t.title,
           `${t.year || "年份待补"} · ${t.edition_name}`,
-          IMPORT_SCHEMA.version,
+          templateVersion,
           filename,
           hash,
           n.error ? "preview" : "ready",
@@ -279,7 +284,7 @@ export async function createPreview(
       .prepare(
         "SELECT id FROM credit_import_batch WHERE production_id=? AND edition_id=? AND file_sha256=? AND template_version=? AND status IN ('preview','ready','committing','committed')",
       )
-      .bind(t.id, t.edition_id, hash, IMPORT_SCHEMA.version)
+      .bind(t.id, t.edition_id, hash, templateVersion)
       .first<string>("id");
     if (duplicate) return duplicate;
     throw e;

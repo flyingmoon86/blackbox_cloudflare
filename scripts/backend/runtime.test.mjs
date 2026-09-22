@@ -128,7 +128,7 @@ test(
       ).results;
       assert.equal(editions.length, 3);
       // Exercise the deployed node:zlib/XLSX path and D1 transaction, not only the Node adapter.
-      const workbook = unzipSync(readFileSync("templates/production-credit-import-v1.xlsx"));
+      const workbook = unzipSync(readFileSync("templates/production-credit-import-v2.xlsx"));
       for (const name of Object.keys(workbook))
         if (name.endsWith(".xml"))
           workbook[name] = strToU8(strFromU8(workbook[name]).replaceAll("张三", "运行时测试档案"));

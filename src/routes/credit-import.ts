@@ -6,7 +6,7 @@ import { authForm, formText, readBoundedBody } from "../http/validation";
 import { consumeAccountLimit } from "../middleware/request-limits";
 import { creditTemplate } from "../generated/credit-template";
 import { IMPORT_SCHEMA, ImportError, csv, templateCsv, type ImportBatch } from "../services/credit-import/schema";
-import { parseImport } from "../services/credit-import/parser";
+import { parseImportFile } from "../services/credit-import/parser";
 import {
   createPreview,
   getBatch,
@@ -16,7 +16,7 @@ import {
   type Decision,
 } from "../services/credit-import/store";
 import { commitImport, rollbackImport } from "../services/credit-import/commit";
-import { importUploadPage, importHistoryPage, importBatchPage } from "../views/credit-import";
+import { importStartPage, importUploadPage, importHistoryPage, importBatchPage } from "../views/credit-import";
 
 export const creditImportRoutes = new Hono<AppEnv>();
 creditImportRoutes.use("*", async (c, next) => {
@@ -40,6 +40,26 @@ const positive = (value: string | undefined) => {
 const base = "/admin/productions/:id/credits/import";
 const batchBase = "/admin/credit-imports";
 
+// A direct workbench entry: choose a work here, then reuse its existing upload form.
+creditImportRoutes.get(`${batchBase}/new`, async (c) => {
+  const selected = c.req.query("production_id");
+  if (selected !== undefined) {
+    const id = positive(selected);
+    const exists = await c.env.DB.prepare("SELECT id FROM production WHERE id=?").bind(id).first();
+    if (!exists) throw new ImportError("作品不存在，请重新选择。", 404);
+    return c.redirect(`/admin/productions/${id}/credits/import`, 303);
+  }
+  const productions = (
+    await c.env.DB.prepare("SELECT id,title,year,is_hidden FROM production ORDER BY year DESC,id DESC").all<{
+      id: number;
+      title: string;
+      year: number | null;
+      is_hidden: number;
+    }>()
+  ).results;
+  return c.html(importStartPage(productions));
+});
+
 creditImportRoutes.get(base, async (c) => {
   const id = positive(c.req.param("id"));
   const production = await c.env.DB.prepare("SELECT id,title FROM production WHERE id=?")
@@ -61,7 +81,10 @@ for (const extension of ["csv", "xlsx"]) {
       .bind(positive(c.req.param("id")))
       .first();
     if (!exists) throw new ImportError("作品不存在。", 404);
-    c.header("Content-Disposition", `attachment; filename="production-credit-import-v1.${extension}"`);
+    c.header(
+      "Content-Disposition",
+      `attachment; filename="production-credit-import-v${IMPORT_SCHEMA.version}.${extension}"`,
+    );
     c.header(
       "Content-Type",
       extension === "csv"
@@ -89,7 +112,7 @@ creditImportRoutes.post(`${base}/preview`, async (c) => {
     c.header("Retry-After", String(retry));
     return c.text("上传次数较多，请稍后再试。", 429);
   }
-  const rows = await parseImport(file);
+  const { rows, version } = await parseImportFile(file);
   const hash = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", await file.arrayBuffer())), (b) =>
     b.toString(16).padStart(2, "0"),
   ).join("");
@@ -100,6 +123,7 @@ creditImportRoutes.post(`${base}/preview`, async (c) => {
     file.name.replace(/[\u0000-\u001f]/g, "").slice(0, 180),
     hash,
     rows,
+    version,
   );
   return c.redirect(`${batchBase}/${batch}`, 303);
 });
@@ -141,7 +165,6 @@ creditImportRoutes.get(`${batchBase}/:batchId/errors.csv`, async (c) => {
         .map((r) => [
           r.row_number,
           r.member_name,
-          r.external_id,
           r.kind === "cast" ? "演员" : r.kind === "crew" ? "后台与创作" : r.kind,
           r.role_name,
           r.error_message,

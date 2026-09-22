@@ -1,7 +1,7 @@
 import { inflateRawSync } from "node:zlib";
 import { zipSync } from "fflate";
 import readWorkbook from "read-excel-file/universal";
-import { IMPORT_SCHEMA as schema, ImportError, personKey, type ImportRow } from "./schema";
+import { IMPORT_SCHEMA as schema, LEGACY_IMPORT_FIELDS, ImportError, personKey, type ImportRow } from "./schema";
 
 const decoder = new TextDecoder("utf-8", { fatal: true });
 
@@ -84,7 +84,9 @@ export function safeWorkbook(bytes: Uint8Array): Uint8Array<ArrayBuffer> {
         if (!coordinate || Number(coordinate[2]) > 1024 || ++cellCount > 4096)
           throw new ImportError("工作表单元格范围过大或坐标不正确。");
       }
-      for (const match of xml.matchAll(/\b(?:r|ref)\s*=\s*(["'])([^"']*)\1/g)) {
+      // Match standalone XML attributes only. Excel may add a legal `xmlns:r`
+      // namespace declaration when saving the template; that is not a cell row.
+      for (const match of xml.matchAll(/\s(?:r|ref)\s*=\s*(["'])([^"']*)\1/g)) {
         const reference = match[2];
         if (
           !/^(?:[1-9]\d{0,3}|[A-P][1-9]\d{0,3}(?::[A-P][1-9]\d{0,3})?)$/.test(reference) ||
@@ -111,7 +113,7 @@ export function parseCsv(text: string): string[][] {
     row.push(cell);
     cell = "";
     closed = false;
-    if (row.length > 4) throw new ImportError("表格只允许标准模板的 4 列。");
+    if (row.length > LEGACY_IMPORT_FIELDS.length) throw new ImportError("表格存在多余列，请使用本站模板。");
   };
   const line = () => {
     field();
@@ -148,8 +150,13 @@ export function parseCsv(text: string): string[][] {
 }
 
 export async function parseImport(file: File): Promise<ImportRow[]> {
+  return (await parseImportFile(file)).rows;
+}
+
+export async function parseImportFile(file: File): Promise<{ rows: ImportRow[]; version: number }> {
   if (!file.size || file.size > schema.maxBytes) throw new ImportError("请选择不超过 5MB 的 CSV 或 XLSX 文件。", 413);
   let cells: unknown[][];
+  let workbookVersion: number | undefined;
   try {
     const bytes = new Uint8Array(await file.arrayBuffer());
     if (/\.csv$/i.test(file.name)) cells = parseCsv(decoder.decode(bytes).replace(/^\uFEFF/, ""));
@@ -157,8 +164,14 @@ export async function parseImport(file: File): Promise<ImportRow[]> {
       const sheets = await readWorkbook(safeWorkbook(bytes).buffer, { trim: false, parseNumber: (s) => s });
       const input = sheets.find((s) => s.sheet === schema.sheet),
         guide = sheets.find((s) => s.sheet === schema.guide);
-      if (sheets.length !== 2 || !input || !guide || String(guide.data[2]?.[1]) !== String(schema.version))
-        throw new ImportError("请使用本站 v1 模板，保留“演职人员导入”和“填写说明”工作表。");
+      if (
+        sheets.length !== 2 ||
+        !input ||
+        !guide ||
+        !["1", String(schema.version)].includes(String(guide.data[2]?.[1]))
+      )
+        throw new ImportError("请使用本站模板，保留“演职人员导入”和“填写说明”工作表。");
+      workbookVersion = Number(guide.data[2][1]);
       cells = input.data;
     } else throw new ImportError("只支持 .xlsx 和 UTF-8 .csv 文件。");
   } catch (e) {
@@ -166,22 +179,29 @@ export async function parseImport(file: File): Promise<ImportRow[]> {
     throw new ImportError("文件无法解析，请检查 UTF-8 编码或重新另存为标准 XLSX。");
   }
   const header = cells[0] || [];
-  if (
-    header.length !== schema.fields.length ||
-    schema.fields.some((f, i) => String(header[i] ?? "").trim() !== f.title)
-  )
-    throw new ImportError("表头不匹配，请下载本站 v1 模板并保留列顺序。");
+  const formats = [
+    { version: schema.version, fields: schema.fields },
+    { version: 1, fields: LEGACY_IMPORT_FIELDS },
+  ];
+  const format = formats.find(
+    ({ version, fields }) =>
+      (workbookVersion === undefined || workbookVersion === version) &&
+      header.length === fields.length &&
+      fields.every((f, i) => String(header[i] ?? "").trim() === f.title),
+  );
+  if (!format) throw new ImportError("表头不匹配，请下载新模板，按姓名、类别、角色或分工的顺序填写。");
+  const fields = format.fields;
   const result: ImportRow[] = [];
   for (let index = 1; index < cells.length; index++) {
     const source = cells[index] || [];
     if (source.every((v) => v == null || String(v).trim() === "")) continue;
     // Only the exact, unmodified example is skipped. Edited/deleted examples cannot swallow a real row.
-    if (index === 1 && schema.fields.every((f, i) => source[i] === f.example)) continue;
+    if (index === 1 && fields.every((f, i) => source[i] === f.example)) continue;
     if (result.length >= schema.maxRows) throw new ImportError("一次最多导入 50 行（不含表头和示例）。");
-    const values = schema.fields.map((_, i) => String(source[i] ?? "").trim());
+    const values = fields.map((_, i) => String(source[i] ?? "").trim());
     const errors: string[] = [];
-    if (source.length > 4) errors.push("存在多余列");
-    schema.fields.forEach((f, i) => {
+    if (source.length > fields.length) errors.push("存在多余列");
+    fields.forEach((f, i) => {
       if (f.required && !values[i]) errors.push(`${f.title.replace("*", "")}必填`);
       if (values[i].length > f.max) errors.push(`${f.title.replace("*", "")}最多 ${f.max} 字`);
       if (
@@ -191,7 +211,9 @@ export async function parseImport(file: File): Promise<ImportRow[]> {
       )
         errors.push(`${f.title.replace("*", "")}须为普通文本`);
     });
-    const [name, external, kind, role] = values;
+    const record = Object.fromEntries(fields.map((f, i) => [f.key, values[i]]));
+    const { member_name: name, kind, role_name: role } = record;
+    const external = record.external_id || "";
     const storedName = name.slice(0, 50);
     const storedExternal = external.slice(0, 80) || null;
     if (!Object.hasOwn(schema.kinds, kind)) errors.push("类别只能为演员或后台与创作");
@@ -215,5 +237,5 @@ export async function parseImport(file: File): Promise<ImportRow[]> {
     });
   }
   if (!result.length) throw new ImportError("没有可导入的数据，请从第 3 行起填写。");
-  return result;
+  return { rows: result, version: format.version };
 }

@@ -1,5 +1,5 @@
 export const IMPORT_SCHEMA = {
-  version: 1,
+  version: 2,
   sheet: "演职人员导入",
   guide: "填写说明",
   maxRows: 50,
@@ -7,12 +7,18 @@ export const IMPORT_SCHEMA = {
   maxExpandedBytes: 8 * 1024 * 1024,
   fields: [
     { key: "member_name", title: "*姓名", max: 50, required: true, example: "张三" },
-    { key: "external_id", title: "外部ID", max: 80, required: false, example: "BB-M-0001" },
     { key: "kind", title: "*类别", max: 20, required: true, example: "演员" },
     { key: "role_name", title: "*角色或分工", max: 80, required: true, example: "哈姆雷特" },
   ],
   kinds: { 演员: "cast", 后台与创作: "crew" } as Record<string, string>,
 } as const;
+
+// Retain the original format for existing files and their idempotent batches.
+export const LEGACY_IMPORT_FIELDS = [
+  IMPORT_SCHEMA.fields[0],
+  { key: "external_id", title: "外部ID", max: 80, required: false, example: "BB-M-0001" },
+  ...IMPORT_SCHEMA.fields.slice(1),
+] as const;
 
 export class ImportError extends Error {
   constructor(

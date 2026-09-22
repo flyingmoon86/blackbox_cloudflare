@@ -4,10 +4,11 @@ import { readFileSync } from "node:fs";
 import { zipSync, unzipSync, strToU8, strFromU8 } from "fflate";
 import { creditFixture } from "./credit-import-fixture.mjs";
 import { loadModule } from "./harness.mjs";
-const { parseImport } = await loadModule("src/services/credit-import/parser.ts");
+const { parseImport, parseImportFile, parseCsv } = await loadModule("src/services/credit-import/parser.ts");
 const { purgeExpiredImports } = await loadModule("src/services/credit-import/commit.ts");
 const { safeWorkbook } = await loadModule("src/services/credit-import/parser.ts");
 const header = "*姓名,外部ID,*类别,*角色或分工\n";
+const headerV2 = "*姓名,*类别,*角色或分工\n";
 const actor = 1;
 async function preview(s, text) {
   const res = await s.upload(header + text);
@@ -56,6 +57,11 @@ test("admin preview -> resolution -> atomic import -> replay -> guarded rollback
       s,
       "张三,EXT-1,演员,主角\n新队员,,后台与创作,灯光\n新队员,,后台与创作,灯光\n张三,EXT-1,演员,旁白",
     );
+    const review = await (await s.req(1, path)).text();
+    assert.match(review, /需要手动处理 <span>2<\/span>/);
+    assert.match(review, /自动匹配与已处理 <span>2<\/span>/);
+    assert.match(review, /import-row import-row--compact/);
+    assert.match(review, /调整关联/);
     assert.equal(s.db.prepare("SELECT COUNT(*) n FROM production_credit").get().n, 0);
     assert.equal((await change(s, path, "confirm")).status, 409);
     assert.equal((await change(s, path, "resolve", { decision_3: "create", decision_4: "create" })).status, 303);
@@ -90,6 +96,8 @@ test("permissions, CSRF, parent mismatch, illegal query and required confirmatio
         path,
         path + "/errors.csv",
         "/admin/credit-imports",
+        "/admin/credit-imports/new",
+        "/admin/credit-imports/new?production_id=10",
         "/admin/productions/10/credits/import/template.xlsx",
       ]) {
         assert.ok([302, 403].includes((await s.req(id, url)).status));
@@ -219,6 +227,16 @@ test("compressed expansion, malicious worksheet dimensions and CSV error-report 
     ),
   };
   assert.throws(() => safeWorkbook(zipSync(sparse)), /范围过大/);
+  const excelSaved = {
+    ...original,
+    "xl/worksheets/sheet1.xml": strToU8(
+      strFromU8(original["xl/worksheets/sheet1.xml"]).replace(
+        "<x:worksheet ",
+        '<x:worksheet xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" ',
+      ),
+    ),
+  };
+  assert.doesNotThrow(() => safeWorkbook(zipSync(excelSaved)));
   const relocated = { ...original };
   relocated["xl/alternate.xml"] = strToU8(
     strFromU8(original["xl/worksheets/sheet1.xml"]).replace('r="A1"', "r='A2048'"),
@@ -243,8 +261,136 @@ test("compressed expansion, malicious worksheet dimensions and CSV error-report 
     assert.match(response.headers.get("cache-control"), /private.*no-store/);
     assert.deepEqual(
       Buffer.from(await response.arrayBuffer()),
-      readFileSync("templates/production-credit-import-v1.xlsx"),
+      readFileSync("templates/production-credit-import-v2.xlsx"),
     );
+  } finally {
+    s.db.close();
+  }
+});
+
+test("v2 downloads have three fields; XLSX/CSV round trips and legacy version remain supported", async () => {
+  const s = await creditFixture();
+  try {
+    const response = await s.req(1, "/admin/productions/10/credits/import/template.csv");
+    assert.match(response.headers.get("content-disposition"), /v2\.csv/);
+    const template = await response.text();
+    assert.deepEqual(parseCsv(template.replace(/^\uFEFF/, ""))[0], ["*姓名", "*类别", "*角色或分工"]);
+    assert.doesNotMatch(template, /ID|编号/);
+    const parsed = await parseImportFile(new File([template + "李四,后台与创作,灯光\n"], "new.csv"));
+    assert.equal(parsed.version, 2);
+    assert.equal(parsed.rows.length, 1);
+    assert.equal(parsed.rows[0].external_id, null);
+    assert.equal(parsed.rows[0].row_number, 3);
+    for (const version of [1, 2]) {
+      const source = readFileSync(`templates/production-credit-import-v${version}.xlsx`);
+      await assert.rejects(parseImport(new File([source], "blank.xlsx")), /没有可导入/);
+      const files = unzipSync(source);
+      for (const key of Object.keys(files)) files[key] = strToU8(strFromU8(files[key]).replaceAll("张三", "李四"));
+      const parsed = await parseImportFile(new File([zipSync(files)], "filled.xlsx"));
+      assert.equal(parsed.version, version);
+      assert.equal(parsed.rows[0].member_name, "李四");
+      assert.equal(parsed.rows[0].external_id, version === 1 ? "BB-M-0001" : null);
+    }
+    assert.equal(
+      (await parseImport(new File([headerV2 + "张三,演员,"], "missing.csv")))[0].input_error,
+      "角色或分工必填",
+    );
+    await assert.rejects(parseImport(new File([headerV2 + "新人,演员,角色\n".repeat(51)], "large.csv")), /50 行/);
+    await assert.rejects(
+      parseImport(new File(["*姓名,*角色或分工,*类别\n甲,角色,演员"], "wrong.csv")),
+      /姓名、类别、角色或分工/,
+    );
+  } finally {
+    s.db.close();
+  }
+});
+
+test("no-ID imports require explicit missing/ambiguous decisions, preserve existing IDs and replay safely", async () => {
+  const s = await creditFixture();
+  try {
+    s.db.exec("UPDATE member SET external_id='EXISTING-1' WHERE id=1");
+    const text = headerV2 + "张三,演员,主角\n同名,演员,配角\n新姓名,后台与创作,灯光";
+    const response = await s.upload(text);
+    assert.equal(response.status, 303);
+    const path = response.headers.get("location");
+    const batch = s.db.prepare("SELECT * FROM credit_import_batch WHERE id=?").get(path.split("/").pop());
+    assert.equal(batch.template_version, 2);
+    const rows = s.db.prepare("SELECT * FROM credit_import_row WHERE batch_id=? ORDER BY row_number").all(batch.id);
+    assert.deepEqual(
+      rows.map((r) => [r.resolution, r.matched_member_id]),
+      [
+        ["matched", 1],
+        ["unresolved", null],
+        ["unresolved", null],
+      ],
+    );
+    assert.deepEqual(
+      rows.map((r) => r.error_code),
+      ["", "ambiguous", "missing"],
+    );
+    assert.equal((await change(s, path, "confirm")).status, 409);
+    assert.equal(s.db.prepare("SELECT COUNT(*) n FROM production_credit").get().n, 0);
+    const html = await (await s.req(1, path)).text();
+    assert.doesNotMatch(html, /外部ID|EXISTING-1|未填写编号/);
+    assert.match(html, /核对候选档案/);
+    await change(s, path, "resolve", { decision_3: "match:3", decision_4: "create" });
+    assert.equal((await change(s, path, "confirm")).status, 303);
+    assert.equal(s.db.prepare("SELECT external_id FROM member WHERE id=1").get().external_id, "EXISTING-1");
+    assert.match(s.db.prepare("SELECT external_id FROM member WHERE name='新姓名'").get().external_id, /^BB-/);
+    assert.equal((await s.upload(text)).headers.get("location"), path);
+    assert.equal(s.db.prepare("SELECT COUNT(*) n FROM production_credit").get().n, 3);
+    const legacy = await preview(s, "张三,EXISTING-1,演员,旧表角色");
+    assert.equal(
+      s.db.prepare("SELECT template_version FROM credit_import_batch WHERE id=?").get(legacy.split("/").pop())
+        .template_version,
+      1,
+    );
+    assert.equal(await preview(s, "张三,EXISTING-1,演员,旧表角色"), legacy);
+    const invalid = await s.upload(headerV2 + "新姓名,演员,");
+    const report = await (await s.req(1, invalid.headers.get("location") + "/errors.csv")).text();
+    // Reports include diagnostics, so they intentionally have more columns than upload templates.
+    assert.equal(report.replace(/^\uFEFF/, "").split("\r\n")[0], '"原表行号","*姓名","*类别","*角色或分工","原因"');
+    assert.match(report, /"2","新姓名","演员","","角色或分工必填"/);
+    assert.doesNotMatch(report, /外部ID/);
+    assert.equal((await change(s, path, "rollback")).status, 303);
+    assert.equal(s.db.prepare("SELECT external_id FROM member WHERE id=1").get().external_id, "EXISTING-1");
+  } finally {
+    s.db.close();
+  }
+});
+
+test("admin workbench groups actionable tasks and direct forms; import selection validates target", async () => {
+  const s = await creditFixture();
+  try {
+    const html = await (await s.req(1, "/admin")).text();
+    assert.match(html, /id="dashboard-pending-title">待处理/);
+    assert.match(html, /id="dashboard-fill-title">填资料/);
+    const fill = html.match(/<nav class="dashboard-tools"[^>]*>([\s\S]*?)<\/nav>/)[1];
+    const urls = [...fill.matchAll(/href="([^"]+)"/g)].map((m) => m[1]);
+    assert.deepEqual(urls, [
+      "/admin/productions/new",
+      "/admin/members/new",
+      "/admin/credit-imports/new",
+      "/resources/submit",
+      "/admin/announcements/new",
+      "/admin/site",
+    ]);
+    for (const url of urls) {
+      const response = await s.req(1, url);
+      assert.equal(response.status, 200, url);
+      assert.match(await response.text(), /<form[^>]+(?:method|action)=/);
+    }
+    for (const id of [0, 2, 3]) assert.ok([302, 403].includes((await s.req(id, "/admin")).status));
+    assert.equal((await s.req(1, "/admin/credit-imports/new?production_id=oops")).status, 400);
+    assert.equal((await s.req(1, "/admin/credit-imports/new?production_id=99999")).status, 404);
+    assert.equal(
+      (await s.req(1, "/admin/credit-imports/new?production_id=10")).headers.get("location"),
+      "/admin/productions/10/credits/import",
+    );
+    s.db.exec("UPDATE production SET is_hidden=1 WHERE id=10");
+    assert.match(await (await s.req(1, "/admin/credit-imports/new")).text(), /合成作品 · 2026 · 已隐藏/);
+    s.db.exec("DELETE FROM production");
+    assert.match(await (await s.req(1, "/admin/credit-imports/new")).text(), /还没有作品/);
   } finally {
     s.db.close();
   }

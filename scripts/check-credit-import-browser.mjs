@@ -9,7 +9,7 @@ import { context } from "./backend/harness.mjs";
 const { chromium } = await import(
   process.env.PLAYWRIGHT_MODULE ? pathToFileURL(process.env.PLAYWRIGHT_MODULE).href : "playwright"
 );
-const dir = "docs/evidence/2026-09-21-credit-import";
+const dir = process.env.EVIDENCE_DIR || "docs/evidence/2026-09-21-credit-import";
 mkdirSync(dir, { recursive: true });
 const s = await creditFixture();
 const root = resolve("public");
@@ -63,6 +63,7 @@ try {
     [390, false],
   ]) {
     const name = `${width}-${js ? "js" : "nojs"}`;
+    if (process.env.BROWSER_CASE && process.env.BROWSER_CASE !== name) continue;
     const ctx = await browser.newContext({
       viewport: { width, height: 768 },
       hasTouch: width === 390,
@@ -100,24 +101,71 @@ try {
     };
     const activate = async (button) => {
       await button.scrollIntoViewIfNeeded();
+      // Centre targets above the fixed mobile bottom bar, including the no-JS fallback.
+      await button.evaluate((el) => el.scrollIntoView({ block: "center", behavior: "instant" }));
       if (width === 390) await Promise.all([page.waitForNavigation({ waitUntil: "networkidle" }), button.tap()]);
       else {
         await button.focus();
         await Promise.all([page.waitForNavigation({ waitUntil: "networkidle" }), page.keyboard.press("Enter")]);
       }
     };
+    await page.goto(base + "/admin", { waitUntil: "networkidle" });
+    assert.equal(await page.locator(".dashboard-fill h2").textContent(), "填资料");
+    assert.equal(await page.locator(".dashboard-pending h2").first().textContent(), "待处理");
+    const fillLinks = await page
+      .locator(".dashboard-tools>a")
+      .evaluateAll((links) =>
+        links.map((a) => ({ name: a.querySelector("strong").textContent, href: a.getAttribute("href") })),
+      );
+    assert.equal(fillLinks.length, 6);
+    await capture("dashboard");
+    for (const link of fillLinks.filter((a) => a.href !== "/admin/credit-imports/new")) {
+      try {
+        await activate(page.locator(`.dashboard-tools>a[href="${link.href}"]`));
+      } catch (error) {
+        await page.screenshot({ path: `${dir}/${name}-entry-failure.png`, fullPage: true });
+        throw new Error(`${name}: ${link.name}: ${error.message}`);
+      }
+      assert.ok(await page.locator('form:not([action="/logout"])').count(), link.href);
+      assert.equal(new URL(page.url()).pathname, link.href);
+      await page.goto(base + "/admin", { waitUntil: "networkidle" });
+    }
+    await activate(page.getByRole("link", { name: /表格导入演职人员/ }));
+    await capture("select-production");
+    await page.getByRole("combobox", { name: "所属作品" }).selectOption("10");
+    await activate(page.getByRole("button", { name: "选择版本并上传" }));
+    assert.equal(new URL(page.url()).pathname, "/admin/productions/10/credits/import");
     await page.goto(base + "/productions/10", { waitUntil: "networkidle" });
     await page.locator("#manage-credits").scrollIntoViewIfNeeded();
     await capture("existing-manual-form");
     await page.getByRole("link", { name: "表格导入演职人员", exact: true }).click();
     await capture("upload");
-    const csv = `*姓名,外部ID,*类别,*角色或分工\n张三,,演员,主角-${name}\n新队员-${name},,后台与创作,舞台与灯光\n缺少角色-${name},,演员,`;
+    const csv = `*姓名,*类别,*角色或分工\n张三,演员,主角-${name}\n新队员-${name},后台与创作,舞台与灯光\n缺少角色-${name},演员,`;
     await page.getByRole("combobox", { name: /^演出版本/ }).selectOption("30");
     await page
       .getByLabel("导入文件", { exact: true })
       .setInputFiles({ name: "browser.csv", mimeType: "text/csv", buffer: Buffer.from(csv) });
     await activate(page.getByRole("button", { name: "上传并预览", exact: true }));
     await capture("preview");
+    const reviewMetrics = await page.evaluate(() => {
+      const pending = document.querySelector(".import-review-attention .import-row");
+      const compact = document.querySelector(".import-row--compact");
+      const rect = pending.getBoundingClientRect();
+      return {
+        firstPendingTop: rect.top,
+        firstPendingBottom: rect.bottom,
+        compactHeight: compact.getBoundingClientRect().height,
+        pendingHeight: rect.height,
+      };
+    });
+    if (width === 1366)
+      assert.ok(reviewMetrics.firstPendingBottom < 768, "first pending row must fit in desktop viewport");
+    assert.equal(await page.locator(".import-row--compact select").isVisible(), false);
+    await page.locator(".import-row--compact summary").focus();
+    await page.keyboard.press("Enter");
+    assert.equal(await page.locator(".import-row--compact select").isVisible(), true);
+    await page.keyboard.press("Enter");
+    evidence.push({ viewport: width, javascript: js, ...reviewMetrics });
     await page.getByRole("combobox", { name: /^第 3 行处理/ }).selectOption("create");
     await page.getByRole("combobox", { name: /^第 4 行处理/ }).selectOption("skip");
     await activate(page.getByRole("button", { name: "保存选择并重新检查", exact: true }));

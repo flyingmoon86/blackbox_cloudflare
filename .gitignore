@@ -21,6 +21,7 @@ image/
 .venv-workers/
 .tools/
 python_modules/
+outputs/
 migration-work/
 
 # 编辑器和系统文件
