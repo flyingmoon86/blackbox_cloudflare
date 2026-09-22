@@ -1,0 +1,197 @@
+[
+  {
+    "viewport": "1366x768",
+    "javascript": true,
+    "phase": "existing-manual-form",
+    "width": 1366,
+    "scrollWidth": 1366,
+    "overflow": false
+  },
+  {
+    "viewport": "1366x768",
+    "javascript": true,
+    "phase": "upload",
+    "width": 1366,
+    "scrollWidth": 1366,
+    "overflow": false
+  },
+  {
+    "viewport": "1366x768",
+    "javascript": true,
+    "phase": "preview",
+    "width": 1366,
+    "scrollWidth": 1366,
+    "overflow": false
+  },
+  {
+    "viewport": 1366,
+    "javascript": true,
+    "firstPendingTop": 579.421875,
+    "firstPendingBottom": 743.46875,
+    "compactHeight": 149.46875,
+    "pendingHeight": 164.046875
+  },
+  {
+    "viewport": "1366x768",
+    "javascript": true,
+    "phase": "ready",
+    "width": 1366,
+    "scrollWidth": 1366,
+    "overflow": false
+  },
+  {
+    "viewport": "1366x768",
+    "javascript": true,
+    "phase": "committed",
+    "width": 1366,
+    "scrollWidth": 1366,
+    "overflow": false
+  },
+  {
+    "viewport": "1366x768",
+    "javascript": true,
+    "phase": "rolled-back",
+    "width": 1366,
+    "scrollWidth": 1366,
+    "overflow": false
+  },
+  {
+    "viewport": 1366,
+    "javascript": true,
+    "keyboard": true,
+    "touch": false,
+    "reducedMotion": true,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "viewport": "390x768",
+    "javascript": true,
+    "phase": "existing-manual-form",
+    "width": 390,
+    "scrollWidth": 390,
+    "overflow": false
+  },
+  {
+    "viewport": "390x768",
+    "javascript": true,
+    "phase": "upload",
+    "width": 390,
+    "scrollWidth": 390,
+    "overflow": false
+  },
+  {
+    "viewport": "390x768",
+    "javascript": true,
+    "phase": "preview",
+    "width": 390,
+    "scrollWidth": 390,
+    "overflow": false
+  },
+  {
+    "viewport": 390,
+    "javascript": true,
+    "firstPendingTop": 731.109375,
+    "firstPendingBottom": 1030.140625,
+    "compactHeight": 183.453125,
+    "pendingHeight": 299.03125
+  },
+  {
+    "viewport": "390x768",
+    "javascript": true,
+    "phase": "ready",
+    "width": 390,
+    "scrollWidth": 390,
+    "overflow": false
+  },
+  {
+    "viewport": "390x768",
+    "javascript": true,
+    "phase": "committed",
+    "width": 390,
+    "scrollWidth": 390,
+    "overflow": false
+  },
+  {
+    "viewport": "390x768",
+    "javascript": true,
+    "phase": "rolled-back",
+    "width": 390,
+    "scrollWidth": 390,
+    "overflow": false
+  },
+  {
+    "viewport": 390,
+    "javascript": true,
+    "keyboard": false,
+    "touch": true,
+    "reducedMotion": true,
+    "errors": [],
+    "failures": []
+  },
+  {
+    "viewport": "390x768",
+    "javascript": false,
+    "phase": "existing-manual-form",
+    "width": 390,
+    "scrollWidth": 390,
+    "overflow": false
+  },
+  {
+    "viewport": "390x768",
+    "javascript": false,
+    "phase": "upload",
+    "width": 390,
+    "scrollWidth": 390,
+    "overflow": false
+  },
+  {
+    "viewport": "390x768",
+    "javascript": false,
+    "phase": "preview",
+    "width": 390,
+    "scrollWidth": 390,
+    "overflow": false
+  },
+  {
+    "viewport": 390,
+    "javascript": false,
+    "firstPendingTop": 731.109375,
+    "firstPendingBottom": 1030.140625,
+    "compactHeight": 183.453125,
+    "pendingHeight": 299.03125
+  },
+  {
+    "viewport": "390x768",
+    "javascript": false,
+    "phase": "ready",
+    "width": 390,
+    "scrollWidth": 390,
+    "overflow": false
+  },
+  {
+    "viewport": "390x768",
+    "javascript": false,
+    "phase": "committed",
+    "width": 390,
+    "scrollWidth": 390,
+    "overflow": false
+  },
+  {
+    "viewport": "390x768",
+    "javascript": false,
+    "phase": "rolled-back",
+    "width": 390,
+    "scrollWidth": 390,
+    "overflow": false
+  },
+  {
+    "viewport": 390,
+    "javascript": false,
+    "keyboard": false,
+    "touch": true,
+    "reducedMotion": true,
+    "errors": [],
+    "failures": []
+  }
+]
