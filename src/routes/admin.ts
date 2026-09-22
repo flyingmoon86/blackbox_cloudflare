@@ -38,7 +38,7 @@ export type PendingCounts = {
 };
 
 type NotificationGroup = {
-  kind: "member" | "production-join" | "resource" | "production-create" | "suggestion" | "feedback";
+  kind: "member" | "production-join" | "resource" | "production-create" | "suggestion" | "feedback" | "credit-import";
   count: number;
   newest_id: number;
 };
@@ -56,6 +56,8 @@ type NotificationSnapshot = {
   suggestion_newest_id: number;
   feedback_count: number;
   feedback_newest_id: number;
+  import_count: number;
+  import_newest_id: number;
 };
 
 export const adminRoutes = new Hono<AppEnv>();
@@ -129,7 +131,9 @@ adminRoutes.get("/admin/notifications", async (c) => {
       (SELECT COUNT(*) FROM suggestion WHERE status='open' AND category='website') suggestion_count,
       (SELECT COALESCE(MAX(id),0) FROM suggestion WHERE status='open' AND category='website') suggestion_newest_id,
       (SELECT COUNT(*) FROM website_feedback WHERE status='open') feedback_count,
-      (SELECT COALESCE(MAX(id),0) FROM website_feedback WHERE status='open') feedback_newest_id`,
+      (SELECT COALESCE(MAX(id),0) FROM website_feedback WHERE status='open') feedback_newest_id,
+      (SELECT COUNT(*) FROM credit_import_event WHERE action IN ('committed','rollback') AND created_at>=datetime('now','-7 days')) import_count,
+      (SELECT COALESCE(MAX(id),0) FROM credit_import_event WHERE action IN ('committed','rollback') AND created_at>=datetime('now','-7 days')) import_newest_id`,
     ).first<NotificationSnapshot>(),
     c.env.DB.prepare("SELECT notification_key FROM admin_notification_read WHERE user_id=?")
       .bind(user.id)
@@ -151,6 +155,7 @@ adminRoutes.get("/admin/notifications", async (c) => {
         },
         { kind: "suggestion", count: snapshot.suggestion_count, newest_id: snapshot.suggestion_newest_id },
         { kind: "feedback", count: snapshot.feedback_count, newest_id: snapshot.feedback_newest_id },
+        { kind: "credit-import", count: snapshot.import_count, newest_id: snapshot.import_newest_id },
       ]
     : [];
   const seen = new Set(reads.results.map((row) => row.notification_key));
@@ -161,15 +166,18 @@ adminRoutes.get("/admin/notifications", async (c) => {
     "production-create": { title: "新作品建档申请", href: "/admin/suggestions" },
     suggestion: { title: "旧网站建议", href: "/admin/suggestions" },
     feedback: { title: "新网站建议", href: "/admin/community" },
+    "credit-import": { title: "演职人员导入动态", href: "/admin/credit-imports" },
   };
-  const pending = groups
+  const notifications = groups
     .filter((group) => group.count > 0)
     .map((group) => ({
       key: `${group.kind}:${group.newest_id}`,
       count: group.count,
+      informational: group.kind === "credit-import",
       ...labels[group.kind],
     }));
-  const unread = pending.filter((item) => !seen.has(item.key));
+  const pending = notifications.filter((item) => !item.informational);
+  const unread = notifications.filter((item) => !seen.has(item.key));
   return c.json({
     csrf: await csrfFor(c),
     pending,
@@ -185,7 +193,7 @@ adminRoutes.post("/admin/notifications/dismiss", async (c) => {
   const form = await c.req.formData();
   if (!csrfValid(c, form.get("csrf"))) return c.json({ error: "请求已失效，请刷新后重试。" }, 400);
   const key = String(form.get("key") ?? "");
-  if (!/^(member|production-join|resource|production-create|suggestion|feedback):\d+$/.test(key))
+  if (!/^(member|production-join|resource|production-create|suggestion|feedback|credit-import):\d+$/.test(key))
     return c.json({ error: "通知不存在。" }, 400);
   await c.env.DB.prepare("INSERT OR IGNORE INTO admin_notification_read(user_id,notification_key) VALUES(?,?)")
     .bind(user.id, key)

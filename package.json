@@ -29,15 +29,17 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260908.1",
     "@types/node": "^26.5.0",
+    "esbuild": "0.28.1",
+    "miniflare": "5.20260907.0-alpha",
     "prettier": "^3.9.6",
     "typescript": "^7.0.2",
-    "wrangler": "4.129.1",
-    "esbuild": "0.28.1",
-    "miniflare": "5.20260907.0-alpha"
+    "wrangler": "4.129.1"
   },
   "dependencies": {
     "aws4fetch": "^1.0.20",
-    "hono": "^4.13.7"
+    "fflate": "0.8.3",
+    "hono": "^4.13.7",
+    "read-excel-file": "^8.0.2"
   },
   "engines": {
     "node": ">=24"

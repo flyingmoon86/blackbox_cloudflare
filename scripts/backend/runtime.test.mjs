@@ -5,6 +5,7 @@ import { Miniflare, convertV4MiniflareOptions } from "miniflare";
 import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { createHmac } from "node:crypto";
+import { unzipSync, zipSync, strFromU8, strToU8 } from "fflate";
 
 function statements(sql) {
   const result = [];
@@ -126,6 +127,52 @@ test(
           .all()
       ).results;
       assert.equal(editions.length, 3);
+      // Exercise the deployed node:zlib/XLSX path and D1 transaction, not only the Node adapter.
+      const workbook = unzipSync(readFileSync("templates/production-credit-import-v1.xlsx"));
+      for (const name of Object.keys(workbook))
+        if (name.endsWith(".xml"))
+          workbook[name] = strToU8(strFromU8(workbook[name]).replaceAll("张三", "运行时测试档案"));
+      const importForm = new FormData();
+      importForm.set("csrf", "runtime-csrf");
+      importForm.set("edition_id", String(editions[0].id));
+      importForm.set("file", new File([zipSync(workbook)], "runtime.xlsx"));
+      const multipart = new Request("https://blackbox.test", { method: "POST", body: importForm });
+      const imported = await request(1, `/admin/productions/${productionId}/credits/import/preview`, {
+        method: "POST",
+        headers: { "Content-Type": multipart.headers.get("Content-Type") },
+        body: await multipart.arrayBuffer(),
+        redirect: "manual",
+      });
+      assert.equal(imported.status, 303, await imported.clone().text());
+      const importPath = imported.headers.get("location");
+      response = await request(1, importPath + "?q=" + encodeURIComponent("测".repeat(80)));
+      assert.equal(response.status, 200, await response.clone().text());
+      const confirmations = await Promise.all(
+        [1, 2].map(() =>
+          request(1, importPath + "/confirm", {
+            method: "POST",
+            body: new URLSearchParams({ csrf: "runtime-csrf", revision: "0", confirm: "yes" }),
+            redirect: "manual",
+          }),
+        ),
+      );
+      assert.ok(confirmations.some((r) => r.status === 303));
+      for (const response of confirmations)
+        assert.ok([303, 409].includes(response.status), await response.clone().text());
+      assert.equal(
+        await db.prepare("SELECT COUNT(*) n FROM production_credit WHERE import_batch_id IS NOT NULL").first("n"),
+        1,
+      );
+      const rolledBack = await request(1, importPath + "/rollback", {
+        method: "POST",
+        body: new URLSearchParams({ csrf: "runtime-csrf", revision: "1", confirm: "yes" }),
+        redirect: "manual",
+      });
+      assert.equal(rolledBack.status, 303, await rolledBack.clone().text());
+      assert.equal(
+        await db.prepare("SELECT COUNT(*) n FROM production_credit WHERE import_batch_id IS NOT NULL").first("n"),
+        0,
+      );
       assert.equal(await db.prepare("SELECT year FROM production WHERE id=?").bind(productionId).first("year"), 2026);
       const bytes = Uint8Array.from([255, 216, 255, 224, 0, 16, 74, 70, 73, 70, 0, 1, 0, 0, 255, 217]);
       response = await request(1, "/api/uploads", {

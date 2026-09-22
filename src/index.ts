@@ -18,6 +18,8 @@ import {
 import { memberRoutes } from "./routes/members";
 import { adminRoutes } from "./routes/admin";
 import { productionRoutes } from "./routes/productions";
+import { creditImportRoutes } from "./routes/credit-import";
+import { purgeExpiredImports } from "./services/credit-import/commit";
 import { contentRoutes } from "./routes/content";
 import { resourceRoutes } from "./routes/resources";
 import { helpRoutes } from "./routes/help";
@@ -52,6 +54,7 @@ app.get("/health", health);
 app.route("/", authRoutes);
 app.route("/", memberRoutes);
 app.route("/", adminRoutes);
+app.route("/", creditImportRoutes);
 app.route("/", productionRoutes);
 app.route("/", contentRoutes);
 app.route("/", resourceRoutes);
@@ -69,5 +72,6 @@ export default {
   scheduled(_controller, env, context) {
     context.waitUntil(cleanExpiredUploads(env));
     context.waitUntil(cleanExpiredRequestLimits(env));
+    context.waitUntil(purgeExpiredImports(env.DB));
   },
 } satisfies ExportedHandler<AppEnv["Bindings"]>;

@@ -147,19 +147,20 @@ if (notificationHost) {
       if (current === signature) return;
       signature = current;
       notificationHost.replaceChildren();
-      if (!count) return;
-      const persistent = document.createElement("a");
-      persistent.className = "admin-pending-indicator";
-      persistent.href = "/admin";
-      persistent.textContent = `${count} 项待办`;
-      persistent.setAttribute("aria-label", `还有 ${count} 项管理员任务未处理`);
-      notificationHost.append(persistent);
+      if (count) {
+        const persistent = document.createElement("a");
+        persistent.className = "admin-pending-indicator";
+        persistent.href = "/admin";
+        persistent.textContent = `${count} 项待办`;
+        persistent.setAttribute("aria-label", `还有 ${count} 项管理员任务未处理`);
+        notificationHost.append(persistent);
+      }
       if (!data.items?.length) return;
       const details = document.createElement("details");
       details.className = "admin-notification-menu";
-      details.open = true;
+      details.open = !data.items.every((item) => item.informational);
       const summary = document.createElement("summary");
-      summary.textContent = "新任务";
+      summary.textContent = data.items.some((item) => item.informational) ? "新提醒" : "新任务";
       const stack = document.createElement("div");
       stack.className = "notification-stack";
       for (const item of data.items) {
@@ -169,12 +170,14 @@ if (notificationHost) {
         const title = document.createElement("strong");
         title.textContent = item.title;
         const description = document.createElement("span");
-        description.textContent = `${item.count} 项等待处理`;
+        description.textContent = item.informational
+          ? `近 7 天 ${item.count} 条导入/撤销记录`
+          : `${item.count} 项等待处理`;
         copy.append(title, description);
         const action = document.createElement("button");
         action.type = "button";
         action.className = "small notification-action";
-        action.textContent = "处理 →";
+        action.textContent = item.informational ? "查看 →" : "处理 →";
         action.addEventListener("click", async () => {
           action.disabled = true;
           try {
