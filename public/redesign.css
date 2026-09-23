@@ -204,6 +204,7 @@ html.photo-viewing,html.photo-viewing body,html.photo-viewing main{overflow:hidd
 .curtain-progress .curtain-transfer{font-size:12px;font-variant-numeric:tabular-nums;letter-spacing:.02em;opacity:.85;min-height:20px;margin-bottom:8px}
 .design-public .curtain-progress button:is(:hover,:focus-visible){background:#18090dc9;color:#f3ead8;outline-color:#e6ce4e;transform:none}
 @media(prefers-reduced-motion:reduce){.work-curtain{display:none}}
+.filters .filter-actions{display:flex;align-items:center;gap:12px;white-space:nowrap}
 @media(prefers-reduced-motion:no-preference){
 .edition-heading.edition-light-enter{position:relative;isolation:isolate;animation:edition-light-reveal 400ms ease-out both}
 .edition-heading.edition-light-enter::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(ellipse at 38% 0%,#e6ce4e26,transparent 72%);animation:edition-light-glow 400ms ease-out both}

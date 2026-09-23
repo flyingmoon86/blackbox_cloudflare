@@ -78,7 +78,7 @@ memberRoutes.use("*", async (c, next) => {
 memberRoutes.get("/members", async (c) => {
   const search = (c.req.query("q") ?? "").trim().slice(0, 80);
   const yearText = c.req.query("year") ?? "";
-  const year = /^\d{1,4}$/.test(yearText) ? Number(yearText) : null;
+  const year = yearText === "missing" ? "missing" : /^\d{1,4}$/.test(yearText) ? Number(yearText) : null;
   const where: string[] = [];
   const params: Array<string | number> = [];
   if (search) {
@@ -88,7 +88,9 @@ memberRoutes.get("/members", async (c) => {
     const escaped = `%${search.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_")}%`;
     params.push(escaped, escaped, escaped);
   }
-  if (year !== null) {
+  if (year === "missing") {
+    where.push("(m.join_year IS NULL OR m.join_year = '')");
+  } else if (year !== null) {
     where.push("m.join_year = ?");
     params.push(year);
   }

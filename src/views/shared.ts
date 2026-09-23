@@ -35,7 +35,7 @@ export type PageInfo = {
   path: string;
   visibility?: string;
   query?: string;
-  year?: number | null;
+  year?: number | "missing" | null;
   edition?: number;
 };
 export function pageNumber(value: string | undefined): number {
@@ -50,7 +50,7 @@ export function pagination(info?: PageInfo): string {
     new URLSearchParams({
       ...(info.query ? { q: info.query } : {}),
       ...(info.visibility ? { visibility: info.visibility } : {}),
-      ...(info.year ? { year: String(info.year) } : {}),
+      ...(info.year !== null && info.year !== undefined ? { year: String(info.year) } : {}),
       ...(info.edition ? { edition: String(info.edition) } : {}),
       page: String(page),
     });

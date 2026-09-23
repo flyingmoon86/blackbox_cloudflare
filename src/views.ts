@@ -278,7 +278,7 @@ export function memberListPage(
   members: MemberRow[],
   years: number[],
   search: string,
-  selectedYear: number | null,
+  selectedYear: number | "missing" | null,
   admin: boolean,
   signedIn = true,
   page?: PageInfo,
@@ -296,9 +296,13 @@ export function memberListPage(
   const options = YEARS.map(
     (year) => `<option value="${year}"${selectedYear === year ? " selected" : ""}>${year}</option>`,
   ).join("");
+  const olderYear =
+    typeof selectedYear === "number" && !YEARS.includes(selectedYear)
+      ? `<option value="${selectedYear}" selected>${selectedYear}</option>`
+      : "";
   return layout(
     "队员名录",
-    `<section class="page-heading"><p class="eyebrow">HALL OF FAME</p><h1>队员名录</h1>${admin ? '<p><a class="button" href="/admin/members/new">＋ 新建队员档案</a></p>' : ""}<form method="get" class="filters"><input name="q" value="${escapeHtml(search)}" placeholder="搜索姓名、入学年级或作品"><select name="year"><option value="">全部年份</option>${options}</select><button>查找</button></form></section><section class="card-grid member-grid" data-server-paged>${cards}</section>${pagination(page)}`,
+    `<section class="page-heading"><p class="eyebrow">HALL OF FAME</p><h1>队员名录</h1>${admin ? '<p><a class="button" href="/admin/members/new">＋ 新建队员档案</a></p>' : ""}<form method="get" class="filters"><input name="q" value="${escapeHtml(search)}" aria-label="搜索队员" placeholder="搜索姓名、入学年级或作品"><select name="year" aria-label="入队年份"><option value="">全部入队年份</option><option value="missing"${selectedYear === "missing" ? " selected" : ""}>未填写入队年份</option>${olderYear}${options}</select><span class="filter-actions"><button>查找</button>${search || selectedYear !== null ? '<a href="/members">清除筛选</a>' : ""}</span></form></section><section class="card-grid member-grid" data-server-paged>${cards}</section>${pagination(page)}`,
     signedIn,
     admin,
   );

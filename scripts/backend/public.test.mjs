@@ -38,6 +38,37 @@ async function setup() {
     });
   return { db, env, req, post };
 }
+test("member year filter distinguishes missing from zero and combines with search and pagination", async () => {
+  const s = await setup();
+  s.db.exec(
+    "INSERT INTO member(id,name,cohort,join_year) VALUES(10,'未填甲','2024',NULL),(11,'未填乙','2025',NULL),(12,'零年队员','2024',0),(13,'有年队员','2024',2025),(14,'旧年队员','2024',1998)",
+  );
+  s.db.exec("INSERT INTO member(id,name,cohort,join_year) VALUES(15,'旧空值队员','2024','')");
+  const get = async (path) => (await s.req(0, path)).text();
+  const missing = await get("/members?year=missing");
+  assert.match(missing, /<option value="missing" selected>未填写入队年份<\/option>/);
+  assert.match(missing, /<strong>未填甲<\/strong>/);
+  assert.match(missing, /<strong>未填乙<\/strong>/);
+  assert.match(missing, /<strong>旧空值队员<\/strong>/);
+  assert.doesNotMatch(missing, /<strong>零年队员<\/strong>|<strong>有年队员<\/strong>/);
+  assert.match(missing, /href="\/members">清除筛选<\/a>/);
+  const combined = await get("/members?year=missing&q=2024");
+  assert.match(combined, /<strong>未填甲<\/strong>/);
+  assert.match(combined, /<strong>旧空值队员<\/strong>/);
+  assert.doesNotMatch(combined, /<strong>未填乙<\/strong>|<strong>零年队员<\/strong>/);
+  assert.match(await get("/members?year=missing&q=不存在"), /没有找到符合条件的队员/);
+  assert.match(await get("/members?year=0"), /<strong>零年队员<\/strong>/);
+  assert.doesNotMatch(await get("/members?year=0"), /<strong>未填甲<\/strong>/);
+  assert.match(await get("/members?year=1998"), /<option value="1998" selected>1998<\/option>/);
+  assert.match(await get("/members?year=2025"), /<strong>有年队员<\/strong>/);
+  assert.match(await get("/members"), /<strong>零年队员<\/strong>/);
+  for (let id = 30; id < 55; id++)
+    s.db.prepare("INSERT INTO member(id,name,join_year) VALUES(?,?,NULL)").run(id, `补档${id}`);
+  const paged = await get("/members?year=missing&page=2");
+  assert.match(paged, /第 2 \/ 2 页/);
+  assert.match(paged, /href="\/members\?year=missing&amp;page=1">上一页<\/a>/);
+  s.db.close();
+});
 test("guests browse public pages but cannot fetch originals, pending files or administrator guides", async () => {
   const s = await setup();
   for (const path of [
