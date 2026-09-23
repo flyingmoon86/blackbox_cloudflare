@@ -1,9 +1,15 @@
 import { escapeHtml } from "../views";
-export const YEARS = [2026, 2025, 2024, 2023, 2022, 2021, 2020];
+export const YEARS = Array.from({ length: 27 }, (_, index) => 2026 - index);
 export function yearSelect(name: string, value: unknown = ""): string {
   const selected = String(value ?? "");
-  const legacy = selected && !YEARS.some((year) => String(year) === selected);
-  return `<select name="${name}"><option value="">${legacy ? "保留原年份（" + escapeHtml(selected) + "）" : "未填写"}</option>${YEARS.map((year) => `<option value="${year}"${String(year) === selected ? " selected" : ""}>${year}</option>`).join("")}</select>`;
+  if (name !== "join_year" && name !== "cohort") {
+    const recentYears = YEARS.slice(0, 7);
+    const legacy = selected && !recentYears.some((year) => String(year) === selected);
+    return `<select name="${name}"><option value="">${legacy ? "保留原年份（" + escapeHtml(selected) + "）" : "未填写"}</option>${recentYears.map((year) => `<option value="${year}"${String(year) === selected ? " selected" : ""}>${year}</option>`).join("")}</select>`;
+  }
+  const editable = /^(19|20)[0-9]{2}$/.test(selected);
+  const label = name === "join_year" ? "入队年份" : "入学年级";
+  return `<input name="${name}" type="text" inputmode="numeric" pattern="(19|20)[0-9]{2}" maxlength="4" list="${name}-years" value="${editable ? escapeHtml(selected) : ""}" placeholder="例如 2000" aria-label="${label}" aria-describedby="${name}-year-hint"><datalist id="${name}-years">${YEARS.map((year) => `<option value="${year}"></option>`).join("")}</datalist><span class="hint" id="${name}-year-hint">可直接填写四位年份${selected && !editable ? `；留空保留原记录（${escapeHtml(selected)}）` : "；留空保留原记录"}。</span>`;
 }
 export function archiveTabs(active: "productions" | "resources"): string {
   return `<nav class="section-tabs" aria-label="作品与资料"><a href="/productions"${active === "productions" ? ' class="active" aria-current="page"' : ""}>${icon("productions")}作品档案</a><a href="/resources"${active === "resources" ? ' class="active" aria-current="page"' : ""}>${icon("resources")}资料库</a></nav>`;

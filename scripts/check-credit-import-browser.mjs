@@ -46,6 +46,8 @@ const server = createServer(async (req, res) => {
       s.env,
       context(),
     );
+    if (req.method === "POST" && /\/admin\/credit-imports\/[^/]+\/confirm$/.test(req.url))
+      await new Promise((done) => setTimeout(done, 900));
     res.writeHead(response.status, Object.fromEntries(response.headers));
     res.end(Buffer.from(await response.arrayBuffer()));
   } catch {
@@ -119,6 +121,12 @@ try {
       );
     assert.equal(fillLinks.length, 6);
     await capture("dashboard");
+    await page.goto(base + "/admin/members/new", { waitUntil: "networkidle" });
+    await page.getByRole("combobox", { name: "入队年份" }).fill("2000");
+    await page.getByRole("combobox", { name: "入学年级" }).fill("2000");
+    assert.equal(await page.getByRole("combobox", { name: "入队年份" }).inputValue(), "2000");
+    await capture("year-inputs");
+    await page.goto(base + "/admin", { waitUntil: "networkidle" });
     for (const link of fillLinks.filter((a) => a.href !== "/admin/credit-imports/new")) {
       try {
         await activate(page.locator(`.dashboard-tools>a[href="${link.href}"]`));
@@ -171,7 +179,26 @@ try {
     await activate(page.getByRole("button", { name: "保存选择并重新检查", exact: true }));
     await capture("ready");
     await page.getByRole("checkbox").check();
-    await activate(page.getByRole("button", { name: "确认入库", exact: true }));
+    if (js) {
+      const button = page.getByRole("button", { name: "确认入库", exact: true });
+      const navigation = page.waitForNavigation({ waitUntil: "networkidle" });
+      if (width === 390) await button.tap();
+      else {
+        await button.focus();
+        await page.keyboard.press("Enter");
+      }
+      await page.locator(".import-commit-progress").waitFor({ state: "visible" });
+      assert.equal(await page.locator(".import-commit-progress progress").getAttribute("value"), null);
+      const progressPosition = await page.locator(".import-commit-progress").evaluate((el) => {
+        const rect = el.getBoundingClientRect();
+        return { top: rect.top, bottom: rect.bottom, height: innerHeight };
+      });
+      assert.ok(
+        progressPosition.top >= 0 && progressPosition.bottom <= progressPosition.height - (width === 390 ? 64 : 0),
+      );
+      await capture("committing");
+      await navigation;
+    } else await activate(page.getByRole("button", { name: "确认入库", exact: true }));
     assert.ok(await page.getByText("导入完成。重复确认不会再次创建记录。", { exact: true }).isVisible());
     await capture("committed");
     const downloadPromise = page.waitForEvent("download");

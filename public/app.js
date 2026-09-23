@@ -34,6 +34,92 @@ document.addEventListener("submit", (event) => {
     event.preventDefault();
 });
 
+const importConfirm = document.querySelector("form[data-import-confirm]");
+if (importConfirm instanceof HTMLFormElement) {
+  const panel = importConfirm.querySelector(".import-commit-progress");
+  const meter = panel?.querySelector("progress");
+  const message = panel?.querySelector("[data-import-message]");
+  const checkLink = panel?.querySelector("[data-import-check]");
+  const submit = importConfirm.querySelector('button[type="submit"],button:not([type])');
+  const batchUrl = new URL(importConfirm.action).pathname.replace(/\/confirm$/, "");
+  let pending = false;
+  let finished = false;
+  let pollTimer;
+  const showResult = () => {
+    if (finished) return;
+    finished = true;
+    clearInterval(pollTimer);
+    meter.value = 1;
+    message.textContent = "数据库已确认导入完成，正在打开结果。";
+    location.assign(batchUrl);
+  };
+  const status = async () => {
+    const response = await fetch(importConfirm.dataset.statusUrl, {
+      headers: { Accept: "application/json" },
+      credentials: "same-origin",
+      cache: "no-store",
+    });
+    if (!response.ok || !response.headers.get("Content-Type")?.includes("application/json")) return null;
+    return response.json();
+  };
+  importConfirm.addEventListener("submit", async (event) => {
+    if (!panel || !meter || !message || !checkLink || !submit) return;
+    if (pending) {
+      event.preventDefault();
+      return;
+    }
+    event.preventDefault();
+    pending = true;
+    submit.disabled = true;
+    panel.hidden = false;
+    panel.scrollIntoView({ block: "center" });
+    checkLink.hidden = true;
+    meter.removeAttribute("value");
+    message.textContent = "正在提交整批数据，完成前无法显示逐行百分比。";
+    pollTimer = setInterval(async () => {
+      if (finished) return;
+      try {
+        if ((await status())?.status === "committed") showResult();
+      } catch {}
+    }, 3000);
+    const waiting = setTimeout(() => {
+      if (!finished) {
+        message.textContent = "仍在等待服务器确认。请勿重复提交；可以打开批次页核对结果。";
+        checkLink.hidden = false;
+      }
+    }, 8000);
+    try {
+      const response = await fetch(importConfirm.action, {
+        method: "POST",
+        body: new FormData(importConfirm),
+        headers: { Accept: "application/json" },
+        credentials: "same-origin",
+      });
+      if (finished) return;
+      if (response.ok && !response.redirected && response.headers.get("Content-Type")?.includes("application/json")) {
+        const result = await response.json();
+        if (result.status === "committed") return showResult();
+      }
+      message.textContent =
+        response.status === 409
+          ? "批次或档案已变化，未确认入库。请打开批次页核对。"
+          : "服务器未确认提交结果。请打开批次页核对，不要直接重试。";
+    } catch {
+      if (finished) return;
+      try {
+        if ((await status())?.status === "committed") return showResult();
+      } catch {}
+      message.textContent = "网络中断，提交结果尚未确认。请打开批次页核对，不要直接重试。";
+    } finally {
+      clearTimeout(waiting);
+      if (!finished) {
+        clearInterval(pollTimer);
+        checkLink.hidden = false;
+      }
+    }
+  });
+}
+
 const notice = document.querySelector("[data-test-notice]");
 if (notice instanceof HTMLDialogElement) {
   const key = `blackbox-test-notice-${notice.dataset.testNotice}`;

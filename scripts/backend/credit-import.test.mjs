@@ -68,6 +68,16 @@ test("admin preview -> resolution -> atomic import -> replay -> guarded rollback
     assert.equal((await change(s, path, "resolve")).status, 303, "choices survive reevaluation");
     const ready = await (await s.req(1, path)).text();
     assert.match(ready, /确认入库/);
+    assert.match(ready, /data-import-confirm/);
+    assert.equal((await (await s.req(1, path + "/status")).json()).status, "ready");
+    const jsonConfirm = await s.req(1, path + "/confirm", {
+      method: "POST",
+      headers: { Accept: "application/json" },
+      body: new URLSearchParams({ csrf: "credit-csrf", revision: revision(s, path), confirm: "yes" }),
+    });
+    assert.equal(jsonConfirm.status, 200);
+    assert.deepEqual(await jsonConfirm.json(), { status: "committed", url: path });
+    assert.equal((await (await s.req(1, path + "/status")).json()).status, "committed");
     assert.equal((await change(s, path, "confirm")).status, 303);
     assert.equal((await s.post(1, path + "/confirm", { revision: "0", confirm: "yes" })).status, 303);
     assert.equal(s.db.prepare("SELECT COUNT(*) n FROM production_credit").get().n, 3);
@@ -95,6 +105,7 @@ test("permissions, CSRF, parent mismatch, illegal query and required confirmatio
       for (const url of [
         path,
         path + "/errors.csv",
+        path + "/status",
         "/admin/credit-imports",
         "/admin/credit-imports/new",
         "/admin/credit-imports/new?production_id=10",

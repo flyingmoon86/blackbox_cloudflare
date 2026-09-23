@@ -19,12 +19,16 @@ export async function target(db: D1Database, productionId: number, editionId: nu
   return found;
 }
 export async function getBatch(db: D1Database, id: string) {
-  const batch = await db.prepare("SELECT * FROM credit_import_batch WHERE id=?").bind(id).first<ImportBatch>();
-  if (!batch) throw new ImportError("未找到导入批次。", 404);
+  const batch = await getBatchSummary(db, id);
   const rows = (
     await db.prepare("SELECT * FROM credit_import_row WHERE batch_id=? ORDER BY row_number").bind(id).all<ImportRow>()
   ).results;
   return { batch, rows };
+}
+export async function getBatchSummary(db: D1Database, id: string): Promise<ImportBatch> {
+  const batch = await db.prepare("SELECT * FROM credit_import_batch WHERE id=?").bind(id).first<ImportBatch>();
+  if (!batch) throw new ImportError("未找到导入批次。", 404);
+  return batch;
 }
 export async function memberChoices(db: D1Database, search = "") {
   // Keep the SSR selector bounded; a GET search is usable without JavaScript.

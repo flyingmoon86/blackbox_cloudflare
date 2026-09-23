@@ -208,11 +208,15 @@ test("withdrawal immediately denies public previews including conditional reques
 });
 test("cohort input is numeric and unrelated profile edits preserve old data", async () => {
   const s = await setup();
+  const edit = await (await s.req(1, "/admin/members/1/edit")).text();
+  assert.match(edit, /name="join_year"[^>]*type="text"/);
+  assert.match(edit, /name="cohort"[^>]*type="text"/);
+  assert.match(edit, /<option value="2000"><\/option>/);
   assert.equal(
-    (await s.post(2, "/profile/member", { join_year: "2025", cohort: "2024", bio: "简介", works: "作品" })).status,
+    (await s.post(2, "/profile/member", { join_year: "2000", cohort: "2000", bio: "简介", works: "作品" })).status,
     303,
   );
-  assert.match(await (await s.req(0, "/members/1")).text(), /2024 级/);
+  assert.match(await (await s.req(0, "/members/1")).text(), /2000 级/);
   assert.equal((await s.post(2, "/profile/member", { cohort: "2024届" })).status, 400);
   s.db.exec("UPDATE member SET cohort='旧记录' WHERE id=1");
   await s.post(1, "/admin/members/1/edit", { name: "测试队员", cohort: "", join_year: "2025", bio: "新版简介" });
@@ -367,8 +371,7 @@ test("work themes are admin-only and old years and profile works survive unrelat
   assert.ok(!detail.includes("历史原文"));
   const edit = await (await s.req(2, "/profile/member")).text();
   assert.ok(!edit.includes('name="works"'));
-  assert.ok(!edit.includes('value="2018"'));
-  assert.match(edit, /保留原年份（2018）/);
+  assert.match(edit, /name="join_year"[^>]*value="2018"/);
   s.db.close();
 });
 

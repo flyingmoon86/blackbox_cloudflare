@@ -58,6 +58,15 @@ window.blackboxCreateCloth = () => {
 };
 
 // Only curtain resources are prepared up front. Work URLs are never prefetched.
+// Identical system-font geometry before and after document navigation.
+window.blackboxCreateCurtainPanel = () => {
+  const panel = document.createElement("div");
+  panel.className = "curtain-status-panel curtain-navigation-status";
+  panel.innerHTML =
+    '<span class="curtain-bell" aria-hidden="true">🔔</span><p role="status">正在准备作品</p><div class="curtain-meter curtain-navigation-meter" role="progressbar" aria-label="等待作品页面响应"><span></span></div><p class="curtain-transfer">正在获取作品页面</p><button type="button" class="curtain-navigation-cancel">取消打开</button>';
+  return panel;
+};
+
 (() => {
   const motion = matchMedia("(prefers-reduced-motion: reduce)");
   let navigation;
@@ -108,8 +117,7 @@ window.blackboxCreateCloth = () => {
     dialog.id = "work-navigation-curtain";
     dialog.className = "curtain-navigation";
     dialog.setAttribute("aria-label", "正在打开作品");
-    dialog.innerHTML =
-      '<div class="curtain-navigation-status"><span class="curtain-navigation-bell" aria-hidden="true">🔔</span><p role="status">正在获取作品页面</p><div class="curtain-navigation-meter" role="progressbar" aria-label="等待作品页面响应"></div><button type="button" class="curtain-navigation-cancel">取消打开</button></div>';
+    dialog.append(window.blackboxCreateCurtainPanel());
     dialog.prepend(window.blackboxCreateCloth().cloth);
     document.body.append(dialog);
     try {
@@ -127,8 +135,7 @@ window.blackboxCreateCloth = () => {
     });
     dialog.querySelector("button").onclick = cancelNavigation;
     slowNotice = setTimeout(() => {
-      if (navigation === dialog)
-        dialog.querySelector('[role="status"]').textContent = "仍在等待作品页面响应，可取消后重试";
+      if (navigation === dialog) dialog.querySelector(".curtain-transfer").textContent = "响应较慢，可取消后重试";
     }, 8000);
     // Allow one closed-curtain paint, not a simulated loading delay. The browser
     // performs one normal document request; destination JS handles actual media.
@@ -151,8 +158,10 @@ window.blackboxCreateCloth = () => {
   const fabric = window.blackboxCreateCloth();
   const earlyCloth = document.createElement("div");
   earlyCloth.className = "curtain-boot-cloth";
-  earlyCloth.setAttribute("aria-hidden", "true");
   earlyCloth.append(fabric.cloth);
+  const panel = window.blackboxCreateCurtainPanel();
+  panel.querySelector("button").textContent = "直接查看";
+  earlyCloth.append(panel);
   root.append(earlyCloth);
   const release = () => {
     root.classList.remove("curtain-pending");
@@ -181,7 +190,7 @@ window.blackboxCreateCloth = () => {
   const onFailure = (event) => {
     if (event.target instanceof HTMLScriptElement || event.error) dismiss();
   };
-  window.blackboxCurtainBoot = { release, cancelled: false, fabric };
+  window.blackboxCurtainBoot = { release, cancelled: false, fabric, panel };
   root.classList.add("curtain-pending");
   document.addEventListener("keydown", onKey);
   document.addEventListener("click", dismiss);

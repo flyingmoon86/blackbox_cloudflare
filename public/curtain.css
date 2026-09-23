@@ -9,11 +9,6 @@ html.curtain-pending::before {
   content: ""; position: fixed; inset: 0; z-index: 1000;
   background: var(--curtain-closed);
 }
-html.curtain-pending::after {
-  content: "正在准备舞台 · 点击或按 Esc 直接查看";
-  position: fixed; z-index: 1001; bottom: 8vh; inset-inline: 20px;
-  text-align: center; color: #f3ead8; font: 14px/1.6 sans-serif; letter-spacing: .08em;
-}
 #work-navigation-curtain {
   position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none;
   box-sizing: border-box; margin: 0; padding: 0; border: 0; border-radius: 0;
@@ -31,10 +26,30 @@ html.curtain-pending::after {
 .curtain-navigation-meter { height: 3px; border-radius: 3px; background: #f3ead826; margin-bottom: 12px; }
 #work-navigation-curtain .curtain-navigation-cancel {
   display: inline-block; min-height: 44px; padding: 8px 12px; border: 0; background: none;
-  color: #f3ead8; font: 14px/1.6 sans-serif; text-decoration: underline; cursor: pointer;
+  color: #f3ead8; font: 400 12px/20px Arial,"Microsoft YaHei",sans-serif; text-decoration: underline; cursor: pointer;
 }
 .curtain-navigation-cancel:focus-visible { outline: 2px solid #e6ce4e; outline-offset: 3px; }
 @media(max-width:600px) { :root { --curtain-fold-width: 8.333333vw; } }
 .curtain-boot-cloth { position:fixed; inset:0; z-index:1000; background:#210508; }
 .curtain-boot-cloth > .curtain-cloth,
 #work-navigation-curtain > .curtain-cloth { position:absolute; inset:0; width:100%; height:100%; z-index:0; overflow:hidden; }
+/* Reserve the same rows throughout navigation, boot and media loading. */
+.curtain-status-panel.curtain-status-panel {
+  position:absolute; z-index:1; bottom:max(7vh,env(safe-area-inset-bottom)); left:50%;
+  transform:translateX(-50%); width:min(320px,calc(100% - 48px)); height:186px;
+  text-align:center; color:#f3ead8; font:400 14px/1.6 Arial,"Microsoft YaHei",sans-serif;
+  letter-spacing:.04em; filter:drop-shadow(0 2px 10px #000);
+}
+.curtain-status-panel.curtain-status-panel p {
+  font:inherit; letter-spacing:inherit; margin:0 0 12px; height:23px;
+}
+.curtain-status-panel.curtain-status-panel .curtain-bell { display:block; font-size:28px; line-height:40px; height:40px; margin:0 0 12px; }
+.curtain-status-panel.curtain-status-panel .curtain-transfer {
+  height:40px; margin:0; font-size:12px; line-height:20px; letter-spacing:.02em;
+  font-variant-numeric:tabular-nums; overflow-wrap:anywhere; opacity:.85;
+}
+.curtain-status-panel.curtain-status-panel button {
+  display:inline-block; min-height:44px; margin:0; padding:8px 12px; border:0; background:none;
+  color:inherit; font:400 12px/20px Arial,"Microsoft YaHei",sans-serif; text-decoration:underline; cursor:pointer;
+}
+.curtain-status-panel button:focus-visible { outline:2px solid #e6ce4e; outline-offset:3px; }

@@ -31,32 +31,34 @@
   const clamp = (value) => Math.max(0, Math.min(1, value));
   curtain.append(cloth);
   let clothFrame;
-  const panel = document.createElement("div");
-  panel.className = "curtain-progress";
-  const bell = document.createElement("span");
-  bell.className = "curtain-bell";
-  bell.textContent = "🔔";
-  bell.setAttribute("aria-hidden", "true");
-  const label = document.createElement("p");
-  label.setAttribute("role", "status");
-  label.textContent = "正在准备封面";
-  const progress = document.createElement("div");
-  progress.className = "curtain-meter";
+  const panel = boot.panel;
+  panel.className = "curtain-status-panel curtain-progress";
+  const bell = panel.querySelector(".curtain-bell");
+  const label = panel.querySelector('[role="status"]');
+  const progress = panel.querySelector(".curtain-meter");
   progress.setAttribute("role", "progressbar");
   progress.setAttribute("aria-label", "封面下载进度");
   progress.setAttribute("aria-valuemin", "0");
   progress.setAttribute("aria-valuemax", "100");
-  const fill = document.createElement("span");
-  progress.append(fill);
-  const detail = document.createElement("p");
-  detail.className = "curtain-transfer";
+  const fill = progress.firstElementChild;
+  const detail = panel.querySelector(".curtain-transfer");
   detail.textContent = cover ? "等待服务器响应" : "此作品暂无封面";
   let fillAnimation;
+  let lastByteText = 0;
   const updateBytes = (loaded, total) => {
     const formatBytes = (n) => (n >= 1048576 ? (n / 1048576).toFixed(1) + " MB" : Math.floor(n / 1024) + " KB");
-    detail.textContent = total
-      ? Math.floor(Math.min(loaded / total, 1) * 100) + "% · " + formatBytes(loaded) + " / " + formatBytes(total)
-      : "已接收 " + formatBytes(loaded);
+    // Keep live transfer values truthful, but avoid rapid text repainting.
+    if (performance.now() - lastByteText >= 250 || loaded === total) {
+      lastByteText = performance.now();
+      detail.textContent = total
+        ? "封面 " +
+          Math.floor(Math.min(loaded / total, 1) * 100) +
+          "% · " +
+          formatBytes(loaded) +
+          " / " +
+          formatBytes(total)
+        : "封面已接收 " + formatBytes(loaded);
+    }
     if (total > 0) {
       const fraction = Math.min(loaded / total, 1);
       progress.setAttribute("aria-valuenow", String(Math.floor(fraction * 100)));
@@ -114,10 +116,9 @@
       oscillator.stop(now + 0.3);
     }
   };
-  const skip = document.createElement("button");
-  skip.type = "button";
+  const skip = panel.querySelector("button");
   skip.textContent = "直接查看";
-  panel.append(bell, label, progress, detail, sound, skip);
+  panel.insertBefore(sound, skip);
   curtain.append(panel);
   document.body.append(curtain);
   // Swap both curtains in one task, before the browser can paint the stage.
@@ -125,9 +126,11 @@
   let opened = false;
   let deadline;
   let cleanup;
+  let readinessNotice;
   const remove = () => {
     clearTimeout(deadline);
     clearTimeout(cleanup);
+    clearTimeout(readinessNotice);
     const focused = curtain.contains(document.activeElement);
     curtain.remove();
     cancelAnimationFrame(clothFrame);
@@ -157,20 +160,22 @@
     if (opened || !curtain.isConnected) return;
     opened = true;
     clearTimeout(deadline);
+    clearTimeout(readinessNotice);
     if (curtain.contains(document.activeElement))
       document.querySelector("#main-content")?.focus({ preventScroll: true });
-    panel.hidden = true;
+    panel.inert = true;
+    panel.setAttribute("aria-hidden", "true");
     curtain.classList.add("is-opening");
     const started = performance.now();
     const animateCloth = (now) => {
-      const elapsed = clamp((now - started) / 4200);
+      const elapsed = clamp((now - started) / 3600);
       // Smooth traction and braking, with no elastic bounce.
-      drawCloth(elapsed * elapsed * (3 - 2 * elapsed));
+      drawCloth(elapsed ** 3 * (elapsed * (elapsed * 6 - 15) + 10));
       if (elapsed < 1 && curtain.isConnected) clothFrame = requestAnimationFrame(animateCloth);
       else remove();
     };
     clothFrame = requestAnimationFrame(animateCloth);
-    cleanup = setTimeout(remove, 4700);
+    cleanup = setTimeout(remove, 4100);
   };
   skip.onclick = remove;
   document.addEventListener("keydown", onKey);
@@ -183,9 +188,10 @@
         const request = new XMLHttpRequest();
         request.open("GET", coverUrl);
         request.responseType = "blob";
+        request.timeout = 30000;
+        request.ontimeout = () => reject(new Error("封面加载超时"));
         request.onprogress = (event) => {
           if (!curtain.isConnected || opened) return;
-          label.textContent = "封面加载中";
           updateBytes(event.loaded, event.lengthComputable ? event.total : 0);
         };
         request.onerror = () => reject(new Error("封面加载失败"));
@@ -208,7 +214,6 @@
           try {
             if (curtain.isConnected) {
               updateBytes(blob.size, blob.size);
-              label.textContent = "封面已接收，正在显示";
             }
             await cover.decode();
             resolve();
@@ -246,7 +251,12 @@
       })
     : Promise.resolve(true);
   deadline = setTimeout(() => {
-    if (!opened && curtain.isConnected) detail.textContent += " · 加载较慢，可直接查看";
+    if (!opened && curtain.isConnected) {
+      detail.textContent = "加载较慢，可重试或直接查看";
+      sound.disabled = false;
+      sound.textContent = "重新加载";
+      sound.onclick = () => location.reload();
+    }
   }, 8000);
   (async () => {
     ring();
@@ -254,18 +264,17 @@
       await imageReady;
       if (!curtain.isConnected) return;
       ring();
-      label.textContent = "封面已就绪，正在准备字体";
+      // Only explain this stage if it persists; never hold the curtain for copy.
+      readinessNotice = setTimeout(() => {
+        if (!opened && curtain.isConnected) detail.textContent = "封面已就绪，正在准备页面资源";
+      }, 250);
       const fontsLoaded = await fontsReady;
       if (!curtain.isConnected) return;
-      label.textContent = "正在准备页面资源";
       await pageReady;
       const backdropLoaded = await backdropReady;
       if (!curtain.isConnected) return;
-      label.textContent = !fontsLoaded
-        ? "字体加载失败，使用系统字体"
-        : !backdropLoaded
-          ? "背景加载失败，使用纯色舞台"
-          : "舞台已就绪";
+      // Stable title: ready states need no one-frame announcement before fading.
+      if (!fontsLoaded || !backdropLoaded) detail.textContent = "部分资源不可用，使用基础样式";
       ring();
       open();
     } catch (error) {
@@ -274,7 +283,13 @@
         cover.alt = "封面暂时无法加载";
       }
       clearTimeout(deadline);
-      if (curtain.isConnected) label.textContent = error.message + "，可刷新重试或直接查看";
+      if (curtain.isConnected) {
+        label.textContent = "暂时无法完成加载";
+        detail.textContent = error.message + "，可重试或直接查看";
+        sound.disabled = false;
+        sound.textContent = "重新加载";
+        sound.onclick = () => location.reload();
+      }
     }
   })();
 })();

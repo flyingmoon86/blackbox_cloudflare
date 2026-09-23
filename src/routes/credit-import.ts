@@ -10,6 +10,7 @@ import { parseImportFile } from "../services/credit-import/parser";
 import {
   createPreview,
   getBatch,
+  getBatchSummary,
   memberChoices,
   resolvePreview,
   target,
@@ -136,6 +137,10 @@ creditImportRoutes.get(batchBase, async (c) => {
   ).results;
   return c.html(importHistoryPage(rows, page));
 });
+creditImportRoutes.get(`${batchBase}/:batchId/status`, async (c) => {
+  const batch = await getBatchSummary(c.env.DB, c.req.param("batchId"));
+  return c.json({ status: batch.status, addCount: batch.add_count, createMemberCount: batch.create_member_count });
+});
 creditImportRoutes.get(`${batchBase}/:batchId`, async (c) => {
   const { batch, rows } = await getBatch(c.env.DB, c.req.param("batchId"));
   const q = (c.req.query("q") || "").slice(0, 80);
@@ -176,13 +181,21 @@ for (const action of ["resolve", "confirm", "rollback"] as const) {
   creditImportRoutes.post(`${batchBase}/:batchId/${action}`, async (c) => {
     const form = await authForm(c);
     if (!csrfValid(c, form.get("csrf"))) return c.text("请求已失效，请刷新后重试。", 400);
-    const { batch, rows } = await getBatch(c.env.DB, c.req.param("batchId"));
+    const loaded =
+      action === "resolve"
+        ? await getBatch(c.env.DB, c.req.param("batchId"))
+        : { batch: await getBatchSummary(c.env.DB, c.req.param("batchId")), rows: [] };
+    const { batch, rows } = loaded;
     const actor = c.get("user")!;
+    const resultUrl = `${batchBase}/${batch.id}`;
     if (
       (action === "confirm" && batch.status === "committed") ||
       (action === "rollback" && batch.status === "rolled_back")
-    )
-      return c.redirect(`${batchBase}/${batch.id}`, 303);
+    ) {
+      if (action === "confirm" && c.req.header("Accept")?.includes("application/json"))
+        return c.json({ status: "committed", url: resultUrl });
+      return c.redirect(resultUrl, 303);
+    }
     if (formText(form, "revision") !== String(batch.revision))
       throw new ImportError("批次已更新，请刷新预览后再操作。", 409);
     if (action === "resolve") {
@@ -199,9 +212,27 @@ for (const action of ["resolve", "confirm", "rollback"] as const) {
       await resolvePreview(c.env.DB, batch, rows, decisions, actor);
     } else {
       if (formText(form, "confirm") !== "yes") throw new ImportError("请先勾选确认。");
-      if (action === "confirm") await commitImport(c.env.DB, batch, actor);
-      else await rollbackImport(c.env.DB, batch, actor);
+      if (action === "confirm") {
+        const started = Date.now();
+        let committed = false;
+        try {
+          await commitImport(c.env.DB, batch, actor);
+          committed = true;
+        } finally {
+          console.info(
+            JSON.stringify({
+              event: "credit_import_commit",
+              outcome: committed ? "committed" : "failed",
+              elapsedMs: Date.now() - started,
+              rows: batch.total_rows,
+              newMembers: batch.create_member_count,
+            }),
+          );
+        }
+      } else await rollbackImport(c.env.DB, batch, actor);
     }
-    return c.redirect(`${batchBase}/${batch.id}`, 303);
+    if (action === "confirm" && c.req.header("Accept")?.includes("application/json"))
+      return c.json({ status: "committed", url: resultUrl });
+    return c.redirect(resultUrl, 303);
   });
 }

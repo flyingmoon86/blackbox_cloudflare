@@ -54,12 +54,16 @@ const server = createServer(async (req, res) => {
     res.writeHead(200, { "Content-Type": "text/html", "Content-Security-Policy": csp }).end(html);
     return;
   }
-  if (path === "/productions/991008") {
+  if (path === "/productions/991008" || path === "/productions/991009") {
     documents++;
     await documentGate?.promise;
     res
       .writeHead(failDocument ? 404 : 200, { "Content-Type": "text/html", "Content-Security-Policy": csp })
-      .end(failDocument ? layout("未找到作品", "<h1>未找到作品</h1>") : detail);
+      .end(
+        failDocument
+          ? layout("未找到作品", "<h1>未找到作品</h1>")
+          : detail.replaceAll("991008", path.endsWith("991009") ? "991009" : "991008"),
+      );
     return;
   }
   if (path === "/site/theme.css") {
@@ -67,11 +71,15 @@ const server = createServer(async (req, res) => {
     res.writeHead(200, { "Content-Type": "text/css" }).end("");
     return;
   }
-  if (path === "/productions/991008/cover") {
+  if (/^\/productions\/99100[89]\/cover$/.test(path)) {
     covers++;
     await coverGate?.promise;
     // Two real chunks, with a known length; the client must not open between them.
-    res.writeHead(200, { "Content-Type": "image/webp", "Content-Length": cover.length });
+    res.writeHead(200, {
+      "Content-Type": "image/webp",
+      "Content-Length": cover.length,
+      "Cache-Control": "public, max-age=3600",
+    });
     const middle = Math.floor(cover.length / 2);
     res.write(cover.subarray(0, middle));
     setTimeout(() => res.end(cover.subarray(middle)), 400);
@@ -85,6 +93,7 @@ const server = createServer(async (req, res) => {
   try {
     res
       .writeHead(200, {
+        "Cache-Control": "public, max-age=3600",
         "Content-Type": path.endsWith(".js")
           ? "application/javascript"
           : path.endsWith(".css")
@@ -102,7 +111,11 @@ const browser = await chromium.launch({ channel: "chrome", headless: true });
 const results = [];
 try {
   for (const width of [1366, 390]) {
-    const context = await browser.newContext({ viewport: { width, height: 768 }, hasTouch: width === 390 });
+    const context = await browser.newContext({
+      viewport: { width, height: 768 },
+      hasTouch: width === 390,
+      recordVideo: { dir: dir + "/videos", size: { width, height: 768 } },
+    });
     const page = await context.newPage();
     page.setDefaultTimeout(10000);
     const cdp = await context.newCDPSession(page);
@@ -140,6 +153,11 @@ try {
               JSON.stringify({
                 background: getComputedStyle(dialog).backgroundImage,
                 fabric: dialog.querySelector(".curtain-cloth")?.outerHTML,
+                panel: (() => {
+                  const p = dialog.querySelector(".curtain-navigation-status");
+                  const r = p.getBoundingClientRect();
+                  return { y: r.y, height: r.height, font: getComputedStyle(p).fontFamily };
+                })(),
                 indeterminate: !dialog.querySelector('[role="progressbar"]').hasAttribute("aria-valuenow"),
               }),
           );
@@ -191,6 +209,12 @@ try {
     themeGate.release();
     themeGate = null;
     await page.locator(".work-curtain").waitFor();
+    const panelAfter = await page.locator(".curtain-progress").evaluate((p) => {
+      const r = p.getBoundingClientRect();
+      return { y: r.y, height: r.height, font: getComputedStyle(p).fontFamily };
+    });
+    assert.deepEqual(panelAfter, curtainStyle.panel, "Panel geometry and font must survive navigation unchanged");
+    console.log("PANEL_HANDOFF", width, JSON.stringify({ before: curtainStyle.panel, after: panelAfter }));
     assert.equal(
       await page.locator(".work-curtain .curtain-cloth").evaluate((el) => el.outerHTML),
       curtainStyle.fabric,
@@ -205,6 +229,21 @@ try {
     );
     assert.equal(await page.locator(".work-curtain.is-opening").count(), 0);
     await page.screenshot({ path: `${dir}/${width}-waiting-cover.png` });
+    await page.evaluate(() => {
+      window.curtainPlayback = [];
+      const sample = (now) => {
+        const curtain = document.querySelector(".work-curtain");
+        if (!curtain) return;
+        if (curtain.classList.contains("is-opening"))
+          window.curtainPlayback.push({
+            ms: now,
+            opacity: Number(getComputedStyle(curtain.querySelector(".curtain-progress")).opacity),
+            path: curtain.querySelector("path")?.getAttribute("d"),
+          });
+        requestAnimationFrame(sample);
+      };
+      requestAnimationFrame(sample);
+    });
     coverGate.release();
     coverGate = null;
     await page.waitForFunction(() => {
@@ -213,6 +252,31 @@ try {
     });
     assert.equal(await page.locator(".work-curtain.is-opening").count(), 0);
     await page.locator(".work-curtain.is-opening").waitFor();
+    const playback = await page.evaluate(async () => {
+      const frames = [];
+      const start = performance.now();
+      await new Promise((resolve) => {
+        const sample = (now) => {
+          const curtain = document.querySelector(".work-curtain");
+          if (!curtain) return resolve();
+          frames.push({
+            ms: now - start,
+            opacity: Number(getComputedStyle(curtain.querySelector(".curtain-progress")).opacity),
+            path: curtain.querySelector("path")?.getAttribute("d"),
+          });
+          requestAnimationFrame(sample);
+        };
+        requestAnimationFrame(sample);
+      });
+      return frames;
+    });
+    const earlyPlayback = await page.evaluate(() => window.curtainPlayback);
+    assert.ok(
+      earlyPlayback.some((f) => f.opacity > 0 && f.opacity < 1),
+      "Status fades rather than vanishes",
+    );
+    assert.ok(new Set(playback.map((f) => f.path)).size > 20, "Cloth progresses across actual rendered frames");
+    writeFileSync(`${dir}/${width}-playback.json`, JSON.stringify(playback, null, 2));
     await page.locator(".work-curtain").waitFor({ state: "detached" });
     assert.equal(covers, initial.covers + 1);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
@@ -238,6 +302,23 @@ try {
     await page.locator("h1").filter({ hasText: "未找到作品" }).waitFor();
     assert.equal(await page.locator("dialog[open],.work-curtain,html.curtain-pending").count(), 0);
     failDocument = false;
+    // Warm static cache, repeat entry, then another work: no stale curtain state.
+    for (const id of [991008, 991008, 991009]) {
+      await page.goto(base + "/productions/" + id);
+      await page.locator(".work-curtain").waitFor({ state: "detached" });
+      assert.equal(
+        await page.locator(".production-cover").evaluate((img) => img.complete && img.naturalWidth > 0),
+        true,
+      );
+    }
+    await page.route("**/productions/991008/cover*", (route) => route.fulfill({ status: 503, body: "unavailable" }));
+    await page.goto(base + "/productions/991008");
+    await page.getByRole("button", { name: "重新加载", exact: true }).waitFor();
+    await page.screenshot({ path: `${dir}/${width}-load-error.png` });
+    await page.unroute("**/productions/991008/cover*");
+    await page.getByRole("button", { name: "重新加载", exact: true }).click();
+    await page.locator(".work-curtain").waitFor({ state: "detached" });
+    await page.waitForFunction(() => document.querySelector(".production-cover")?.naturalWidth > 0);
     assert.deepEqual(errors, []);
     results.push({
       width,
@@ -247,9 +328,13 @@ try {
       oneDocument: true,
       oneCover: true,
       realByteProgress: true,
+      panelShiftPx: panelAfter.y - curtainStyle.panel.y,
+      animationFrames: playback.length,
       back: true,
       cancel: true,
       errorRecovery: true,
+      coverRetry: true,
+      warmAndConsecutiveEntries: true,
       overflow: false,
       errors,
     });

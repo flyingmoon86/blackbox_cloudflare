@@ -127,7 +127,7 @@ try {
     releaseBackdrop();
     await page.locator(".work-curtain.is-opening").waitFor();
     assert.equal(requests, 1);
-    assert.equal(await page.locator(".curtain-progress").isVisible(), false);
+    await page.waitForFunction(() => getComputedStyle(document.querySelector(".curtain-progress")).opacity === "0");
     await page.waitForTimeout(1800);
     await page.screenshot({ path: dir + "/" + width + "-opening.png" });
     await page.locator(".work-curtain").waitFor({ state: "detached" });
