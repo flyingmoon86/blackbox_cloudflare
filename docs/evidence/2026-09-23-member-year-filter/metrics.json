@@ -1,0 +1,24 @@
+[
+  {
+    "viewport": "1366x768",
+    "role": "admin",
+    "missing": 3,
+    "combined": 1,
+    "empty": true,
+    "cleared": true,
+    "overflow": false,
+    "errors": [],
+    "failed": []
+  },
+  {
+    "viewport": "390x768",
+    "role": "admin",
+    "missing": 3,
+    "combined": 1,
+    "empty": true,
+    "cleared": true,
+    "overflow": false,
+    "errors": [],
+    "failed": []
+  }
+]
