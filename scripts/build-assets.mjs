@@ -8,6 +8,7 @@ const files = [
   "app.js",
   "experience.js",
   "curtain-boot.js",
+  "curtain.css",
   "upload.js",
   "review.js",
   "images/elephant-mascot-360-v1.webp",

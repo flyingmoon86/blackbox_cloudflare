@@ -27,60 +27,8 @@
   const curtain = document.createElement("div");
   curtain.className = "work-curtain";
   // Each fold has its own carrier: the leading edge gathers fabric before the stack exits.
-  const svgNS = "http://www.w3.org/2000/svg";
-  const cloth = document.createElementNS(svgNS, "svg");
-  cloth.setAttribute("class", "curtain-cloth");
-  cloth.setAttribute("viewBox", "0 0 1200 1000");
-  cloth.setAttribute("preserveAspectRatio", "none");
-  cloth.setAttribute("aria-hidden", "true");
-  cloth.innerHTML = `<defs>
-    <linearGradient id="curtain-fold"><stop stop-color="#210508"/><stop offset=".13" stop-color="#4e0b12"/><stop offset=".32" stop-color="#901d29"/><stop offset=".48" stop-color="#b93640"/><stop offset=".64" stop-color="#951d29"/><stop offset=".85" stop-color="#4b0911"/><stop offset="1" stop-color="#210508"/></linearGradient>
-    <linearGradient id="curtain-weight" x2="0" y2="1"><stop stop-color="#000" stop-opacity=".54"/><stop offset=".16" stop-color="#ff9b8e" stop-opacity=".12"/><stop offset=".55" stop-color="#530815" stop-opacity=".14"/><stop offset="1" stop-color="#000" stop-opacity=".58"/></linearGradient>
-    <filter id="curtain-nap" x="-3%" y="-1%" width="106%" height="102%">
-      <feTurbulence type="fractalNoise" baseFrequency="16 .42" numOctaves="2" seed="19" stitchTiles="stitch" result="fiber"/>
-      <feColorMatrix in="fiber" type="matrix" values="0 0 0 0 .82 0 0 0 0 .05 0 0 0 0 .08 0 0 0 .16 0" result="redFiber"/>
-      <feBlend in="SourceGraphic" in2="redFiber" mode="screen" result="velvet"/>
-      <feComposite in="velvet" in2="SourceGraphic" operator="in" result="clippedVelvet"/>
-      <feDisplacementMap in="clippedVelvet" in2="fiber" scale="1.2" xChannelSelector="R" yChannelSelector="G"/>
-    </filter>
-  </defs>`;
-  const folds = [];
-  const foldCount = matchMedia("(max-width:600px)").matches ? 6 : 10;
-  for (let side = 0; side < 2; side++) {
-    const group = document.createElementNS(svgNS, "g");
-    if (side) group.setAttribute("transform", "translate(1200 0) scale(-1 1)");
-    for (let index = 0; index < foldCount; index++) {
-      const path = document.createElementNS(svgNS, "path");
-      path.setAttribute("fill", "url(#curtain-fold)");
-      path.setAttribute("filter", "url(#curtain-nap)");
-      const shade = document.createElementNS(svgNS, "path");
-      shade.setAttribute("fill", "url(#curtain-weight)");
-      group.append(path, shade);
-      folds.push({ path, shade, index, side });
-    }
-    cloth.append(group);
-  }
+  const { cloth, drawCloth } = boot.fabric;
   const clamp = (value) => Math.max(0, Math.min(1, value));
-  const drawCloth = (progress) => {
-    for (const { path, shade, index, side } of folds) {
-      const edge = (i, depth) => {
-        const delayed = clamp((progress - depth * 0.045) / (1 - depth * 0.045));
-        const lead = 604 - 760 * delayed;
-        const rest = i * (604 / foldCount) + (i > 0 && i < foldCount ? Math.sin(i * 1.4) * 6 : 0);
-        const packed = 11 + Math.sin(i * 1.7) * 1.2;
-        const x = Math.min(rest, lead - (foldCount - i) * packed);
-        const slack = Math.sin(Math.PI * delayed);
-        const drape = x + Math.sin(i * 1.3 + side * 0.6 + depth * 2) * (3 + 5 * slack) * depth + 12 * slack * depth;
-        return i === 0 ? Math.min(-8, drape) : drape;
-      };
-      const a = [edge(index, 0), edge(index, 0.35), edge(index, 0.7), edge(index, 1)];
-      const b = [edge(index + 1, 0), edge(index + 1, 0.35), edge(index + 1, 0.7), edge(index + 1, 1)];
-      const d = `M ${a[0]} -8 C ${a[1]} 260 ${a[2]} 700 ${a[3]} 1010 L ${b[3] + 1} 1010 C ${b[2] + 1} 700 ${b[1] + 1} 260 ${b[0] + 1} -8 Z`;
-      path.setAttribute("d", d);
-      shade.setAttribute("d", d);
-    }
-  };
-  drawCloth(0);
   curtain.append(cloth);
   let clothFrame;
   const panel = document.createElement("div");
@@ -319,8 +267,6 @@
           ? "背景加载失败，使用纯色舞台"
           : "舞台已就绪";
       ring();
-      // Let the last measured byte update settle before the separate opening animation.
-      await new Promise((resolve) => setTimeout(resolve, 280));
       open();
     } catch (error) {
       if (cover) {

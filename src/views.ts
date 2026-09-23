@@ -140,6 +140,12 @@ export function layout(title: string, content: string, signedIn = false, admin =
     ' · 黑匣子</title><link rel="icon" type="image/webp" href="' +
     assetUrl("/images/elephant-mascot-360-v1.webp") +
     '"><link rel="stylesheet" href="' +
+    assetUrl("/curtain.css") +
+    '"><script src="' +
+    assetUrl("/curtain-boot.js") +
+    '"' +
+    (content.includes('class="card production-detail work-detail') ? " data-work-curtain" : "") +
+    '></script><link rel="stylesheet" href="' +
     assetUrl("/app.css") +
     '"><link rel="stylesheet" href="' +
     assetUrl("/experience.css") +
@@ -150,9 +156,6 @@ export function layout(title: string, content: string, signedIn = false, admin =
     '"><link rel="stylesheet" href="' +
     assetUrl("/fonts.css") +
     '">' +
-    (content.includes('class="card production-detail work-detail')
-      ? '<script src="' + assetUrl("/curtain-boot.js") + '"></script>'
-      : "") +
     '<script src="' +
     assetUrl("/app.js") +
     '" defer></script><script src="' +

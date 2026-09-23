@@ -1,5 +1,5 @@
 import { build } from "esbuild";
-import { chromium } from "playwright";
+const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || "playwright");
 import { mkdirSync, readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 import { pathToFileURL } from "node:url";
@@ -33,7 +33,7 @@ const server = createServer((req, res) => {
 });
 await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
 const base = "http://127.0.0.1:" + server.address().port;
-const dir = "docs/evidence/2026-09-20-curtain-first-paint";
+const dir = process.env.EVIDENCE_DIR || "docs/evidence/2026-09-20-curtain-first-paint";
 mkdirSync(dir, { recursive: true });
 await build({
   entryPoints: ["src/views/productions.ts"],
