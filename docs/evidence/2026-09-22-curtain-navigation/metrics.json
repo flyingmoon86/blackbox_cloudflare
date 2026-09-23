@@ -1,0 +1,46 @@
+[
+  {
+    "width": 1366,
+    "latencyMs": 2.5,
+    "htmlDelayMs": 3100,
+    "noPrefetch": true,
+    "oneDocument": true,
+    "oneCover": true,
+    "realByteProgress": true,
+    "back": true,
+    "cancel": true,
+    "errorRecovery": true,
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "latencyMs": 1.5,
+    "htmlDelayMs": 3100,
+    "noPrefetch": true,
+    "oneDocument": true,
+    "oneCover": true,
+    "realByteProgress": true,
+    "back": true,
+    "cancel": true,
+    "errorRecovery": true,
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "mode": "no-js",
+    "passed": true
+  },
+  {
+    "mode": "reduced",
+    "passed": true
+  },
+  {
+    "mode": "new-tab",
+    "passed": true
+  },
+  {
+    "mode": "modified",
+    "passed": true
+  }
+]
