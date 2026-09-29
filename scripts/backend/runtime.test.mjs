@@ -91,6 +91,19 @@ test(
           ...options,
           headers: { Cookie: cookie(id), "x-csrf-token": "runtime-csrf", ...options.headers },
         });
+      for (const path of ["/admin/system", "/admin/system/data"]) {
+        assert.equal((await request(2, path)).status, 403);
+        const panel = await request(1, path);
+        assert.equal(panel.status, 200);
+        assert.equal(panel.headers.get("cache-control"), "private, no-store");
+        const html = await panel.text();
+        if (path.endsWith("/data")) {
+          assert.match(html, /production_edition/);
+          assert.match(html, /R2 HEAD/);
+          assert.doesNotMatch(html, /role="alert"/);
+          assert.doesNotMatch(html, /runtime-admin|runtime-applicant|runtime-fixture-secret/);
+        }
+      }
       response = await request(1, "/admin/requests/10/approve", {
         method: "POST",
         body: new URLSearchParams({ csrf: "runtime-csrf" }),

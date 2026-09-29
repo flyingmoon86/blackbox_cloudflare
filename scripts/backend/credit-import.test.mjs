@@ -375,8 +375,8 @@ test("admin workbench groups actionable tasks and direct forms; import selection
   try {
     const html = await (await s.req(1, "/admin")).text();
     assert.match(html, /id="dashboard-pending-title">待处理/);
-    assert.match(html, /id="dashboard-fill-title">填资料/);
-    const fill = html.match(/<nav class="dashboard-tools"[^>]*>([\s\S]*?)<\/nav>/)[1];
+    assert.doesNotMatch(html, /dashboard-fill-title/);
+    const fill = html.match(/<div class="workspace-actions">([\s\S]*?)<\/div>/)[1];
     const urls = [...fill.matchAll(/href="([^"]+)"/g)].map((m) => m[1]);
     assert.deepEqual(urls, [
       "/admin/productions/new",

@@ -96,7 +96,8 @@ test("portal is private, public admin links redirect and normal site stays publi
   const html = await (await s.req("/admin", 1)).text();
   assert.match(html, /工作台/);
   assert.match(html, /查看正式网站/);
-  assert.match(html, /admin-account-panel/);
+  assert.match(html, /href="\/admin\/accounts"/);
+  assert.match(await (await s.req("/admin/accounts", 1)).text(), /admin-account-panel/);
   const login = await (await s.req("/login")).text();
   assert.match(login, /后台登录/);
   assert.ok(!login.includes('href="/register"'));

@@ -1,0 +1,707 @@
+/* Scoped to authenticated management screens; the public theatre keeps its own layout. */
+.admin-workspace {
+  --wb-sidebar: 232px;
+  --wb-top: 76px;
+  --wb-surface: #fffdf8;
+  --wb-border: #e3ded3;
+  background: #f4f1e9;
+  color: #302a22;
+}
+.admin-workspace::before,
+.admin-workspace::after {
+  display: none;
+}
+.admin-workspace .top {
+  height: var(--wb-top);
+  padding: 12px 28px;
+  box-sizing: border-box;
+  background: #fffdf8;
+  border-bottom: 1px solid var(--wb-border);
+  box-shadow: none;
+  z-index: 60;
+}
+.admin-workspace .brand {
+  font-size: 19px;
+  flex-shrink: 0;
+}
+.admin-workspace .brand span {
+  font-size: 8px;
+}
+.admin-workspace .desktop-nav {
+  margin-left: auto;
+  gap: 22px;
+}
+.admin-workspace .desktop-nav a {
+  font-size: 13px;
+}
+.admin-workspace main {
+  margin: 0 0 0 var(--wb-sidebar);
+  padding: 34px clamp(20px, 3vw, 48px) 48px;
+  width: calc(100% - var(--wb-sidebar));
+  max-width: none;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.admin-workspace main > :not(.workbench) {
+  max-width: 1300px;
+}
+.workspace-sidebar {
+  position: fixed;
+  top: var(--wb-top);
+  bottom: 0;
+  left: 0;
+  width: var(--wb-sidebar);
+  background: #292720;
+  color: #ece4d5;
+  overflow-y: auto;
+  z-index: 50;
+  padding: 20px 14px;
+  box-sizing: border-box;
+  scrollbar-width: thin;
+}
+.workspace-navigation > summary {
+  display: none;
+}
+.workspace-navigation nav {
+  display: grid;
+  gap: 3px;
+}
+.workspace-caption {
+  color: #b6ad9c;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  margin: 20px 14px 8px;
+}
+.workspace-caption:first-child {
+  margin-top: 0;
+}
+.workspace-sidebar a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 42px;
+  padding: 9px 12px;
+  color: #e5dfd1;
+  text-decoration: none;
+  font-size: 13px;
+  border-radius: 5px;
+  box-sizing: border-box;
+}
+.workspace-sidebar a .nav-icon {
+  opacity: 0.75;
+  flex: none;
+}
+.workspace-sidebar a:hover {
+  background: #ffffff0d;
+  color: #fff;
+}
+.workspace-sidebar a[aria-current] {
+  background: #e1b765;
+  color: #30271a;
+  font-weight: 750;
+}
+.workspace-sidebar a[aria-current] .nav-icon {
+  opacity: 1;
+}
+.workspace-sidebar-footer {
+  border-top: 1px solid #ffffff21;
+  padding-top: 14px;
+  margin-top: 22px;
+}
+.workspace-sidebar-footer small {
+  display: block;
+  padding: 12px;
+  color: #b6ad9c;
+  font-size: 11px;
+}
+.admin-workspace :is(a, button, input, select, summary):focus-visible {
+  outline: 3px solid #9c6318;
+  outline-offset: 3px;
+}
+.workspace-sidebar :is(a, summary):focus-visible {
+  outline-color: #f5cf85;
+}
+
+.workspace-context {
+  font-size: 13px;
+  color: var(--muted);
+}
+.workbench {
+  max-width: 1200px;
+  margin: auto;
+}
+.wb-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.wb-heading h1 {
+  font-family: var(--serif);
+  font-size: 30px;
+  line-height: 1.4;
+  max-width: none;
+  margin: 0;
+}
+.wb-heading a {
+  color: #795a27;
+  font-size: 12px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+.workbench h2 {
+  font-weight: 650;
+  line-height: 1.5;
+  font-family: inherit;
+  font-size: 16px;
+  margin: 0;
+}
+.wb-overview,
+.wb-panel {
+  border: 1px solid var(--wb-border);
+  border-radius: 6px;
+  background: var(--wb-surface);
+  margin-bottom: 18px;
+  min-width: 0;
+  scroll-margin-top: 94px;
+}
+.wb-overview-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px 8px;
+}
+.wb-total {
+  color: #7e5b27;
+  font-size: 12px;
+}
+.wb-total strong {
+  font-size: 18px;
+}
+.wb-task-list {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  padding: 8px 12px 12px;
+  gap: 6px;
+}
+.wb-task {
+  min-width: 0;
+  border-left: 1px solid var(--wb-border);
+  padding: 0 6px;
+}
+.wb-task:first-child {
+  border-left: none;
+}
+.wb-task > a {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  color: inherit;
+  text-decoration: none;
+  min-height: 44px;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+.wb-task > a:hover {
+  background: #f2ecdf;
+}
+.wb-task strong {
+  font-weight: 600;
+}
+.wb-task b {
+  font-size: 22px;
+  font-weight: 500;
+  color: #795a27;
+}
+.wb-task > a.wb-task-secondary {
+  font-size: 11px;
+  color: #806432;
+  min-height: 32px;
+  padding-top: 0;
+}
+.wb-sync {
+  margin: 0;
+  padding: 8px 20px;
+  border-top: 1px solid var(--wb-border);
+  color: var(--muted);
+  font-size: 11px;
+  background: #faf8f2;
+  border-radius: 0 0 6px 6px;
+}
+.wb-sync[data-state="error"] {
+  color: #a23924;
+}
+.wb-empty {
+  margin: 4px 20px;
+  font-size: 13px;
+  color: #51623a;
+}
+.wb-panel-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--wb-border);
+}
+.wb-panel-head p {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 0;
+}
+.wb-panel .review-tools {
+  margin: 0;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 0;
+  gap: 10px;
+  background: #faf8f2;
+}
+.wb-panel .review-tools label {
+  font-size: 12px;
+}
+.wb-panel .review-tools input,
+.wb-panel .review-tools select {
+  background: #fffdf9;
+  border-radius: 4px;
+  min-height: 40px;
+  font-size: 13px;
+}
+.wb-panel .review-tools button {
+  min-height: 40px;
+  font-size: 12px;
+}
+.wb-panel .review-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 24px;
+  padding: 0 20px;
+}
+.wb-panel .review-card {
+  background: none;
+  margin: 0;
+  border: none;
+  border-bottom: 1px solid var(--wb-border);
+  padding: 20px 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.wb-panel .review-card h3 {
+  font-size: 15px;
+  margin: 0 0 10px;
+}
+.wb-panel .review-card p {
+  font-size: 13px;
+  color: #696153;
+  margin: 7px 0;
+  overflow-wrap: anywhere;
+}
+.wb-panel .admin-actions {
+  align-items: end;
+  gap: 10px;
+  margin-top: 12px;
+}
+.wb-panel .admin-actions form {
+  min-width: 0;
+}
+.wb-panel .admin-actions form:last-child {
+  flex: 1;
+}
+.wb-panel .admin-actions input,
+.wb-panel .admin-actions select {
+  font-size: 12px;
+  min-height: 40px;
+  border-radius: 4px;
+}
+.wb-panel .admin-actions button {
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-size: 12px;
+  min-height: 40px;
+  border-radius: 4px;
+}
+.wb-panel .review-reasons {
+  font-size: 11px;
+}
+.wb-panel [data-review-feedback] {
+  margin: 12px 20px;
+}
+.wb-empty-state {
+  margin: 0;
+  padding: 24px 20px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.workbench [hidden] {
+  display: none !important;
+}
+.wb-tag {
+  display: inline-block;
+  vertical-align: middle;
+  background: #f1eadb;
+  color: #7b653f;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.wb-tag.is-active {
+  color: #4a653c;
+  background: #ecf0e4;
+}
+.wb-tag.is-disabled {
+  color: #9c3f2f;
+  background: #faebe5;
+}
+.wb-account-table .wb-tag {
+  margin: 4px;
+}
+.workbench .admin-account-panel > summary {
+  padding: 16px 20px;
+  border: none;
+  border-radius: 6px;
+  background: var(--wb-surface);
+  font-size: 14px;
+  min-height: 50px;
+}
+.workbench .admin-account-panel > summary span {
+  font-weight: normal;
+  color: var(--muted);
+  margin-left: 12px;
+  font-size: 12px;
+}
+.workbench .admin-account-panel[open] > summary {
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--wb-border);
+}
+.wb-account-tools {
+  padding: 12px 20px;
+}
+.wb-account-tools label {
+  font-size: 12px;
+  max-width: 440px;
+}
+.wb-account-tools input {
+  font-size: 13px;
+  border-radius: 4px;
+}
+.wb-account-tools p {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 6px 0;
+}
+.wb-accounts .table-wrap {
+  border: none;
+  border-radius: 0 0 6px 6px;
+  margin: 0;
+}
+.wb-account-table {
+  font-size: 12px;
+}
+.wb-account-table :is(th, td) {
+  padding: 12px 18px;
+}
+.wb-account-table td {
+  vertical-align: top;
+}
+.wb-account-table .account-actions {
+  gap: 8px;
+}
+.wb-account-table .account-unlink {
+  font-size: 12px;
+}
+.wb-account-table button {
+  min-height: 40px;
+}
+@media (min-width: 1001px) {
+  .admin-workspace .mobile-nav,
+  .admin-workspace .menu-toggle {
+    display: none;
+  }
+}
+@media (max-width: 1200px) {
+  .wb-panel .review-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 1000px) {
+  .admin-workspace {
+    --wb-top: 64px;
+  }
+  .admin-workspace .top {
+    padding: 10px 18px;
+    gap: 12px;
+    flex-wrap: nowrap;
+  }
+  .admin-workspace .desktop-nav,
+  .admin-workspace .menu-toggle,
+  .admin-workspace .mobile-nav,
+  .admin-workspace .nav-scrim {
+    display: none !important;
+  }
+  .admin-workspace .account-link {
+    margin-left: auto;
+  }
+  .admin-workspace .brand span {
+    display: none;
+  }
+  .admin-workspace main {
+    width: 100%;
+    margin: 0;
+    padding: 20px 16px 32px;
+  }
+  .workspace-sidebar {
+    position: relative;
+    top: auto;
+    bottom: auto;
+    width: 100%;
+    padding: 0;
+    overflow: visible;
+    z-index: 30;
+  }
+  .workspace-navigation > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 11px 20px;
+    cursor: pointer;
+    min-height: 44px;
+    box-sizing: border-box;
+    font-size: 13px;
+  }
+  .workspace-navigation[open] nav {
+    padding: 8px 18px 18px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .workspace-navigation:not([open]) nav {
+    display: none;
+  }
+  .workspace-caption,
+  .workspace-sidebar-footer {
+    grid-column: 1/-1;
+  }
+  .workspace-sidebar-footer {
+    margin-top: 8px;
+  }
+  .workspace-sidebar a {
+    min-height: 44px;
+  }
+  .admin-workspace .admin-notification-host {
+    position: static;
+  }
+  .admin-workspace .notification-stack {
+    position: absolute;
+    top: 60px;
+    right: 12px;
+    width: min(350px, calc(100vw - 24px));
+  }
+}
+@media (max-width: 600px) {
+  .admin-workspace main {
+    padding-inline: 12px;
+  }
+  .wb-heading {
+    margin-bottom: 14px;
+  }
+  .wb-heading h1 {
+    font-size: 24px;
+  }
+  .wb-task-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 4px 10px 10px;
+    gap: 4px;
+  }
+  .wb-task {
+    border: none;
+    padding: 0;
+    background: #faf7ef;
+    border-radius: 4px;
+  }
+  .wb-task:last-child {
+    grid-column: 1/-1;
+    display: flex;
+    align-items: center;
+  }
+  .wb-task:last-child > a:first-child {
+    flex: 1;
+  }
+  .wb-task > a.wb-task-secondary {
+    min-height: 44px;
+    padding: 8px;
+  }
+  .wb-task b {
+    font-size: 19px;
+  }
+  .wb-overview-title {
+    padding: 12px 14px 8px;
+  }
+  .wb-sync {
+    padding: 8px 14px;
+  }
+  .wb-panel-head {
+    padding: 12px 14px;
+  }
+  .wb-panel .review-tools {
+    padding: 12px 14px;
+    grid-template-columns: 1fr;
+  }
+  .wb-panel .review-grid {
+    padding-inline: 14px;
+  }
+  .wb-panel .admin-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .wb-panel .admin-actions form {
+    width: 100%;
+  }
+  .wb-panel .admin-actions input,
+  .wb-panel .admin-actions select {
+    width: 100%;
+  }
+  .wb-panel .admin-actions form:last-child {
+    border-top: 1px dashed var(--wb-border);
+    padding-top: 12px;
+  }
+  .wb-panel .admin-actions button {
+    min-height: 44px;
+  }
+  .wb-account-table {
+    display: block;
+    min-width: 0;
+  }
+  .wb-account-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .wb-account-table tbody,
+  .wb-account-table tr {
+    display: block;
+  }
+  .wb-account-table tr {
+    border-bottom: 1px solid var(--wb-border);
+    padding: 14px;
+  }
+  .wb-account-table td {
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr);
+    align-items: baseline;
+    border: 0;
+    padding: 6px 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .wb-account-table td::before {
+    content: attr(data-label);
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .wb-account-table td > .wb-tag {
+    width: fit-content;
+  }
+  .wb-account-table td > .wb-tag + .wb-tag,
+  .wb-account-table td[data-label="用户名"] .wb-tag {
+    grid-column: 2;
+  }
+  .wb-account-table .account-actions {
+    display: grid;
+    min-width: 0;
+  }
+  .wb-account-table .account-unlink form {
+    min-width: 0;
+  }
+}
+
+.workspace-actions {
+  display: contents;
+}
+
+/* Shared backstage framing; forms keep their familiar light reading surfaces. */
+.admin-workspace {
+  --wb-surface: #f6f4e9;
+  --wb-border: #d9ddca;
+  background: #e9ece2;
+}
+.admin-workspace .workspace-sidebar {
+  background: #1b221c;
+  border-right: 1px solid #53604455;
+}
+.workspace-caption {
+  color: #a3ae95;
+}
+.workspace-sidebar a[aria-current] {
+  background: #d6b5741c;
+  color: #f0d496;
+  border-left: 2px solid #d9b370;
+  border-radius: 0 3px 3px 0;
+}
+.wb-heading {
+  padding: 26px 30px;
+  background: radial-gradient(ellipse at right bottom, #81906822, transparent 55%), #20271f;
+  color: #f3efdf;
+  border: 1px solid #7c896450;
+  border-radius: 5px;
+}
+.wb-heading h1 {
+  color: #f1eedf;
+  font-size: 36px;
+  letter-spacing: 0.035em;
+}
+.wb-heading .wb-heading-label {
+  margin: 0 0 10px;
+  color: #bfa878;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+.wb-heading .wb-heading-description {
+  font-size: 12px;
+  color: #aeb99f;
+  margin: 12px 0 0;
+  line-height: 1.8;
+}
+.wb-heading a {
+  color: #eed3a1;
+  border-bottom: 1px solid #cdb87f70;
+}
+.wb-overview {
+  border-top: 3px solid #b8a16d;
+}
+.wb-task-list {
+  counter-reset: work-task;
+}
+.wb-task {
+  counter-increment: work-task;
+  padding-top: 9px;
+}
+.wb-task::before {
+  content: "0" counter(work-task);
+  display: block;
+  font:
+    11px ui-monospace,
+    monospace;
+  color: #7d866e;
+  padding: 0 8px;
+}
+.admin-workspace .wb-tag.is-active {
+  color: #52633f;
+}
+@media (max-width: 600px) {
+  .wb-heading {
+    padding: 20px;
+    flex-wrap: wrap;
+  }
+  .wb-heading h1 {
+    font-size: 28px;
+  }
+  .wb-heading a {
+    min-height: 36px;
+  }
+}

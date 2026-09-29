@@ -12,7 +12,8 @@ export const adminPortalGate: MiddlewareHandler<AppEnv> = async (c, next) => {
     url.origin === portal.publicSite &&
     read &&
     /^\/admin(?:\/|$)/.test(url.pathname) &&
-    url.pathname !== "/admin/notifications"
+    url.pathname !== "/admin/notifications" &&
+    url.pathname !== "/admin/system/data"
   )
     return c.redirect(portal.admin + url.pathname + url.search, 302);
   if (!portal.active) return next();
@@ -20,7 +21,7 @@ export const adminPortalGate: MiddlewareHandler<AppEnv> = async (c, next) => {
   if (["/login", "/logout", "/site/theme.css", "/health"].includes(url.pathname)) return next();
   if (url.pathname === "/register") return c.redirect("/login", 303);
   const user = c.get("user");
-  const notificationRequest = url.pathname.startsWith("/admin/notifications");
+  const notificationRequest = url.pathname.startsWith("/admin/notifications") || url.pathname === "/admin/system/data";
   if (!user) {
     if (notificationRequest) return c.json({ error: "登录状态已失效，请重新登录。" }, 401);
     if (!read) return c.text("请先登录管理员账号。", 401);

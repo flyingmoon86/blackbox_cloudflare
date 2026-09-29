@@ -1,3 +1,5 @@
+import { readSystemInfo } from "../services/system-info";
+import { systemInfoPage, systemInfoSnapshot, systemSections, type SystemSection } from "../views/system-info";
 import { Hono } from "hono";
 import type { AppEnv } from "../types";
 import { layout, escapeHtml } from "../views";
@@ -56,27 +58,14 @@ operationsRoutes.get("/admin/review-history", async (c) => {
     ),
   );
 });
-operationsRoutes.get("/admin/system", async (c) => {
-  const row = await c.env.DB.prepare(
-    "SELECT initialized,used_bytes,reserved_bytes,(SELECT COUNT(*) FROM file_cleanup_task) cleanup_tasks FROM storage_budget WHERE id=1",
-  ).first<{ initialized: number; used_bytes: number; reserved_bytes: number; cleanup_tasks: number }>();
-  const gb = (bytes: number) => (bytes / 1e9).toFixed(3) + " GB";
-  return c.html(
-    layout(
-      "存储状态",
-      '<p><a href="/admin">← 管理员工作台</a></p><section class="card"><h1>存储与服务状态</h1><p>文件容量核对：' +
-        (row?.initialized ? "已完成" : "等待后台核对；暂不接受新上传") +
-        "</p><p>已存文件：" +
-        gb(row?.used_bytes || 0) +
-        "；上传预留：" +
-        gb(row?.reserved_bytes || 0) +
-        "</p><p>新上传容量上限：9 GB。待清理文件：" +
-        (row?.cleanup_tasks || 0) +
-        ' 个。</p><p>这里显示网站的文件台账；实际账单和操作次数请以 Cloudflare 控制台为准。</p><a class="button" href="/admin/system/check">检查数据库与文件存储连接</a></section>',
-      true,
-      true,
-    ),
-  );
+operationsRoutes.get("/admin/system", (c) => c.html(systemInfoPage()));
+for (const section of Object.keys(systemSections) as SystemSection[]) {
+  operationsRoutes.get("/admin/system/" + section, (c) => c.html(systemInfoPage(section, c.req.query("flow"))));
+}
+operationsRoutes.get("/admin/system/data", async (c) => {
+  const section = c.req.query("section");
+  if (section && !Object.hasOwn(systemSections, section)) return c.text("未知系统信息主题。", 400);
+  return c.html(systemInfoSnapshot(await readSystemInfo(c.env), section as SystemSection | undefined));
 });
 operationsRoutes.get("/admin/system/check", async (c) => {
   const retry = await consumeAccountLimit(c, "dependency-check", 6, 60);

@@ -215,7 +215,7 @@ test("admin grant and revoke are protected; repeated suggestions cannot undo a r
   assert.ok(!adminPage.includes('value="member:1"'));
   assert.ok(adminPage.includes('value="member:2"'));
   assert.ok(adminPage.includes("测试队员（账号：队员账号）"));
-  assert.ok(adminPage.includes('<a href="/admin">管理</a>'));
+  assert.match(adminPage, /href="\/admin"[^>]*>[\s\S]*?工作台/);
   assert.ok(!adminPage.includes("了解黑匣子"));
   assert.ok(!(await (await s.req(0, "/")).text()).includes('<a href="/admin">管理</a>'));
   assert.equal((await s.post(3, "/admin/community", { action: "grant", target: "user:2" })).status, 403);
@@ -507,7 +507,7 @@ test("dismissed notifications remain pending until the actual task is processed"
   assert.equal(data.pendingTotal, 1);
   assert.equal(data.pending[0].href, "/admin/resources/reviews");
   const dashboard = await (await s.req(1, "/admin")).text();
-  assert.match(dashboard, /data-pending-message>有 1 项任务等待处理/);
+  assert.match(dashboard, /data-workbench-total>1</);
   s.db.exec("UPDATE resource SET status='rejected' WHERE id=2");
   data = await (await s.req(1, "/admin/notifications")).json();
   assert.equal(data.pendingTotal, 0);

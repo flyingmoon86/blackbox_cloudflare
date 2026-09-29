@@ -157,6 +157,26 @@ if (notificationHost) {
     signature = "",
     lastAttempt = 0,
     lastFailure = "";
+  function workbenchStatus(state, data) {
+    const workbench = document.querySelector("[data-workbench]");
+    if (!workbench) return;
+    const status = workbench.querySelector("[data-workbench-sync]");
+    status.dataset.state = state;
+    if (state === "loading") status.textContent = "正在同步待办数量，当前内容仍可查看…";
+    if (state === "error") status.textContent = "待办同步失败，保留上次数量；请使用页眉重试，或刷新工作台核对。";
+    if (state === "ok") {
+      const counts = new Map((data.pending || []).map((item) => [item.key.split(":")[0], Number(item.count) || 0]));
+      for (const badge of workbench.querySelectorAll("[data-workbench-count]")) {
+        badge.textContent = badge.dataset.workbenchCount
+          .split(",")
+          .reduce((sum, kind) => sum + (counts.get(kind) || 0), 0);
+      }
+      workbench.querySelector("[data-workbench-total]").textContent = Number(data.pendingTotal) || 0;
+      workbench.querySelector("[data-workbench-empty]").hidden = Boolean(data.pendingTotal);
+      status.textContent =
+        "数量更新于 " + new Date().toLocaleTimeString("zh-CN", { hour12: false }) + "；新申请请刷新查看。";
+    }
+  }
   async function notificationJson(url, options = {}) {
     const response = await fetch(url, {
       credentials: "same-origin",
@@ -217,11 +237,13 @@ if (notificationHost) {
     clearTimeout(timer);
     running = true;
     lastAttempt = Date.now();
+    workbenchStatus("loading");
     try {
       const data = await notificationJson("/admin/notifications", {
         signal: AbortSignal.timeout(15000),
       });
       clearNotificationFailure();
+      workbenchStatus("ok", data);
       const count = Number(data.pendingTotal) || 0;
       const alert = document.querySelector("[data-pending-alert]");
       if (alert) {
@@ -233,7 +255,7 @@ if (notificationHost) {
       if (current === signature) return;
       signature = current;
       notificationHost.replaceChildren();
-      if (count) {
+      if (count && !document.querySelector("[data-workbench]")) {
         const persistent = document.createElement("a");
         persistent.className = "admin-pending-indicator";
         persistent.href = "/admin";
@@ -244,7 +266,9 @@ if (notificationHost) {
       if (!data.items?.length) return;
       const details = document.createElement("details");
       details.className = "admin-notification-menu";
-      details.open = !data.items.every((item) => item.informational);
+      // Keep navigation and task controls clear; the reminder remains available in the header.
+      details.open =
+        !document.body.classList.contains("admin-workspace") && !data.items.every((item) => item.informational);
       const summary = document.createElement("summary");
       summary.textContent = data.items.some((item) => item.informational) ? "新提醒" : "新任务";
       const stack = document.createElement("div");
@@ -292,6 +316,7 @@ if (notificationHost) {
       details.append(summary, stack);
       notificationHost.append(details);
     } catch (error) {
+      workbenchStatus("error");
       showNotificationFailure(error);
     } finally {
       running = false;

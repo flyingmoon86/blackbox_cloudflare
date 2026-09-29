@@ -1,3 +1,4 @@
+import { adminNavigation } from "./views/admin-navigation";
 import { YEARS, yearSelect, icon, pagination, type PageInfo } from "./views/shared";
 import { assetUrl } from "./views/assets";
 import { turnstileWidget } from "./services/turnstile";
@@ -19,6 +20,7 @@ export function escapeHtml(value: unknown): string {
 export function layout(title: string, content: string, signedIn = false, admin = false, themeId?: number): string {
   const context = tryGetContext<AppEnv>();
   const portal = context ? adminPortal(context) : null;
+  const workspace = admin && Boolean(portal?.active || context?.req.path.startsWith("/admin"));
   const link = (href: string, label: string) =>
     '<a href="' +
     href +
@@ -134,6 +136,10 @@ export function layout(title: string, content: string, signedIn = false, admin =
         "</nav>"
       : "";
   }
+  if (workspace) {
+    nav = '<span class="workspace-context">管理员后台</span>';
+    mobile = "";
+  }
   return (
     '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' +
     escapeHtml(title) +
@@ -162,10 +168,18 @@ export function layout(title: string, content: string, signedIn = false, admin =
     assetUrl("/experience.js") +
     '" defer></script>' +
     (admin ? '<script src="' + assetUrl("/review.js") + '" defer></script>' : "") +
+    (workspace
+      ? '<link rel="stylesheet" href="' +
+        assetUrl("/workbench.css") +
+        '"><script src="' +
+        assetUrl("/workbench.js") +
+        '" defer></script>'
+      : "") +
     '</head><body class="' +
     (signedIn ? "signed-in" : "signed-out") +
     (portal?.active || context?.req.path.startsWith("/admin") ? " design-admin" : " design-public") +
     (portal?.active ? " admin-portal" : "") +
+    (workspace ? " admin-workspace" : "") +
     (content.includes('class="section-tabs"') ? " archive-page" : "") +
     '" data-section="' +
     (/^\/(productions|resources|my-resources|suggestions)(?:\/|$)/.test(context?.req.path || "")
@@ -180,7 +194,9 @@ export function layout(title: string, content: string, signedIn = false, admin =
     "</nav>" +
     account +
     (admin ? '<div class="admin-notification-host" data-admin-notifications aria-live="polite"></div>' : "") +
-    '</header><div class="nav-scrim" aria-hidden="true"></div><main id="main-content" tabindex="-1">' +
+    '</header><div class="nav-scrim" aria-hidden="true"></div>' +
+    (workspace ? adminNavigation(context?.req.path || "/admin", portal?.publicSite) : "") +
+    '<main id="main-content" tabindex="-1">' +
     content +
     "</main>" +
     mobile +

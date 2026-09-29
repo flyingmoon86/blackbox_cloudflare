@@ -64,7 +64,7 @@ export const adminRoutes = new Hono<AppEnv>();
 
 const requireAdmin = async (c: any, next: () => Promise<void>) => {
   const user = c.get("user");
-  const notificationRequest = c.req.path.startsWith("/admin/notifications");
+  const notificationRequest = c.req.path.startsWith("/admin/notifications") || c.req.path === "/admin/system/data";
   if (!user)
     return notificationRequest
       ? c.json({ error: "登录状态已失效，请重新登录。" }, 401)
@@ -77,44 +77,55 @@ const requireAdmin = async (c: any, next: () => Promise<void>) => {
 adminRoutes.use("/admin", requireAdmin);
 adminRoutes.use("/admin/*", requireAdmin);
 
-adminRoutes.get("/admin", async (c) => {
-  const [requests, users, counts] = await Promise.all([
-    c.env.DB.prepare(
-      `SELECT r.id,r.user_id,u.username,r.apply_type,r.identity_note,r.member_id,m.name AS member_name,
+for (const path of ["/admin", "/admin/member-requests", "/admin/accounts"]) {
+  adminRoutes.get(path, async (c) => {
+    const message = c.req.query("message") ?? "";
+    if (c.req.path === "/admin") {
+      if (["approved", "rejected"].includes(message))
+        return c.redirect("/admin/member-requests?message=" + encodeURIComponent(message));
+      if (["user-updated", "member-unlinked", "user-deleted"].includes(message))
+        return c.redirect("/admin/accounts?message=" + encodeURIComponent(message));
+    }
+    const section =
+      c.req.path === "/admin/accounts" ? "accounts" : c.req.path === "/admin/member-requests" ? "members" : "overview";
+    const [requests, users, counts] = await Promise.all([
+      c.env.DB.prepare(
+        `SELECT r.id,r.user_id,u.username,r.apply_type,r.identity_note,r.member_id,m.name AS member_name,
       r.name,r.bio,r.join_year,r.cohort,r.created_at FROM join_request r JOIN user u ON u.id=r.user_id
       LEFT JOIN member m ON m.id=r.member_id WHERE r.status='pending' ORDER BY r.created_at`,
-    ).all<JoinReview>(),
-    c.env.DB.prepare(
-      `SELECT u.id,u.username,u.email,u.role,u.status,u.member_id,m.name AS member_name FROM user u
+      ).all<JoinReview>(),
+      c.env.DB.prepare(
+        `SELECT u.id,u.username,u.email,u.role,u.status,u.member_id,m.name AS member_name FROM user u
       LEFT JOIN member m ON m.id=u.member_id ORDER BY u.id DESC LIMIT 200`,
-    ).all<ManagedUser>(),
-    c.env.DB.prepare(
-      `SELECT
+      ).all<ManagedUser>(),
+      c.env.DB.prepare(
+        `SELECT
       (SELECT COUNT(*) FROM join_request WHERE status='pending') member_requests,
       (SELECT COUNT(*) FROM production_join_request WHERE status='pending') production_joins,
       (SELECT COUNT(*) FROM resource WHERE status='pending') resource_reviews,
       (SELECT COUNT(*) FROM suggestion WHERE status='open' AND category='production') production_creates,
       (SELECT COUNT(*) FROM suggestion WHERE status='open' AND category='website') + (SELECT COUNT(*) FROM website_feedback WHERE status='open') website_suggestions`,
-    ).first<PendingCounts>(),
-  ]);
-  return c.html(
-    adminDashboardPage(
-      requests.results,
-      users.results,
-      counts || {
-        member_requests: 0,
-        production_joins: 0,
-        resource_reviews: 0,
-        production_creates: 0,
-        website_suggestions: 0,
-      },
-      c.get("user")!.id,
-      await csrfFor(c),
-      c.req.query("message") ?? "",
-    ),
-  );
-});
-
+      ).first<PendingCounts>(),
+    ]);
+    return c.html(
+      adminDashboardPage(
+        requests.results,
+        users.results,
+        counts || {
+          member_requests: 0,
+          production_joins: 0,
+          resource_reviews: 0,
+          production_creates: 0,
+          website_suggestions: 0,
+        },
+        c.get("user")!.id,
+        await csrfFor(c),
+        message,
+        section,
+      ),
+    );
+  });
+}
 adminRoutes.get("/admin/notifications", async (c) => {
   const user = c.get("user")!;
   const [snapshot, reads] = await Promise.all([
@@ -160,7 +171,7 @@ adminRoutes.get("/admin/notifications", async (c) => {
     : [];
   const seen = new Set(reads.results.map((row) => row.notification_key));
   const labels: Record<NotificationGroup["kind"], { title: string; href: string }> = {
-    member: { title: "新队员认证申请", href: "/admin#member-requests" },
+    member: { title: "新队员认证申请", href: "/admin/member-requests" },
     "production-join": { title: "新作品加入申请", href: "/admin/production-requests" },
     resource: { title: "新资料等待审核", href: "/admin/resources/reviews" },
     "production-create": { title: "新作品建档申请", href: "/admin/suggestions" },

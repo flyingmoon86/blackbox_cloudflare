@@ -1,2 +1,4 @@
 src/generated/
 public/assets/
+
+public/system-scene.js

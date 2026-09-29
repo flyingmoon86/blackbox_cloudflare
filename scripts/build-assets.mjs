@@ -1,5 +1,15 @@
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
+import { build } from "esbuild";
+await build({
+  entryPoints: ["public/system-scene.entry.js"],
+  outfile: "public/system-scene.js",
+  bundle: true,
+  format: "esm",
+  minify: true,
+  target: "es2022",
+  legalComments: "eof",
+});
 const files = [
   "app.css",
   "experience.css",
@@ -11,6 +21,12 @@ const files = [
   "curtain.css",
   "upload.js",
   "review.js",
+  "system-info.js",
+  "system-schema.js",
+  "system-scene.js",
+  "system-info.css",
+  "workbench.css",
+  "workbench.js",
   "images/elephant-mascot-360-v1.webp",
 ];
 mkdirSync("public/assets", { recursive: true });

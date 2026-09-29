@@ -29,3 +29,6 @@ migration-work/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Generated local Three.js bundle; rebuilt by assets:build
+public/system-scene.js
