@@ -221,3 +221,46 @@ html.photo-viewing,html.photo-viewing body,html.photo-viewing main{overflow:hidd
 .production-visibility button {
   min-height: 44px;
 }
+
+.empty-actions{line-height:2}
+
+/* Hide page scrollbar chrome without disabling native scrolling. */
+html,body,body>main,.theatre-stage,.stage-scene{scrollbar-width:none;scrollbar-gutter:auto}
+html::-webkit-scrollbar,body::-webkit-scrollbar,body>main::-webkit-scrollbar,.theatre-stage::-webkit-scrollbar,.stage-scene::-webkit-scrollbar{display:none;width:0;height:0}
+
+/* Scoped administrator controls on production detail pages. */
+.production-manage-link{margin-left:auto;min-height:44px;display:inline-flex;align-items:center}
+.production-management{margin-top:48px;padding:32px;border:1px solid var(--line);border-radius:8px;background:var(--panel);scroll-margin-top:88px}
+.management-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:24px}
+.management-heading .eyebrow{margin:0 0 8px;color:var(--muted)}
+.production-management .management-heading h2{font-size:28px;line-height:1.3;margin:0}
+.management-heading>p{margin:0;max-width:32em;font-size:15px}.management-heading>p>span{display:block;margin-top:8px;color:var(--muted);font-size:14px}
+.management-shortcuts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-bottom:24px}
+.management-shortcut{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:20px;border:1px solid var(--line);border-radius:5px;text-decoration:none;color:var(--ink);background:var(--paper)}
+.management-shortcut>span:first-child{font-size:12px;color:var(--muted)}
+.management-shortcut strong{display:block;font-size:20px;line-height:1.4;color:var(--ink);margin:6px 0}
+.management-shortcut small{font-size:14px;line-height:1.6}.management-shortcut>span:last-child{font-size:22px;color:var(--amber)}
+.management-shortcut:hover{border-color:var(--amber)}
+.production-management-panel{border-top:1px solid var(--line);margin:0}
+.production-management-panel>summary{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px 0;cursor:pointer;list-style:none;min-height:64px}
+.production-management-panel>summary::-webkit-details-marker{display:none}
+.production-management-panel>summary strong{display:block;font-size:18px;line-height:1.5;font-weight:600}
+.production-management-panel>summary small{display:block;color:var(--muted);font-size:14px;font-weight:400;margin-top:4px;line-height:1.6}
+.management-toggle{font-size:24px;transition:transform .15s}.production-management-panel[open]>summary .management-toggle{transform:rotate(45deg)}
+.management-panel-body{padding:8px 0 24px}.management-panel-body form{margin:0;max-width:none}
+.management-version-select{max-width:480px;margin-bottom:20px}
+.production-management .credit-row{display:grid;grid-template-columns:minmax(120px,1fr) minmax(160px,1.2fr) minmax(100px,.65fr) minmax(140px,1fr) auto;gap:12px;align-items:end;padding:20px 0;margin:0;border-top:1px solid var(--line)}
+.production-management .credit-row label{min-width:0;margin:0;font-size:14px}
+.production-management :is(input,select,textarea){width:100%;min-width:0}
+.production-management input[type=checkbox]{width:auto}
+.production-management .credit-row :is(input,select,button){min-height:44px;margin-bottom:0}
+.management-form-actions{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:20px;padding-top:16px;border-top:1px solid var(--line)}
+.management-form-actions button{margin:0;min-height:44px}
+.management-edition-fields{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:16px}
+.management-footnote{font-size:14px;color:var(--muted);padding-top:20px;margin:0;border-top:1px solid var(--line)}
+.production-version-editor{padding:0 20px;border:1px solid var(--line);border-radius:5px}
+.production-version-editor>summary{padding:16px 0;min-height:44px;font-size:15px}
+.production-management :is(a,summary,button,input,select,textarea):focus-visible,.production-version-editor>summary:focus-visible{outline:2px solid var(--amber);outline-offset:4px}
+@media(max-width:1100px){.production-management .credit-row{grid-template-columns:repeat(2,minmax(0,1fr))}.production-management .credit-row>button{justify-self:start}}
+@media(max-width:600px){.production-management{padding:20px 16px;margin-top:32px}.management-heading{display:block}.management-heading>p{margin-top:12px}.management-shortcuts,.management-edition-fields,.production-management .credit-row{grid-template-columns:minmax(0,1fr)}.management-shortcut{padding:16px}.management-form-actions button{flex:1}.management-shortcut strong{font-size:18px}}
+@media(prefers-reduced-motion:reduce){.management-toggle{transition:none}}

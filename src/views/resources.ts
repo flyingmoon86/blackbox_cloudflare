@@ -32,7 +32,7 @@ export function resourceListPage(
             `<div><p class="muted">所属作品：${escapeHtml(r.production_title || "其他资料")} · ${escapeHtml(r.edition_name || "未关联作品版本")}</p>${card(r)}</div>`,
         )
         .join("")
-    : `<p class="card">${query ? `没有找到与“${escapeHtml(query)}”相关的资料或作品。` : "暂无资料。"}</p>`;
+    : `<p class="card">${query ? `没有找到与“${escapeHtml(query)}”相关的资料或作品。` : "暂无资料。"}</p><p class="empty-actions">${query ? '<a class="button secondary" href="/resources">清除搜索</a> · ' : ""}<a href="/productions">浏览作品档案</a> · <a href="/resources/submit">补充资料</a></p>`;
   const groups = new Map<string, { title: string; productionId: number | null; rows: ResourceRow[] }>();
   for (const row of rows) {
     const key = row.production_id === null ? "other" : String(row.production_id);
@@ -64,7 +64,7 @@ export function resourceListPage(
           return `<section class="archive-group"><h2>${group.productionId ? `<a href="/productions/${group.productionId}">${escapeHtml(group.title)}</a>` : "其他资料"}</h2><p class="muted">按提交时间排列，最新资料在前。</p><div class="card-grid">${entries.map((entry) => entry.html).join("")}</div></section>`;
         })
         .join("")
-    : `<p class="card">${query ? `没有找到与“${escapeHtml(query)}”相关的资料或作品。` : "暂无资料。"}</p>`;
+    : `<p class="card">${query ? `没有找到与“${escapeHtml(query)}”相关的资料或作品。` : "暂无资料。"}</p><p class="empty-actions">${query ? '<a class="button secondary" href="/resources">清除搜索</a> · ' : ""}<a href="/productions">浏览作品档案</a> · <a href="/resources/submit">补充资料</a></p>`;
   return layout(
     mine ? "我的资料" : "资料库",
     `${archiveTabs("resources")}<section class="page-heading"><p class="eyebrow">ARCHIVE</p><h1>${mine ? "我的资料与审核结果" : "资料库"}</h1><p>${mine ? '<a href="/resources">已入库资料</a> · ' : ""}<a href="/my-resources">我的提交</a> · <a href="/resources/submit">提交资料</a></p>${mine ? "" : `<p class="hint">剧本、台本与其他文件在这里查找；剧照在作品档案中查看。</p><form class="filters resource-search" method="get" action="/resources" role="search"><label>搜索资料或作品<input type="search" name="q" value="${escapeHtml(query)}" maxlength="100" placeholder="输入资料标题、文件名或作品名称"></label><button>搜索</button>${query ? '<a class="button secondary" href="/resources">清除</a>' : ""}</form>${query ? `<p class="search-summary">找到 ${page?.total ?? rows.length} 项与“${escapeHtml(query)}”相关的资料。</p>` : ""}`}</section><section class="review-grid" data-server-paged>${mine ? flatCards : groupedCards}</section>${pagination(page)}`,

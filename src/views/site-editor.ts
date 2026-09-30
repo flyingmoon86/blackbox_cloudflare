@@ -17,7 +17,7 @@ export function siteEditor(
   const area = (name: string, label: string, value: unknown) =>
     `<label>${label}<textarea name="${name}" rows="4" maxlength="10000">${e(value)}</textarea></label>`;
   const image = (name: string, label: string, value: string, empty: string) =>
-    `<label>${label}<select name="${name}"><option value="">${empty}</option>${photos.map((photo) => `<option value="${photo.id}"${String(photo.id) === value ? " selected" : ""}>${e(photo.title)}</option>`).join("")}</select></label>`;
+    `<label>${label}<select name="${name}"><option value="">${empty}</option>${value && !photos.some((photo) => String(photo.id) === value) ? `<option value="${e(value)}" selected>当前图片 #${e(value)}（暂不可用）</option>` : ""}${photos.map((photo) => `<option value="${photo.id}"${String(photo.id) === value ? " selected" : ""}>${e(photo.title)}</option>`).join("")}</select></label>`;
   const color = validAccent(t.brand_accent || "") ? t.brand_accent : DEFAULT_ACCENT;
   const section = (id: string, title: string, content: string) =>
     `<section class="site-edit-section" aria-labelledby="${id}"><h2 id="${id}">${title}</h2>${content}</section>`;

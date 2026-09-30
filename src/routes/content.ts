@@ -1,3 +1,4 @@
+import { imageOptions } from "../services/image-picker";
 import { DEFAULT_ACCENT, validAccent, themeCss } from "../services/theme";
 import { productionVisible } from "../services/production-visibility";
 import { Hono } from "hono";
@@ -125,6 +126,8 @@ contentRoutes.post("/admin/announcements/:id/delete", async (c) => {
   return c.redirect("/announcements", 303);
 });
 
+contentRoutes.get("/admin/image-options", imageOptions);
+
 contentRoutes.get("/admin/site", async (c) => {
   const denied = adminDenied(c);
   if (denied) return denied;
@@ -134,9 +137,30 @@ contentRoutes.get("/admin/site", async (c) => {
     title: string;
     year: number | null;
   }>();
+  let savedImages: Record<string, unknown> = {};
+  try {
+    const parsed = JSON.parse(profile?.page_texts || "{}");
+    if (parsed && typeof parsed === "object") savedImages = parsed;
+  } catch {}
+  const selected = [
+    profile?.hero_photo,
+    ...[
+      "mascot_photo",
+      "productions_background",
+      "members_background",
+      "thanks_background",
+      "recruitment_poster",
+      "recruitment_poster_mobile",
+    ].map((key) => savedImages[key]),
+  ]
+    .filter((value) => /^[1-9]\d*$/.test(String(value)))
+    .map(Number);
   const photos = await c.env.DB.prepare(
-    "SELECT id,title FROM resource WHERE status='approved' AND res_type='photo' ORDER BY id DESC LIMIT 300",
-  ).all<{ id: number; title: string }>();
+    `SELECT id,title FROM resource WHERE id IN (SELECT id FROM resource WHERE status='approved' AND res_type='photo' ORDER BY id DESC LIMIT 300)
+     ${selected.length ? `OR id IN (${selected.map(() => "?").join(",")})` : ""} ORDER BY id DESC`,
+  )
+    .bind(...selected)
+    .all<{ id: number; title: string }>();
   return c.html(
     siteSettingsPage(profile!, productions.results, photos.results, await csrfFor(c), c.req.query("saved") === "1"),
   );

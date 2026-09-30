@@ -75,10 +75,11 @@ memberRoutes.use("*", async (c, next) => {
   await next();
 });
 
-memberRoutes.get("/members", async (c) => {
+function memberFilter(c: Parameters<typeof productionVisible>[0]) {
   const search = (c.req.query("q") ?? "").trim().slice(0, 80);
   const yearText = c.req.query("year") ?? "";
-  const year = yearText === "missing" ? "missing" : /^\d{1,4}$/.test(yearText) ? Number(yearText) : null;
+  const year: number | "missing" | null =
+    yearText === "missing" ? "missing" : /^\d{1,4}$/.test(yearText) ? Number(yearText) : null;
   const where: string[] = [];
   const params: Array<string | number> = [];
   if (search) {
@@ -95,6 +96,11 @@ memberRoutes.get("/members", async (c) => {
     params.push(year);
   }
   const condition = where.length ? `WHERE ${where.join(" AND ")}` : "";
+  return { search, year, condition, params };
+}
+
+memberRoutes.get("/members", async (c) => {
+  const { search, year, condition, params } = memberFilter(c);
   const total =
     (
       await c.env.DB.prepare(`SELECT COUNT(*) n FROM member m ${condition}`)
@@ -150,6 +156,30 @@ memberRoutes.get("/members/:id", async (c) => {
       .bind(id)
       .all<NonNullable<MemberRow["productions"]>[number]>()
   ).results;
+  const { search, year, condition, params } = memberFilter(c);
+  const nearby = await c.env.DB.prepare(
+    `WITH candidates AS (
+    SELECT m.id,m.name,m.join_year,COUNT(f.id)+(SELECT COUNT(*) FROM visitor_flower vf WHERE vf.member_id=m.id) flower_count
+    FROM member m LEFT JOIN flower f ON f.member_id=m.id ${condition} GROUP BY m.id
+  ), ordered AS (
+    SELECT id,name,ROW_NUMBER() OVER (ORDER BY flower_count DESC,join_year DESC,name COLLATE NOCASE,id) position FROM candidates
+  ) SELECT id,name,position FROM ordered WHERE position BETWEEN
+    (SELECT position-1 FROM ordered WHERE id=?) AND (SELECT position+1 FROM ordered WHERE id=?) ORDER BY position`,
+  )
+    .bind(...params, id, id)
+    .all<{ id: number; name: string; position: number }>();
+  const context = new URLSearchParams();
+  if (search) context.set("q", search);
+  if (year !== null) context.set("year", String(year));
+  const current = nearby.results.find((row) => row.id === id);
+  const page = c.req.query("page") ? pageNumber(c.req.query("page")) : Math.ceil((current?.position || 1) / 25);
+  context.set("page", String(page));
+  const navigation = {
+    back: `/members?${context}`,
+    previous: nearby.results.find((row) => current && row.position === current.position - 1),
+    next: nearby.results.find((row) => current && row.position === current.position + 1),
+    query: context.toString(),
+  };
   const user = c.get("user")!;
   return c.html(
     memberDetailPage(
@@ -159,6 +189,7 @@ memberRoutes.get("/members/:id", async (c) => {
       user?.member_id === id,
       user?.role === "admin",
       Boolean(user),
+      navigation,
     ),
   );
 });

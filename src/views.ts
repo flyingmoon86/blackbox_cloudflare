@@ -114,7 +114,7 @@ export function layout(title: string, content: string, signedIn = false, admin =
   let mobile =
     '<nav class="mobile-nav" aria-label="手机主导航">' +
     link("/", "首页") +
-    link("/productions", "作品资料") +
+    link("/productions", "作品档案") +
     link("/members", "队员") +
     link(signedIn ? "/profile" : "/login", signedIn ? "我的" : "登录") +
     "</nav>";
@@ -160,14 +160,25 @@ export function layout(title: string, content: string, signedIn = false, admin =
     '"><link rel="stylesheet" href="' +
     assetUrl("/redesign.css") +
     '"><link rel="stylesheet" href="' +
+    assetUrl("/archive-design.css") +
+    '"><link rel="stylesheet" href="' +
     assetUrl("/fonts.css") +
     '">' +
     '<script src="' +
     assetUrl("/app.js") +
     '" defer></script><script src="' +
+    assetUrl("/member-dossier.js") +
+    '" defer></script><script src="' +
     assetUrl("/experience.js") +
     '" defer></script>' +
     (admin ? '<script src="' + assetUrl("/review.js") + '" defer></script>' : "") +
+    (admin
+      ? '<link rel="stylesheet" href="' +
+        assetUrl("/image-picker.css") +
+        '"><script src="' +
+        assetUrl("/image-picker.js") +
+        '" defer></script>'
+      : "") +
     (workspace
       ? '<link rel="stylesheet" href="' +
         assetUrl("/workbench.css") +
@@ -299,13 +310,16 @@ export function memberListPage(
   signedIn = true,
   page?: PageInfo,
 ): string {
+  const memberContext = new URLSearchParams({ page: String(page?.page || 1) });
+  if (search) memberContext.set("q", search);
+  if (selectedYear !== null) memberContext.set("year", String(selectedYear));
   const cards = members.length
     ? members
         .map((member) => {
           const portrait = member.photo
             ? `<img class="member-card-media" src="/members/${member.id}/avatar" alt="${escapeHtml(member.name)}的头像">`
             : `<span class="member-card-art" aria-hidden="true">${escapeHtml(member.name.slice(0, 1) || "剧")}</span>`;
-          return `<article class="member-card${member.photo ? "" : " member-card-empty"}"><a class="member-card-link" href="/members/${member.id}">${portrait}<span class="member-card-shade"></span><span class="member-card-copy"><span class="eyebrow">${escapeHtml(cohortLabel(member.cohort) || (member.join_year ? member.join_year + " 年入队" : "剧团成员"))}</span><strong>${escapeHtml(member.name)}</strong>${member.contributor ? '<span class="contributor-tag">网站贡献者</span>' : ""}<span class="member-card-details"><span>${escapeHtml(member.bio || "点击查看队员档案与舞台经历")}</span><small>🌸 ${member.flower_count} · 查看档案 →</small></span></span></a></article>`;
+          return `<article class="member-card${member.photo ? "" : " member-card-empty"}"><a class="member-card-link" href="/members/${member.id}?${escapeHtml(memberContext.toString())}">${portrait}<span class="member-card-shade"></span><span class="member-card-copy"><span class="eyebrow">${escapeHtml(cohortLabel(member.cohort) || (member.join_year ? member.join_year + " 年入队" : "剧团成员"))}</span><strong>${escapeHtml(member.name)}</strong>${member.contributor ? '<span class="contributor-tag">网站贡献者</span>' : ""}<span class="member-card-details"><span>${escapeHtml(member.bio || "点击查看队员档案与舞台经历")}</span><small>🌸 ${member.flower_count} · 查看档案 →</small></span></span></a></article>`;
         })
         .join("")
     : '<p class="card">没有找到符合条件的队员。</p>';
@@ -340,6 +354,12 @@ export function memberDetailPage(
   own = false,
   admin = false,
   signedIn = true,
+  navigation?: {
+    back: string;
+    query: string;
+    previous?: { id: number; name: string };
+    next?: { id: number; name: string };
+  },
 ): string {
   const notice =
     flower === "sent"
@@ -348,24 +368,32 @@ export function memberDetailPage(
         ? message("你今天已经送过花了，明天再来吧。")
         : "";
   const edit = admin
-    ? `<a class="edit-link" href="/admin/members/${member.id}/edit">编辑队员档案</a>`
+    ? `<a class="button secondary" href="/admin/members/${member.id}/edit">管理档案</a>`
     : own
-      ? '<a class="edit-link" href="/profile/member">修改我的信息</a>'
+      ? '<a class="button secondary" href="/profile/member">修改我的信息</a>'
       : "";
+  const back = escapeHtml(navigation?.back || "/members");
+  const neighbor = (row: { id: number; name: string } | undefined, previous: boolean) =>
+    row
+      ? `<a href="/members/${row.id}?${escapeHtml(navigation?.query || "")}" rel="${previous ? "prev" : "next"}"><span>${previous ? "← 上一位" : "下一位 →"}</span><small>${escapeHtml(row.name)}</small></a>`
+      : `<span aria-disabled="true">${previous ? "已是第一位" : "已是最后一位"}</span>`;
+  const experience = member.productions?.length
+    ? `<ul class="dossier-credits">${member.productions.map((p) => `<li><span class="dossier-year">${p.year || "年份待补"}</span><a href="/productions/${p.id}${p.edition_id ? `?edition=${p.edition_id}#edition-${p.edition_id}` : ""}"><strong>${escapeHtml(p.title)}</strong>${p.edition_name ? `<span> / ${escapeHtml(p.edition_name)}</span>` : ""}<small>${p.kind === "crew" ? "幕后" : "演员"} · ${escapeHtml(p.role_name || "参与演出")}</small></a><span aria-hidden="true">→</span></li>`).join("")}</ul>`
+    : '<p class="dossier-empty">暂无已关联的舞台经历。<br>审核通过的演职员记录会显示在这里。</p>';
+  const senders = [...(member.flower_senders || [])].sort((a, b) => b.amount - a.amount).slice(0, 3);
   return layout(
     member.name,
-    `<article class="profile-detail member-detail"><header class="profile-heading"><p class="eyebrow">队员档案 / PROFILE</p><h1>${escapeHtml(member.name)}</h1><p>${escapeHtml(cohortLabel(member.cohort) || "剧团成员")}${member.join_year ? ` · ${member.join_year} 年入队` : ""}</p>${member.contributor ? '<span class="contributor-tag">网站贡献者</span>' : ""}${edit}</header>${notice}<div class="profile-columns"><aside class="profile-portrait-column">${member.photo ? `<figure class="profile-photo"><img src="/members/${member.id}/avatar" alt="${escapeHtml(member.name)}的头像"></figure>` : `<div class="profile-photo profile-initial" aria-label="暂未上传头像">${escapeHtml(member.name.slice(0, 1))}</div>`}<section class="profile-flowers"><p><strong>${member.flower_count}</strong> 朵花</p><form method="post" action="/members/${member.id}/flowers"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button>送 TA 一朵花 ✻</button></form></section></aside><div class="profile-story"><section><h2>关于 TA</h2><p class="preline">${escapeHtml(member.bio || "这位队员的故事，等待慢慢补充。")}</p></section><section class="profile-experience"><h2>舞台经历</h2>${member.productions?.length ? `<ul>${member.productions.map((p) => `<li><strong>${escapeHtml(p.role_name || "参与演出")}${p.kind === "crew" ? " · 幕后" : ""}</strong><a href="/productions/${p.id}${p.edition_id ? `?edition=${p.edition_id}#edition-${p.edition_id}` : ""}">${escapeHtml(p.title)}${p.year ? ` · ${p.year}` : ""}${p.edition_name ? ` · ${escapeHtml(p.edition_name)}` : ""} →</a></li>`).join("")}</ul>` : '<p class="muted">暂无已关联的舞台经历。</p>'}</section><section class="flower-senders flower-senders-compact" aria-label="送花最多的前三名"><span class="bouquet-mark" aria-hidden="true">✻</span><h2>送来的心意</h2><ul>${[
-      ...(member.flower_senders || []),
-    ]
-      .sort((a, b) => b.amount - a.amount)
-      .slice(0, 3)
-      .map(
-        (sender) =>
-          `<li><span>${sender.member_id ? `<a href="/members/${sender.member_id}">${escapeHtml(sender.name)}</a>` : escapeHtml(sender.name)}</span><strong>${sender.amount} 朵</strong></li>`,
-      )
-      .join(
-        "",
-      )}${(member.flower_senders?.length || 0) > 3 || member.anonymous_flowers ? `<li class="flower-more" aria-label="还有其他或匿名心意" title="还有其他或匿名心意">…</li>` : ""}</ul></section></div></div><a class="profile-back" href="/members">← 返回队员名录</a></article>`,
+    `<article class="profile-detail member-dossier">
+    <div class="dossier-toolbar"><a data-member-return href="${back}">← 返回查找结果</a>${edit}</div>
+    ${notice}<div class="dossier-grid">
+    <header class="dossier-heading"><p class="eyebrow">队员档案</p><h1${member.name.length > 10 ? ' class="dossier-long-name"' : ""}>${escapeHtml(member.name)}</h1><div class="dossier-identity"><p>${escapeHtml(cohortLabel(member.cohort) || "剧团成员")}${member.join_year ? ` · ${member.join_year} 年入队` : ""}</p>${member.contributor ? '<span class="contributor-tag">网站贡献者</span>' : ""}</div>${member.bio ? `<p class="dossier-intro">${escapeHtml(member.bio.replace(/\s+/g, " ").slice(0, 72))}${member.bio.replace(/\s+/g, " ").length > 72 ? "…" : ""}</p>` : ""}</header>
+    <figure class="dossier-portrait">${member.photo ? `<a href="/members/${member.id}/avatar" data-dossier-photo aria-label="放大查看${escapeHtml(member.name)}的头像"><img src="/members/${member.id}/avatar" alt="${escapeHtml(member.name)}的头像" fetchpriority="high"><span>放大查看 ↗</span></a>` : `<div class="dossier-placeholder"><span aria-hidden="true">${escapeHtml(member.name.slice(0, 1))}</span><p>照片待补充</p></div>`}</figure>
+    <div class="dossier-content"><nav class="dossier-tabs" aria-label="队员资料栏目"><a id="tab-about" href="#member-about">关于 TA</a><a id="tab-stage" href="#member-stage">舞台经历</a><a id="tab-flowers" href="#member-flowers">送来的心意</a></nav>
+    <div class="dossier-panels"><section id="member-about" class="dossier-panel" aria-labelledby="tab-about"><h2>关于 TA</h2><p class="preline">${escapeHtml(member.bio || "这位队员的故事，等待慢慢补充。")}</p></section>
+    <section id="member-stage" class="dossier-panel" aria-labelledby="tab-stage"><h2>舞台经历</h2>${experience}</section>
+    <section id="member-flowers" class="dossier-panel" aria-labelledby="tab-flowers"><h2>送来的心意</h2><p class="muted">共收到 ${member.flower_count} 朵花${senders.length ? " · 送花最多的前三位" : ""}</p><ul class="dossier-senders">${senders.map((sender) => `<li><span>${sender.member_id ? `<a href="/members/${sender.member_id}">${escapeHtml(sender.name)}</a>` : escapeHtml(sender.name)}</span><span>${sender.amount} 朵</span></li>`).join("")}</ul>${(member.flower_senders?.length || 0) > 3 || member.anonymous_flowers ? '<p class="muted">还有其他或匿名送来的心意。</p>' : ""}${!member.flower_count ? '<p class="dossier-empty">还没有收到花。送一朵，留下你的鼓励。</p>' : ""}</section>
+    </div><p class="dossier-scroll-cue" hidden aria-hidden="true">向下查看更多 ↓</p><div class="dossier-flower-action"><form method="post" action="/members/${member.id}/flowers"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button class="secondary"><svg class="dossier-flower-icon" viewBox="0 0 32 32" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><circle cx="16" cy="16" r="3"/><path d="M13 12C5 9 12-1 16 7c4-8 11 2 3 5 9-3 11 9 3 9 7 6-4 12-6 4-2 8-13 2-6-4-8 0-6-12 3-9Z"/></svg><span>送 TA 一朵花</span></button></form><span><strong>${member.flower_count}</strong> 朵花</span></div></div></div>
+    <nav class="dossier-neighbors" aria-label="切换队员">${neighbor(navigation?.previous, true)}<a data-member-return href="${back}">返回查找结果</a>${neighbor(navigation?.next, false)}</nav></article>`,
     signedIn,
     admin,
   );

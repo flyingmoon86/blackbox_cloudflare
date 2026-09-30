@@ -696,6 +696,15 @@
       const doc = new DOMParser().parseFromString(await response.text(), "text/html");
       const fresh = doc.querySelector(".profile-detail");
       if (!fresh) throw new Error("Missing profile");
+      const existing = form.closest(".profile-detail");
+      if (existing.classList.contains("member-dossier")) {
+        fresh
+          .querySelector(".dossier-neighbors")
+          ?.replaceWith(existing.querySelector(".dossier-neighbors").cloneNode(true));
+        fresh
+          .querySelector("[data-member-return]")
+          ?.setAttribute("href", existing.querySelector("[data-member-return]").getAttribute("href"));
+      }
       form.closest(".profile-detail").dispatchEvent(new Event("profile:detach"));
       form.closest(".profile-detail").replaceWith(fresh);
       document.dispatchEvent(new Event("profile:updated"));
