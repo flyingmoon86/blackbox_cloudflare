@@ -7,6 +7,9 @@ test("theatre redesign renders three real scenes, safe titles, and preserves nat
   db.prepare(
     "INSERT INTO production(id,title,year,promo,synopsis) VALUES(700,'<script>舞台</script>',2026,'演出介绍','正文'),(701,'旧作品',2020,'','')",
   ).run();
+  db.exec(
+    "INSERT INTO resource(id,production_id,title,res_type,status,filename,original_name,preview_filename) VALUES(701,701,'旧作品剧照','photo','approved','old.jpg','old.jpg','old-preview.jpg')",
+  );
   db.prepare("UPDATE site_profile SET featured_production_id=700 WHERE id=1").run();
   const env = {
     DB: d1(db),

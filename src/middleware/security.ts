@@ -3,9 +3,14 @@ import type { AppEnv } from "../types";
 
 export const securityHeaders: MiddlewareHandler<AppEnv> = async (c, next) => {
   await next();
+  const visualPreview =
+    c.get("user")?.role === "admin" &&
+    c.req.query("stage-preview") === "1" &&
+    ["/", "/productions", "/members", "/thanks"].includes(c.req.path);
+  const visualEditor = c.get("user")?.role === "admin" && c.req.path === "/admin/site";
   c.header("X-Content-Type-Options", "nosniff");
   c.header("Referrer-Policy", "same-origin");
-  c.header("X-Frame-Options", "DENY");
+  c.header("X-Frame-Options", visualPreview ? "SAMEORIGIN" : "DENY");
   c.header("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
   if (new URL(c.req.url).protocol === "https:")
     c.header("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
@@ -14,10 +19,13 @@ export const securityHeaders: MiddlewareHandler<AppEnv> = async (c, next) => {
     "default-src 'self'; script-src 'self'" +
       (c.env.TURNSTILE_ENABLED === "true" ? " https://challenges.cloudflare.com" : "") +
       "; frame-src " +
-      (c.env.TURNSTILE_ENABLED === "true" ? "https://challenges.cloudflare.com" : "'none'") +
+      (visualEditor ? "'self' " : "") +
+      (c.env.TURNSTILE_ENABLED === "true" ? "https://challenges.cloudflare.com" : visualEditor ? "" : "'none'") +
       "; object-src 'none'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self' https://*.r2.cloudflarestorage.com" +
       (c.env.TURNSTILE_ENABLED === "true" ? " https://challenges.cloudflare.com" : "") +
-      "; style-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'self'",
+      "; style-src 'self'; form-action 'self'; frame-ancestors " +
+      (visualPreview ? "'self'" : "'none'") +
+      "; base-uri 'self'",
   );
 };
 

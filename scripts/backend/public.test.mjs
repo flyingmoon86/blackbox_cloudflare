@@ -443,7 +443,8 @@ test("section backgrounds accept approved previews only and cannot expose pendin
   assert.equal((await s.req(0, "/site/background?section=members")).status, 204);
   const editor = await (await s.req(1, "/admin/site")).text();
   assert.match(editor, /页面编辑/);
-  assert.match(editor, /name="thanks_background"/);
+  assert.match(editor, /name="stage_thanks_pair"/);
+  assert.match(editor, /name="stage_thanks_light"/);
   assert.doesNotMatch(editor, /name="page_background_photo"|name="member_guide"|name="admin_guide"/);
   s.db.close();
 });

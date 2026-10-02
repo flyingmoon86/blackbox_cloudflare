@@ -381,89 +381,83 @@
   document.addEventListener("click", (event) => {
     if (!event.target.closest(".top")) close();
   });
-  const stage = document.querySelector(".theatre-stage"),
-    desktop = matchMedia("(min-width:901px)");
+  const stage = document.querySelector(".theatre-stage");
   if (stage) {
-    const about = stage.querySelector(".about-columns");
-    if (about) {
-      const more = document.createElement("button");
-      more.type = "button";
-      more.className = "about-read-more";
-      more.textContent = "阅读完整介绍";
-      more.hidden = true;
-      about.after(more);
-      const fit = () => {
-        more.hidden = !desktop.matches || about.scrollHeight <= about.clientHeight + 2;
-      };
-      new ResizeObserver(fit).observe(about);
-      more.addEventListener("click", () => {
-        const dialog = document.createElement("dialog");
-        dialog.className = "about-reading";
-        dialog.setAttribute("aria-label", "完整剧团介绍");
-        const close = document.createElement("button");
-        close.textContent = "关闭 ×";
-        close.addEventListener("click", () => dialog.close());
-        dialog.append(close);
-        about.querySelectorAll("p").forEach((p) => dialog.append(p.cloneNode(true)));
-        document.body.append(dialog);
-        dialog.addEventListener(
-          "close",
-          () => {
-            dialog.remove();
-            more.focus();
-          },
-          { once: true },
-        );
-        dialog.showModal();
-      });
-    }
-    const scenes = [...stage.querySelectorAll(".stage-scene")],
-      links = [...stage.querySelectorAll(".scene-nav a")];
+    const scenes = [...stage.querySelectorAll(".stage-scene")];
+    const links = [...stage.querySelectorAll(".scene-nav a")];
     const sceneIndex = (hash) =>
       Math.max(
         0,
         scenes.findIndex((scene) => "#" + scene.id === (hash === "#contact" ? "#about" : hash)),
       );
     let index = sceneIndex(location.hash),
-      last = 0,
+      last = -Infinity,
       accumulated = 0,
-      lastWheel = 0;
+      lastWheel = -Infinity;
     const show = (next, update = false) => {
+      const previous = index;
+      const moveFocus = scenes[previous].contains(document.activeElement);
       index = Math.max(0, Math.min(scenes.length - 1, next));
       scenes.forEach((scene, i) => {
-        scene.hidden = desktop.matches && i !== index;
-        scene.inert = desktop.matches && i !== index;
+        scene.hidden = i !== index;
+        scene.inert = i !== index;
       });
+      // Background and switch belong to stage, so hiding a scene cannot hide them.
+      stage.dataset.activeScene = scenes[index].id;
+      if (previous !== index) {
+        scenes[index].scrollTop = 0;
+        if (moveFocus) {
+          scenes[index].tabIndex = -1;
+          scenes[index].focus({ preventScroll: true });
+        }
+      }
       links.forEach((link, i) => link.setAttribute("aria-current", String(i === index)));
       if (update) history.replaceState(null, "", "#" + scenes[index].id);
     };
-    const setup = () => {
-      stage.classList.toggle("stage-ready", desktop.matches);
-      show(index);
+    const canScroll = (target, direction) => {
+      for (let node = target; node && node !== stage; node = node.parentElement) {
+        if (node.scrollHeight > node.clientHeight + 2 && /auto|scroll/.test(getComputedStyle(node).overflowY)) {
+          if (direction < 0 ? node.scrollTop > 1 : node.scrollTop + node.clientHeight < node.scrollHeight - 1)
+            return true;
+        }
+      }
+      return false;
     };
-    stage.querySelectorAll('a[href="#about"],a[href="#welcome"],a[href="#playbill"]').forEach((a) =>
-      a.addEventListener("click", (event) => {
-        if (!desktop.matches) return;
+    const blocked = (target) =>
+      target.closest("input,textarea,select,dialog,button,.top,.mobile-nav") ||
+      document.querySelector("dialog[open]") ||
+      document.body.classList.contains("navigation-open");
+    stage.classList.add("stage-ready");
+    show(index);
+    stage.querySelectorAll('a[href="#about"],a[href="#welcome"],a[href="#playbill"]').forEach((link) => {
+      link.addEventListener("click", (event) => {
         event.preventDefault();
-        show(sceneIndex(a.hash), true);
-      }),
-    );
+        show(sceneIndex(link.hash), true);
+      });
+    });
     window.addEventListener("hashchange", () => {
       show(sceneIndex(location.hash));
+      if (location.hash === "#contact") stage.querySelector("#contact")?.scrollIntoView({ block: "nearest" });
     });
+    if (location.hash === "#contact")
+      requestAnimationFrame(() => stage.querySelector("#contact")?.scrollIntoView({ block: "nearest" }));
     stage.addEventListener(
       "wheel",
       (event) => {
-        if (!desktop.matches || event.ctrlKey || event.target.closest("input,textarea,select,dialog,button")) return;
-        if (document.querySelector("dialog[open]") || document.body.classList.contains("navigation-open")) return;
-        event.preventDefault();
-        const now = performance.now();
-        if (now - lastWheel > 180) accumulated = 0;
-        const continued = now - lastWheel < 180;
+        if (event.ctrlKey || Math.abs(event.deltaX) > Math.abs(event.deltaY) || blocked(event.target)) return;
+        const now = performance.now(),
+          direction = Math.sign(event.deltaY);
+        const continued = now - lastWheel < 220;
         lastWheel = now;
-        if (now - last < 700 || (continued && accumulated === Infinity)) return;
-        accumulated += event.deltaY;
-        if (Math.abs(accumulated) > 55) {
+        if (now - last < 750 || (continued && accumulated === Infinity)) {
+          event.preventDefault();
+          return;
+        }
+        if (!continued) accumulated = 0;
+        if (canScroll(event.target, direction)) return;
+        event.preventDefault();
+        accumulated += event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? stage.clientHeight : 1);
+        if (Math.abs(accumulated) > 45) {
           show(index + Math.sign(accumulated), true);
           last = now;
           accumulated = Infinity;
@@ -473,19 +467,64 @@
     );
     document.addEventListener("keydown", (event) => {
       if (
-        !desktop.matches ||
         event.defaultPrevented ||
-        event.target.closest("input,textarea,select,dialog,summary,button,.top,.mobile-nav") ||
-        document.querySelector("dialog[open]")
+        event.repeat ||
+        event.ctrlKey ||
+        event.altKey ||
+        event.metaKey ||
+        blocked(event.target) ||
+        !["ArrowDown", "PageDown", "ArrowUp", "PageUp"].includes(event.key)
       )
         return;
-      if (["ArrowDown", "PageDown", "ArrowUp", "PageUp"].includes(event.key)) {
-        event.preventDefault();
-        show(index + (event.key === "ArrowDown" || event.key === "PageDown" ? 1 : -1), true);
-      }
+      const direction = event.key === "ArrowDown" || event.key === "PageDown" ? 1 : -1;
+      if (canScroll(event.target.closest(".stage-scene") ? event.target : scenes[index], direction)) return;
+      event.preventDefault();
+      show(index + direction, true);
     });
-    desktop.addEventListener("change", setup);
-    setup();
+    let touch = null;
+    stage.addEventListener(
+      "touchstart",
+      (event) => {
+        touch =
+          event.touches.length === 1 && !blocked(event.target)
+            ? {
+                x: event.touches[0].clientX,
+                y: event.touches[0].clientY,
+                target: event.target,
+                up: canScroll(event.target, -1),
+                down: canScroll(event.target, 1),
+              }
+            : null;
+      },
+      { passive: true },
+    );
+    stage.addEventListener(
+      "touchend",
+      (event) => {
+        if (!touch || !event.changedTouches.length) return;
+        const dy = touch.y - event.changedTouches[0].clientY,
+          dx = touch.x - event.changedTouches[0].clientX;
+        if (
+          Math.abs(dy) > 65 &&
+          Math.abs(dy) > Math.abs(dx) * 1.4 &&
+          !(dy > 0 ? touch.down : touch.up) &&
+          !canScroll(touch.target, Math.sign(dy)) &&
+          performance.now() - last > 750
+        ) {
+          show(index + Math.sign(dy), true);
+          last = performance.now();
+        }
+        touch = null;
+      },
+      { passive: true },
+    );
+    stage.addEventListener(
+      "touchcancel",
+      () => {
+        touch = null;
+      },
+      { passive: true },
+    );
   }
   document.querySelectorAll("[data-contribution-thanks]").forEach((d) => d.showModal());
   const lists = new Set(

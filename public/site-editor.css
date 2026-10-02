@@ -1,0 +1,24 @@
+.site-editor [data-site-panel][hidden],.site-editor [data-stage-editor][hidden]{display:none!important}
+.site-editor-intro{color:var(--muted);margin:0 0 22px}
+.site-editor-nav{display:flex;flex-wrap:wrap;gap:6px;padding:12px 0;background:var(--paper,#f7f4eb);border-bottom:1px solid var(--line);margin:0}
+.site-editor-nav a,.stage-editor-nav a{display:block;padding:11px 16px;border:1px solid transparent;border-radius:4px;text-decoration:none;color:var(--ink);font-size:14px;line-height:1.4}
+.site-editor-nav a:hover,.stage-editor-nav a:hover{background:#88744812}
+.site-editor-nav a[aria-selected=true]{background:var(--ink,#29251d);color:var(--paper,#fff5e4)}
+.stage-editor-nav{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 8px;padding:8px 0;background:var(--paper,#f7f4eb)}
+.stage-editor-nav a{border-color:var(--line)}
+.stage-editor-nav a[aria-selected=true]{background:#b89c4420;border-color:var(--amber);box-shadow:inset 0 -2px 0 var(--amber)}
+.site-editor .site-editor-panel>.site-edit-section:first-child{border-top:0;margin-top:0;padding-top:24px}
+.site-editor .site-edit-section [id],.site-editor .site-edit-section h2{scroll-margin-top:24px}
+.site-editor .stage-editor{margin-top:16px;scroll-margin-top:24px}
+.site-editor-save{position:sticky;bottom:0;z-index:6;display:flex;align-items:center;justify-content:space-between;gap:16px;background:var(--paper,#f7f4eb);border-top:1px solid var(--line);padding:14px 0;margin-top:20px}
+.site-editor-save span{color:var(--muted);font-size:13px}
+.site-editor-save button{margin:0;min-height:44px}
+@media(max-width:1000px){.site-editor .site-edit-section [id],.site-editor .site-edit-section h2,.site-editor .stage-editor{scroll-margin-top:calc(var(--wb-top,64px) + 24px)}}
+@media(max-width:700px){
+ .site-editor-nav{gap:5px;padding:9px 0}
+ .site-editor-nav a{padding:9px 11px;font-size:13px}
+ .stage-editor-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+ .stage-editor-nav a{text-align:center;padding:10px 8px;font-size:13px}
+ .site-editor-save{align-items:stretch;flex-direction:column;gap:8px;padding:12px 0}
+ .site-editor-save button{width:100%}
+}

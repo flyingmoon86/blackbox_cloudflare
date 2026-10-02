@@ -1,0 +1,166 @@
+/* Shared fixed backdrop. All layers are cropped by the same image plane. */
+body.design-public:has([data-theatre-scene])::before,body.design-public:has([data-theatre-scene])::after{display:none}
+[data-theatre-scene]{--stage-intensity:1;--stage-shade:.58;position:relative;isolation:isolate}
+.theatre-art{position:fixed;inset:56px 0 0;z-index:-1;overflow:hidden;pointer-events:none;background:#f4e6cb}
+.stage-image-plane{position:absolute;inset:0}
+.stage-image-plane img,.stage-direction{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:cover;object-position:center;mix-blend-mode:normal}
+.stage-image-plane img[hidden]{display:none}
+.theatre-art [data-theatre-light],.stage-direction,.stage-lamp-lit{opacity:0;transition:opacity 850ms ease-in-out}
+[data-lights="on"] [data-theatre-light]{opacity:var(--stage-intensity)}
+.stage-direction{z-index:2}
+[data-lights="on"] .stage-direction{opacity:calc(var(--stage-intensity) * .68)}
+[data-direction="off"] .stage-direction{display:none}
+.theatre-art::after{content:"";position:absolute;inset:0;z-index:1;background:#181510;opacity:var(--stage-shade);transition:opacity 850ms ease-in-out}
+.navigation-stage[data-lights="on"] .theatre-art::after{opacity:calc(var(--stage-shade) * .84)}
+.navigation-stage{min-height:calc(100dvh - 110px)}
+.navigation-stage-content{position:relative;min-height:inherit;padding-right:84px}
+.navigation-stage-content .page-heading{max-width:800px;text-shadow:0 2px 10px #0009}
+.navigation-stage-content :is(.page-heading,.filters,.section-tabs,.thanks-person,.special-thanks){background:#191510d9;padding:22px;border-radius:4px;color:#f3ead8}
+.navigation-stage-content :is(.page-heading,.thanks-person) p{color:#e1d8c7}
+/* Readable document fallback before scene controls initialize. */
+html:has(.theatre-stage){height:auto;overflow:auto;background:#f4e6cb;scroll-padding-top:76px}
+body.design-public:has(.theatre-stage){height:auto;min-height:100vh;overflow:visible;display:block;background:#f4e6cb}
+body.design-public:has(.theatre-stage)>.top{position:sticky;top:0}
+body.design-public:has(.theatre-stage)>main{height:auto;overflow:visible;padding:0}
+.design-public .theatre-stage{height:auto;overflow:visible;background:transparent;padding-bottom:0;color:#29251d}
+.design-public .theatre-stage .stage-scene{height:auto;min-height:calc(100svh - 56px);overflow:visible;scroll-margin-top:56px;color:#29251d}
+.design-public .theatre-stage #welcome{background:transparent;isolation:auto}
+.design-public #welcome .welcome-copy{top:36%;left:5vw;max-width:75%;padding:12px 24px;background:#fff4dde8;border-radius:3px}
+.design-public #welcome .welcome-copy h1{font-size:clamp(56px,10vh,112px);margin:12px 0;color:#29251d}
+.design-public .theatre-stage .eyebrow,.design-public #welcome .stage-news span,.design-public #welcome .stage-explore{color:#55442b}
+.design-public #welcome .stage-news,.design-public #welcome .stage-explore{background:#fff4ddeb;padding:10px 14px;border-radius:3px}
+.design-public .theatre-stage .stage-playbill{background:linear-gradient(180deg,#f4e6cb00,#f4e6cbe8 140px,#f4e6cbee);padding:150px max(9vw,24px) 72px 5vw}
+.design-public .theatre-stage .stage-about{background:linear-gradient(#f4e6cbee,#f4e6cbf7);padding:64px max(9vw,24px) 100px 5vw}
+.design-public .theatre-stage :is(.stage-playbill,.stage-about){--ink:#29251d;--muted:#554b3c;--line:#79684655;--panel:#fff5e4;--amber:#66451f}
+.design-public .theatre-stage .playbill-feature{height:auto;min-height:320px;background:#fff7e9d9;border-color:#79684655;color:#29251d}
+.design-public .theatre-stage .playbill-feature>img{max-height:460px}
+.design-public .theatre-stage .playbill-feature p:not(.eyebrow){color:#554b3c;display:block;overflow:visible}
+.design-public .theatre-stage .playbill-list>a{border-color:#79684655}
+.design-public .theatre-stage .playbill-list small{color:#554b3c}
+/* Dedicated story layout: no inherited full-screen poster gutter or absolute caption. */
+.design-public #about .about-copy,.design-public #about .about-copy:has(.recruitment-poster){height:auto;max-width:none;display:block;padding:0;min-width:0}
+.design-public #about .troupe-layout{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(280px,1fr);gap:clamp(28px,4vw,64px);align-items:start;margin-top:0}
+.design-public #about .troupe-copy{min-width:0}
+.design-public #about .troupe-heading{margin-bottom:24px}
+.design-public #about .troupe-heading .edit-link{display:inline-block;margin-right:16px}
+.design-public #about .troupe-layout:not(:has(.troupe-poster)){grid-template-columns:minmax(0,760px)}
+.design-public #about .troupe-narrative{min-width:0;max-width:68ch}
+.design-public #about .troupe-narrative p{color:#403725;font:400 17px/1.9 var(--sans,"Microsoft YaHei",sans-serif);margin:0 0 1.25em;overflow-wrap:anywhere}
+.design-public #about .troupe-introduction{padding:0 0 20px;border-bottom:1px solid #79684655;margin-bottom:26px}
+.design-public #about .troupe-introduction p{font:500 clamp(19px,1.6vw,23px)/1.85 var(--serif);margin:0}
+.design-public #about .troupe-poster{min-width:0;position:static}
+.design-public #about .recruitment-poster{position:static;width:100%;height:auto;margin:0;max-width:100%;padding:8px;background:#fff9ed66;border:1px solid #79684633;box-shadow:0 10px 30px #49371914}
+.design-public #about .recruitment-poster a,.design-public #about .recruitment-poster picture{display:block;height:auto}
+.design-public #about .recruitment-poster img,.design-public #about .recruitment-poster.poster-portrait img{display:block;width:100%;height:auto;max-height:none;object-fit:contain}
+.design-public #about .recruitment-poster figcaption{position:static;margin:0;padding:12px 4px 2px;background:transparent;color:#55442b;font-size:13px}
+.design-public #about .troupe-poster>.edit-link{display:inline-block;margin-top:12px}
+.design-public #about .stage-contact{overflow-wrap:anywhere;font-size:14px}
+.design-public #about .hall-of-fame-link{border-color:#79684666;color:#55442b}
+.design-public .poster-zoom:not(.is-zoomed) img{width:auto;height:auto;max-width:100%;max-height:65dvh;margin-inline:auto}
+.design-public .theatre-stage .stage-contact{color:#554b3c;border-color:#79684655;margin-top:40px}
+.design-public .theatre-stage .edit-link{color:#66451f}
+.design-public .scene-nav{position:fixed;top:42%;right:12px;background:#fff4ddf2;border:1px solid #79684633;border-radius:4px;padding:6px;z-index:10}
+.design-public .scene-nav a{color:#493719;letter-spacing:0}
+.design-public .scene-nav span{background:#79684655}
+/* The provided housing and complete lit icon are cross-faded; no visible caption. */
+.design-public [data-theatre-scene] .theatre-light-switch{position:fixed;inset:70px 18px auto auto;z-index:45;width:64px;height:78px;min-height:44px;padding:4px;background:#fff4ddd9;color:#32263d;border:1px solid #66547644;border-radius:10px;box-shadow:0 3px 12px #0002;filter:none;transform:none;display:grid;place-items:center}
+.design-public [data-theatre-scene] .theatre-light-switch[aria-pressed="true"]{background:#fff4ddd9;color:#32263d;border-color:#66547644}
+.stage-lamp-icon{display:block;width:54px;height:66px;overflow:visible}
+[data-lights="on"] .stage-lamp-lit{opacity:1}
+.design-public [data-theatre-scene] .theatre-light-switch:focus-visible{outline:3px solid #bd9750;outline-offset:3px}
+.theatre-light-status{position:fixed;top:156px;right:18px;z-index:45;max-width:240px;font-size:13px;padding:8px;background:#fff4dd;color:#29251d}
+.theatre-light-status:empty{display:none}
+.stage-preview-page .announcement-update,.stage-preview-page .test-notice,.stage-preview-page .curtain-boot{display:none!important}
+@media(max-width:900px){
+ .navigation-stage-content{padding-right:0}
+ .navigation-stage-content :is(.page-heading,.filters,.section-tabs,.thanks-person,.special-thanks){padding:16px}
+ .design-public #welcome .welcome-copy{top:36%;left:6vw;max-width:88%;padding:12px 16px}
+ .design-public #welcome .welcome-copy h1{font-size:clamp(44px,11vw,72px)}
+ .design-public #welcome .stage-news{bottom:21%;max-width:calc(100% - 112px)}
+ .design-public #welcome .stage-explore{bottom:11%;right:80px}
+ .design-public .theatre-stage .stage-playbill{padding:110px 6vw 44px}
+ .design-public .theatre-stage .stage-about{padding:44px 6vw 100px}
+ .design-public #about .troupe-layout{grid-template-columns:minmax(0,1fr);gap:30px}
+ .design-public #about .troupe-poster{position:static;width:min(100%,480px);justify-self:center}
+ .design-public #about .troupe-narrative p{font-size:16px}
+ .design-public #about .troupe-introduction p{font-size:19px}
+ .design-public .theatre-stage .playbill-feature{grid-template-columns:1fr}
+ .design-public .scene-nav{display:none}
+ .design-public [data-theatre-scene] .theatre-light-switch{top:auto;bottom:calc(84px + env(safe-area-inset-bottom));right:10px;width:52px;height:64px;padding:3px;border-radius:7px}
+ .stage-lamp-icon{width:42px;height:52px}
+ .theatre-light-status{top:auto;bottom:calc(158px + env(safe-area-inset-bottom));right:10px}
+}
+@media(prefers-reduced-motion:reduce){.theatre-art [data-theatre-light],.stage-direction,.stage-lamp-lit,.theatre-art::after{transition:none}}
+/* Three independent acts: only the selected scene participates in layout. */
+html:has(.theatre-stage.stage-ready){height:100%;overflow:hidden;scroll-padding:0}
+body.design-public:has(.theatre-stage.stage-ready){height:100dvh;min-height:0;overflow:hidden;display:grid;grid-template-rows:56px minmax(0,1fr)}
+body.design-public:has(.theatre-stage.stage-ready)>.top{position:relative;top:auto}
+body.design-public:has(.theatre-stage.stage-ready)>main{height:100%;min-height:0;overflow:hidden}
+.design-public .theatre-stage.stage-ready{height:100%;min-height:0;overflow:hidden}
+.design-public .theatre-stage.stage-ready .stage-scene{height:100%;min-height:0;overflow:auto;overscroll-behavior:contain;scroll-margin:0;scrollbar-width:thin}
+.design-public .theatre-stage.stage-ready #welcome{overflow:hidden}
+.design-public .theatre-stage.stage-ready :is(.stage-playbill,.stage-about){padding:24px max(9vw,28px) 24px 5vw;background:#f4e6cbdc}
+.design-public .theatre-stage.stage-ready .stage-playbill>h2{font-size:clamp(28px,4.8vh,48px);margin:8px 0 18px}
+.design-public .theatre-stage.stage-ready .playbill-feature{height:clamp(170px,31dvh,320px);min-height:0}
+.design-public .theatre-stage.stage-ready .playbill-feature>img{height:100%;max-height:100%}
+.design-public .theatre-stage.stage-ready .playbill-feature>div{padding:18px 26px}
+.design-public .theatre-stage.stage-ready .playbill-feature h3{font-size:clamp(25px,4vh,46px)}
+.design-public .theatre-stage.stage-ready .playbill-list>a{padding:10px 0}
+.design-public .theatre-stage.stage-ready #about .about-copy{height:100%;min-height:0;display:flex;flex-direction:column}
+.design-public .theatre-stage.stage-ready #about h2{font-size:clamp(28px,4.8vh,48px);margin:8px 0 14px}
+.design-public .theatre-stage.stage-ready #about .troupe-layout{flex:1;min-height:0;margin-top:0;overflow:hidden;align-items:stretch}
+.design-public .theatre-stage.stage-ready #about .troupe-copy{display:flex;flex-direction:column;min-height:0}
+.design-public .theatre-stage.stage-ready #about .troupe-heading{flex-shrink:0;margin-bottom:22px}
+.design-public .theatre-stage.stage-ready #about .troupe-narrative{flex:1;min-height:0;height:auto;overflow:auto;padding-right:18px;scrollbar-width:thin;scrollbar-color:#79684688 transparent;overscroll-behavior:contain}
+.design-public .theatre-stage.stage-ready #about .troupe-poster{height:100%;min-height:0;display:flex;flex-direction:column}
+.design-public .theatre-stage.stage-ready #about .recruitment-poster{flex:1;min-height:0;display:flex;flex-direction:column}
+.design-public .theatre-stage.stage-ready #about .recruitment-poster a{display:flex;flex-direction:column;flex:1;min-height:0}
+.design-public .theatre-stage.stage-ready #about .recruitment-poster picture{flex:1;min-height:0}
+.design-public .theatre-stage.stage-ready #about .recruitment-poster img{height:100%;width:100%;object-fit:contain;object-position:center top}
+.design-public .theatre-stage.stage-ready #about .stage-contact{margin-top:16px;padding-top:12px;flex-shrink:0}
+.design-public .theatre-stage.stage-ready #about .hall-of-fame-link{margin-top:12px;flex-shrink:0}
+@media(max-width:900px){
+ .design-public .theatre-stage.stage-ready :is(.stage-playbill,.stage-about){padding:26px 6vw 88px}
+ .design-public .theatre-stage.stage-ready .playbill-feature{height:auto}
+ .design-public .theatre-stage.stage-ready .playbill-feature>img{height:auto;max-height:none}
+ .design-public .theatre-stage.stage-ready #about .about-copy{height:auto;display:block}
+ .design-public .theatre-stage.stage-ready #about .troupe-layout{overflow:visible}
+ .design-public .theatre-stage.stage-ready #about .troupe-copy{display:block}
+ .design-public .theatre-stage.stage-ready #about .troupe-narrative{height:auto;overflow:visible;padding:0}
+ .design-public .theatre-stage.stage-ready #about .troupe-poster{height:auto;display:block}
+ .design-public .theatre-stage.stage-ready #about .recruitment-poster img{height:auto}
+}
+@media(prefers-reduced-motion:reduce){.theatre-stage.stage-ready .stage-scene{animation:none}}
+/* Homepage recommendation details, scoped to the requested sections. */
+.design-public .theatre-stage.stage-ready .playbill-feature{height:clamp(230px,42dvh,420px);grid-template-columns:minmax(0,1.8fr) minmax(0,1fr)}
+.design-public .theatre-stage.stage-ready .playbill-feature>div{padding:18px 24px}
+.design-public .theatre-stage.stage-ready .playbill-feature p:not(.eyebrow){display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.playbill-list{position:relative;isolation:isolate}
+.playbill-recommendation{position:relative}
+.playbill-recommendation>strong,.playbill-recommendation>small,.playbill-recommendation>span{position:relative;z-index:2}
+.recommendation-still{position:absolute;left:0;top:0;width:var(--preview-width,clamp(280px,31vw,440px));height:auto;object-fit:contain;background:transparent;filter:sepia(.24) saturate(.8) contrast(.95);opacity:0;pointer-events:none;z-index:1;border:0;border-radius:0;box-shadow:none;mix-blend-mode:multiply;mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent),linear-gradient(180deg,transparent,#000 10%,#000 90%,transparent);mask-composite:intersect;transform:translateY(-100%);transition:opacity 320ms ease;will-change:transform,opacity}
+.playbill-recommendation.is-previewing .recommendation-still{opacity:.78}
+.playbill-list:has(.is-previewing) .playbill-recommendation :is(strong,small,span){text-shadow:0 0 5px #f4e6cb,0 0 10px #f4e6cb,0 1px 0 #fff5e4}
+.design-public .playbill-list>a:hover{color:#66451f;background:#fff5e42b}
+.playbill-recommendation:focus-visible{outline:2px solid #796846;outline-offset:4px}
+@media(max-width:900px){
+ .design-public .theatre-stage.stage-ready .playbill-feature{height:auto;grid-template-columns:1fr}
+ .design-public .theatre-stage.stage-ready .playbill-feature>img{aspect-ratio:16/11;object-fit:contain}
+}
+@media(hover:none),(pointer:coarse),(max-width:900px){
+ .design-public .playbill-list>a:has(.recommendation-still:not([hidden])){grid-template-columns:96px minmax(0,1fr) auto 16px;gap:12px;align-items:center;min-height:86px}
+ .recommendation-still{position:static;width:96px;height:64px;opacity:1!important;filter:none;mix-blend-mode:normal;mask-image:none;transform:none!important;border:0;box-shadow:none;border-radius:2px;will-change:auto}
+ .design-public .playbill-list strong{font-size:clamp(18px,4vw,24px)}
+}
+@media(prefers-reduced-motion:reduce){.recommendation-still{transition:none;will-change:auto}}
+/* Remove the opaque search-area panels, leaving the form controls readable. */
+.design-public .navigation-stage:is([data-theatre-scene="productions"],[data-theatre-scene="members"]) :is(.page-heading,.filters,.section-tabs){background:transparent;border:0;box-shadow:none;border-radius:0;padding-inline:0}
+.design-public .navigation-stage:is([data-theatre-scene="productions"],[data-theatre-scene="members"]) .filters{padding-block:12px}
+.design-public .navigation-stage:is([data-theatre-scene="productions"],[data-theatre-scene="members"]) .filters :is(input,select){border:1px solid #efe2cc55;background:#211d17a6;color:#fff5e5;box-shadow:none}
+.design-public .navigation-stage:is([data-theatre-scene="productions"],[data-theatre-scene="members"]) .filters input::placeholder{color:#e0d8c8}
+/* Thanks: compact heading and light rules instead of heavy framed panels. */
+.design-public [data-theatre-scene="thanks"] .page-heading{padding:12px 0 24px;background:none;border:0;box-shadow:none}
+.design-public [data-theatre-scene="thanks"] .page-heading h1{font-size:clamp(36px,5vw,60px);margin:0 0 12px}
+.design-public [data-theatre-scene="thanks"] :is(.thanks-person,.special-thanks){background:#211d172b;border:0;border-top:1px solid #e4d8c53d;border-radius:0;box-shadow:none}
+.design-public [data-theatre-scene="thanks"] .special-thanks{padding:28px 0}
+.playbill-recommendation>strong{justify-self:start;max-width:100%}

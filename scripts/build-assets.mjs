@@ -11,6 +11,20 @@ await build({
   legalComments: "eof",
 });
 const files = [
+  "site-editor.js",
+  "site-editor.css",
+  "home-recommendations.js",
+  "stage-editor.js",
+  "stage-editor.css",
+  "images/stage-lamp.png",
+  ...["productions", "members", "thanks"].flatMap((section) => [
+    `images/${section}-unlit.png`,
+    `images/${section}-light.png`,
+  ]),
+  "home-light.css",
+  "home-light.js",
+  "images/theatre-unlit.png",
+  "images/theatre-light.png",
   "app.css",
   "experience.css",
   "fonts.css",

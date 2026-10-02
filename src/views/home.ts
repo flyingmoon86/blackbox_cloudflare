@@ -1,3 +1,4 @@
+import { stageArt, stageAssets, stageAttributes } from "./stage-art";
 import { assetUrl } from "./assets";
 import { escapeHtml as e, layout } from "../views";
 import type { UserSession } from "../types";
@@ -9,7 +10,7 @@ export function theatreHome(
   news: AnnouncementRow[],
   user: UserSession | null,
   backgroundId: number | null,
-  latest: ProductionRow[] = [],
+  latest: (ProductionRow & { hover_photo_id?: number | null })[] = [],
   announcementRevision = "",
 ): string {
   let texts: Record<string, string> = {};
@@ -19,9 +20,7 @@ export function theatreHome(
   const admin = user?.role === "admin";
   const edit = (field: string, label: string) =>
     admin ? '<a class="edit-link" href="/admin/site#' + field + '">' + label + " ↗</a>" : "";
-  const image = backgroundId
-    ? '<img class="stage-backdrop" src="/site/hero?v=' + backgroundId + '" alt="" fetchpriority="high">'
-    : "";
+  const image = stageArt("home", profile.page_texts);
   const mascot = texts.mascot_photo
     ? "/site/mascot?v=" + encodeURIComponent(texts.mascot_photo)
     : assetUrl("/images/elephant-mascot-360-v1.webp");
@@ -51,31 +50,35 @@ export function theatreHome(
       '"></div><p>点击图片切换放大，放大后可滚动查看。</p></dialog>'
     : "";
   const about =
-    '<section class="stage-scene stage-about" id="about" aria-label="剧团介绍"><div class="about-copy"><span class="eyebrow">03 / OUR STORY</span><h2 class="preline">' +
+    '<section class="stage-scene stage-about" id="about" aria-label="剧团介绍"><div class="about-copy"><div class="troupe-layout"><div class="troupe-copy"><header class="troupe-heading"><span class="eyebrow">OUR STORY</span><h2 class="preline">' +
     e(heading) +
     "</h2>" +
     edit("about_heading", "编辑标题") +
     edit("about_text", "编辑介绍") +
-    '<div class="about-columns"><article><p class="preline">' +
+    '</header><article class="troupe-narrative" tabindex="0" aria-label="剧团介绍与招新正文"><div class="troupe-introduction"><p class="preline">' +
     e(texts.about_text || "我们是某大学生艺术团话剧队！祝大家晚安！") +
-    '</p></article><article><p class="preline">' +
+    '</p></div><div class="troupe-recruitment"><p class="preline">' +
     e(profile.recruitment || "欢迎喜欢舞台的你加入我们。") +
-    "</p><p>" +
+    '</p><p class="preline">' +
     e(profile.requirements) +
-    "</p>" +
-    poster +
-    edit("recruitment_poster", "编辑招新海报") +
-    '</article></div><footer class="stage-contact" id="contact"><span>联系剧团</span><a href="mailto:' +
+    '</p></div></article><footer class="stage-contact" id="contact"><span>联系剧团</span><a href="mailto:' +
     e(profile.contact_email || "moonflying56@gmail.com") +
     '">' +
     e(profile.contact_email || "moonflying56@gmail.com") +
     "</a>" +
     (profile.qq_group ? "<span>QQ群 " + e(profile.qq_group) + "</span>" : "") +
     edit("contact_intro", "编辑联系") +
-    '</footer><a class="hall-of-fame-link" href="/members">查看话剧队名人堂 →</a></div></section>';
+    '</footer><a class="hall-of-fame-link" href="/members">查看话剧队名人堂 →</a></div>' +
+    (poster
+      ? '<aside class="troupe-poster" aria-label="招新海报">' +
+        poster +
+        edit("recruitment_poster", "编辑招新海报") +
+        "</aside>"
+      : "") +
+    "</div></div></section>";
   const testNotice = texts.test_notice || "网站正在测试。欢迎浏览与提交建议，测试阶段暂不支持视频上传。";
   const playbill =
-    '<section class="stage-scene stage-playbill" id="playbill" aria-label="近期作品"><p class="eyebrow">02 / RECENT WORKS</p><h2>近期作品</h2>' +
+    '<section class="stage-scene stage-playbill" id="playbill" aria-label="近期作品"><p class="eyebrow">RECENT WORKS</p><h2>近期作品</h2>' +
     (featured
       ? '<a class="playbill-feature" href="/productions/' +
         featured.id +
@@ -104,7 +107,13 @@ export function theatreHome(
         (p) =>
           '<a href="/productions/' +
           p.id +
-          '"><strong>' +
+          '" class="playbill-recommendation">' +
+          (p.hover_photo_id
+            ? '<img class="recommendation-still" src="/resources/' +
+              p.hover_photo_id +
+              '/preview" alt="" aria-hidden="true" loading="lazy" decoding="async">'
+            : "") +
+          "<strong>" +
           e(p.title) +
           (admin && p.is_hidden ? " · 已隐藏" : "") +
           "</strong><small>" +
@@ -127,12 +136,19 @@ export function theatreHome(
       : "";
   return layout(
     "首页",
-    announcementAlert +
+    stageAssets() +
+      '<script src="' +
+      assetUrl("/home-recommendations.js") +
+      '" defer></script>' +
+      announcementAlert +
       dialog +
       posterDialog +
-      '<div class="theatre-stage">' +
+      '<div class="theatre-stage" ' +
+      stageAttributes("home", profile.page_texts) +
+      ">" +
       image +
-      '<div class="stage-shade"></div><section class="stage-scene" id="welcome" aria-label="黑匣子首页"><div class="welcome-copy"><p class="eyebrow">01 / BLACK BOX THEATRE</p><h1>黑匣子<br><span>永远是你家</span></h1></div><figure class="weekly-star"><img class="weekly-star-photo" src="' +
+      '<section class="stage-scene" id="welcome" aria-label="黑匣子首页">' +
+      '<div class="welcome-copy"><p class="eyebrow">BLACK BOX THEATRE</p><h1>黑匣子</h1></div><figure class="weekly-star"><img class="weekly-star-photo" src="' +
       e(mascot) +
       '" alt="本周明星照片" width="360" height="360" decoding="async"><figcaption>本周明星<span aria-hidden="true">✦</span></figcaption></figure>' +
       '<div class="stage-news">' +
@@ -140,7 +156,7 @@ export function theatreHome(
       '</div><a class="stage-explore" href="#playbill">浏览近期作品 <span>↓</span></a></section>' +
       playbill +
       about +
-      '<nav class="scene-nav" aria-label="首页场景"><a href="#welcome" aria-label="第一幕：首页">01 入场</a><span></span><a href="#playbill" aria-label="第二幕：近期作品">02 作品</a><span></span><a href="#about" aria-label="第三幕：剧团">03 剧团</a></nav></div>',
+      '<nav class="scene-nav" aria-label="首页场景"><a href="#welcome" aria-label="首页">入场</a><span></span><a href="#playbill" aria-label="近期作品">作品</a><span></span><a href="#about" aria-label="剧团">剧团</a></nav></div>',
     Boolean(user),
     admin,
   );

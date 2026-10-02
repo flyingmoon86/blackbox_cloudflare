@@ -28,7 +28,8 @@ export async function imageOptions(c: Context<AppEnv>) {
   const mode = c.req.query("mode") || "groups";
   if (mode !== "groups" && mode !== "images") return c.json({ error: "查询方式无效。" }, 400);
   const params: Array<string | number> = [];
-  let eligible = "r.status='approved' AND r.res_type='photo'";
+  let eligible = "r.status='approved' AND (r.res_type='photo' OR ?='hero_photo')";
+  params.push(field);
   if (needsPreview.has(field)) eligible += " AND r.preview_filename IS NOT NULL AND r.preview_filename<>''";
   if (field === "cover_id") {
     const text = c.req.query("production") || "";

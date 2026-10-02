@@ -9,7 +9,7 @@ import type { ProductionRow } from "./productions";
 type Photo = { id: number; filename: string; original_name: string; preview_filename: string };
 export async function selectHero(c: Context<AppEnv>): Promise<Photo | null> {
   return c.env.DB.prepare(
-    `SELECT r.id,r.filename,r.original_name,r.preview_filename FROM resource r CROSS JOIN site_profile s LEFT JOIN production p ON p.id=s.featured_production_id WHERE s.id=1 AND ${resourceVisible(c, "r")} AND r.status='approved' AND r.res_type='photo' AND r.preview_filename IS NOT NULL AND r.preview_filename<>'' ORDER BY CASE WHEN CAST(r.id AS TEXT)=s.hero_photo THEN 0 WHEN r.id=p.cover_id THEN 1 ELSE 2 END,r.created_at DESC,r.id DESC LIMIT 1`,
+    `SELECT r.id,r.filename,r.original_name,r.preview_filename FROM resource r CROSS JOIN site_profile s LEFT JOIN production p ON p.id=s.featured_production_id WHERE s.id=1 AND ${resourceVisible(c, "r")} AND r.status='approved' AND (r.res_type='photo' OR CAST(r.id AS TEXT)=s.hero_photo) AND r.preview_filename IS NOT NULL AND r.preview_filename<>'' ORDER BY CASE WHEN CAST(r.id AS TEXT)=s.hero_photo THEN 0 WHEN r.id=p.cover_id THEN 1 ELSE 2 END,r.created_at DESC,r.id DESC LIMIT 1`,
   ).first<Photo>();
 }
 export async function homePage(c: Context<AppEnv>) {
@@ -20,8 +20,15 @@ export async function homePage(c: Context<AppEnv>) {
     ).all<AnnouncementRow>(),
     selectHero(c),
     c.env.DB.prepare(
-      `SELECT id,title,promo,synopsis,year,cover_id,is_hidden FROM production WHERE ${productionVisible(c)} ORDER BY year DESC,id DESC LIMIT 4`,
-    ).all<ProductionRow>(),
+      `SELECT p.id,p.title,p.promo,p.synopsis,p.year,p.cover_id,p.is_hidden,
+       (SELECT r.id FROM resource r WHERE r.production_id=p.id AND r.status='approved'
+        AND r.res_type='photo' AND r.preview_filename IS NOT NULL AND r.preview_filename<>''
+        ORDER BY r.created_at DESC,r.id DESC LIMIT 1) hover_photo_id
+       FROM production p WHERE ${productionVisible(c, "p")}
+       AND EXISTS(SELECT 1 FROM resource photo WHERE photo.production_id=p.id AND photo.status='approved'
+         AND photo.res_type='photo' AND photo.preview_filename IS NOT NULL AND photo.preview_filename<>'')
+       ORDER BY p.year DESC,p.id DESC LIMIT 4`,
+    ).all<ProductionRow & { hover_photo_id: number | null }>(),
   ]);
   if (!profile) return c.text("剧团信息暂不可用，请稍后重试。", 503);
   const featured = profile.featured_production_id

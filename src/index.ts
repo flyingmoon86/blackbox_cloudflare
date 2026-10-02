@@ -1,3 +1,4 @@
+import { getSiteProfile } from "./services/site-profile";
 import { communityRoutes } from "./routes/community";
 import { Hono } from "hono";
 import { contextStorage } from "hono/context-storage";
@@ -42,6 +43,11 @@ app.use("*", loadUser);
 app.use("*", adminPortalGate);
 app.use("*", reviewResponse);
 
+app.use("*", async (c, next) => {
+  if (["/productions", "/members", "/thanks"].includes(c.req.path))
+    c.set("stageTexts", (await getSiteProfile(c))?.page_texts);
+  await next();
+});
 app.get("/", homePage);
 app.get("/favicon.ico", (c) => c.redirect("/images/elephant-mascot-360-v1.webp", 302));
 app.get("/_design/theme", (c) => (c.env.ENVIRONMENT === "development" ? c.redirect("/") : c.notFound()));

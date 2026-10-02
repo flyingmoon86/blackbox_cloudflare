@@ -17,7 +17,8 @@ const wrangler = fileURLToPath(new URL("../node_modules/wrangler/bin/wrangler.js
 let assetWatcher, assetTimer;
 if (process.argv[2] === "dev") {
   assetWatcher = watch("public", { recursive: true }, (_, file) => {
-    if (!file || file.startsWith("assets")) return;
+    // Build outputs must not trigger another build (and an endless dev reload).
+    if (!file || file.startsWith("assets") || file === "system-scene.js") return;
     clearTimeout(assetTimer);
     assetTimer = setTimeout(() => spawnSync(process.execPath, ["scripts/build-assets.mjs"], { stdio: "inherit" }), 150);
   });

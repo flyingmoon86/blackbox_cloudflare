@@ -22,6 +22,7 @@ image/
 .tools/
 python_modules/
 outputs/
+artifacts/
 migration-work/
 
 # 编辑器和系统文件

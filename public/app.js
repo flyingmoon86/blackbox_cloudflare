@@ -121,7 +121,7 @@ if (importConfirm instanceof HTMLFormElement) {
 }
 
 const notice = document.querySelector("[data-test-notice]");
-if (notice instanceof HTMLDialogElement) {
+if (notice instanceof HTMLDialogElement && !document.querySelector("[data-stage-preview]")) {
   const key = `blackbox-test-notice-${notice.dataset.testNotice}`;
   let understood = false;
   try {
@@ -539,6 +539,7 @@ if (posterDialog instanceof HTMLDialogElement) {
     event.preventDefault();
     image.src = event.currentTarget.querySelector("img").currentSrc;
     zoom.classList.remove("is-zoomed");
+    image.setAttribute("aria-pressed", "false");
     posterDialog.showModal();
   });
   posterDialog.querySelector("[data-poster-close]").addEventListener("click", () => posterDialog.close());

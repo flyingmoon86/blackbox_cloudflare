@@ -31,6 +31,6 @@ export const adminPortalGate: MiddlewareHandler<AppEnv> = async (c, next) => {
     return notificationRequest
       ? c.json({ error: "此入口仅供管理员使用。" }, 403)
       : c.text("此入口仅供管理员使用，请返回正式网站。", 403);
-  if (url.pathname === "/" && read) return c.redirect("/admin", 302);
+  if (url.pathname === "/" && read && url.searchParams.get("stage-preview") !== "1") return c.redirect("/admin", 302);
   await next();
 };

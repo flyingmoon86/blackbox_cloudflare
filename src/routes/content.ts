@@ -1,4 +1,7 @@
 import { imageOptions } from "../services/image-picker";
+import { prepareStageUpdate } from "../services/stage-upload";
+import { stageScenes, stageSettings, type StageScene } from "../services/stage-visuals";
+import { serveResourceFile } from "../services/resource-files";
 import { DEFAULT_ACCENT, validAccent, themeCss } from "../services/theme";
 import { productionVisible } from "../services/production-visibility";
 import { Hono } from "hono";
@@ -25,6 +28,18 @@ export type SiteProfileRow = {
 };
 
 export const contentRoutes = new Hono<AppEnv>();
+contentRoutes.get("/site/stage-image/:scene/:layer", async (c) => {
+  const scene = c.req.param("scene") as StageScene,
+    layer = c.req.param("layer");
+  if (!stageScenes.includes(scene) || !["unlit", "light"].includes(layer)) return c.notFound();
+  const pair = stageSettings((await getSiteProfile(c))?.page_texts)[scene].pair;
+  if (!pair) return c.notFound();
+  return serveResourceFile(c.req.raw, c.env.FILES, {
+    key: `stage/${pair.key}/${layer}.png`,
+    filename: `${layer}.png`,
+    publicImage: true,
+  });
+});
 
 contentRoutes.use("*", async (c, next) => {
   if (
@@ -171,8 +186,9 @@ contentRoutes.post("/admin/site", async (c) => {
   if (denied) return denied;
   const form = await c.req.formData();
   if (!csrfValid(c, form.get("csrf"))) return c.text("请求已失效，请刷新页面后重试。", 400);
-  const current = await c.env.DB.prepare("SELECT page_texts FROM site_profile WHERE id=1").first<{
+  const current = await c.env.DB.prepare("SELECT page_texts,hero_photo FROM site_profile WHERE id=1").first<{
     page_texts: string;
+    hero_photo: string;
   }>();
   let texts: Record<string, string> = {};
   try {
@@ -226,33 +242,49 @@ contentRoutes.post("/admin/site", async (c) => {
   const featured = featuredText ? Number(featuredText) : null;
   if (featured !== null && !(await c.env.DB.prepare("SELECT id FROM production WHERE id=?").bind(featured).first()))
     return c.text("请选择有效的精选作品。", 400);
-  const heroText = String(form.get("hero_photo") ?? "");
+  const heroText = String(form.get("hero_photo") ?? current?.hero_photo ?? "");
   const hero = heroText ? Number(heroText) : null;
   if (
+    form.has("hero_photo") &&
     hero !== null &&
-    !(await c.env.DB.prepare("SELECT id FROM resource WHERE id=? AND status='approved' AND res_type='photo'")
-      .bind(hero)
+    !(await c.env.DB.prepare(
+      "SELECT id FROM resource WHERE id=? AND status='approved' AND (res_type='photo' OR ?='hero_photo')",
+    )
+      .bind(hero, "hero_photo")
       .first())
   )
     return c.text("首页背景必须选择已审核的剧照。", 400);
-  await c.env.DB.prepare(
-    `UPDATE site_profile SET troupe_name=?,contact_email=?,qq_group=?,recruitment=?,requirements=?,hero_photo=?,featured_production_id=?,page_texts=? WHERE id=1`,
-  )
-    .bind(
-      String(form.get("troupe_name") ?? "")
-        .trim()
-        .slice(0, 100) || "话剧队",
-      String(form.get("contact_email") ?? "").trim() || null,
-      String(form.get("qq_group") ?? "")
-        .trim()
-        .slice(0, 50),
-      String(form.get("recruitment") ?? "").trim(),
-      String(form.get("requirements") ?? "").trim(),
-      hero === null ? "" : String(hero),
-      featured,
-      JSON.stringify(texts),
+  let stageUploads: Awaited<ReturnType<typeof prepareStageUpdate>>;
+  try {
+    stageUploads = await prepareStageUpdate(form, texts);
+  } catch (error) {
+    return c.text(error instanceof Error ? error.message : "背景素材无法读取。", 400);
+  }
+  try {
+    for (const upload of stageUploads)
+      await c.env.FILES.put(upload.key, upload.bytes, { httpMetadata: { contentType: "image/png" } });
+    await c.env.DB.prepare(
+      `UPDATE site_profile SET troupe_name=?,contact_email=?,qq_group=?,recruitment=?,requirements=?,hero_photo=?,featured_production_id=?,page_texts=? WHERE id=1`,
     )
-    .run();
+      .bind(
+        String(form.get("troupe_name") ?? "")
+          .trim()
+          .slice(0, 100) || "话剧队",
+        String(form.get("contact_email") ?? "").trim() || null,
+        String(form.get("qq_group") ?? "")
+          .trim()
+          .slice(0, 50),
+        String(form.get("recruitment") ?? "").trim(),
+        String(form.get("requirements") ?? "").trim(),
+        form.has("hero_photo") ? (hero === null ? "" : String(hero)) : current?.hero_photo || "",
+        featured,
+        JSON.stringify(texts),
+      )
+      .run();
+  } catch (error) {
+    await Promise.allSettled(stageUploads.map((upload) => c.env.FILES.delete(upload.key)));
+    throw error;
+  }
   await invalidateSiteProfile(c);
   return c.redirect("/admin/site?saved=1", 303);
 });

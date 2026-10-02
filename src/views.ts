@@ -1,4 +1,5 @@
 import { adminNavigation } from "./views/admin-navigation";
+import { stageArt, stageAssets, stageAttributes, type StageScene } from "./views/stage-art";
 import { YEARS, yearSelect, icon, pagination, type PageInfo } from "./views/shared";
 import { assetUrl } from "./views/assets";
 import { turnstileWidget } from "./services/turnstile";
@@ -19,8 +20,17 @@ export function escapeHtml(value: unknown): string {
 
 export function layout(title: string, content: string, signedIn = false, admin = false, themeId?: number): string {
   const context = tryGetContext<AppEnv>();
-  const portal = context ? adminPortal(context) : null;
+  const preview = context?.get("user")?.role === "admin" && context.req.query("stage-preview") === "1";
+  const portal = context && !preview ? adminPortal(context) : null;
   const workspace = admin && Boolean(portal?.active || context?.req.path.startsWith("/admin"));
+  const artPage =
+    !portal?.active && ["/productions", "/members", "/thanks"].includes(context?.req.path || "")
+      ? (context!.req.path.slice(1) as StageScene)
+      : null;
+  if (artPage)
+    content =
+      stageAssets() +
+      `<div class="navigation-stage" ${stageAttributes(artPage)}>${stageArt(artPage)}<div class="navigation-stage-content">${content}</div></div>`;
   const link = (href: string, label: string) =>
     '<a href="' +
     href +

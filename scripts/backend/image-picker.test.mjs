@@ -32,6 +32,9 @@ async function setup() {
     "UPDATE resource SET status='pending' WHERE id=7;UPDATE resource SET res_type='script' WHERE id=8;UPDATE resource SET preview_filename='' WHERE id=9;",
   );
   for (let id = 11; id <= 325; id++) add.run(id, "资料图片 " + id, 1, 1);
+  db.prepare(
+    "INSERT INTO resource(id,title,res_type,status,filename,production_id,edition_id,preview_filename) VALUES(326,'未关联其他资料','other','approved','other.pdf',NULL,NULL,'other-preview.jpg')",
+  ).run();
   db.exec("UPDATE site_profile SET hero_photo='1',page_texts='{\"members_background\":\"1\"}' WHERE id=1");
   const env = {
     DB: d1(db),
@@ -61,13 +64,20 @@ test("image picker separates null associations from broken work/version links, p
     assert.equal((await req("/admin/image-options?field=hero_photo", 2)).status, 403);
     assert.equal((await req("/admin/image-options?field=unknown")).status, 400);
     const groups = await (await req("/admin/image-options?field=hero_photo")).json();
-    assert.equal(groups.groups.find((g) => g.key === "unlinked").count, 1);
+    assert.equal(groups.groups.find((g) => g.key === "unlinked").count, 2);
     assert.equal(groups.groups.find((g) => g.key === "issues").count, 4);
     assert.equal(groups.groups.find((g) => g.key === "production:2").title, "未命名作品 #2");
     const unlinked = await (await req("/admin/image-options?field=hero_photo&mode=images&group=unlinked")).json();
     assert.deepEqual(
       unlinked.items.map((x) => x.id),
-      [2],
+      [326, 2],
+    );
+    const unlinkedOther = await (
+      await req("/admin/image-options?field=hero_photo&mode=images&q=未关联其他资料")
+    ).json();
+    assert.deepEqual(
+      unlinkedOther.items.map((x) => x.id),
+      [326],
     );
     const issues = await (await req("/admin/image-options?field=hero_photo&mode=images&group=issues")).json();
     assert.deepEqual(
@@ -94,6 +104,10 @@ test("image picker separates null associations from broken work/version links, p
       backgrounds.items.map((x) => x.id),
       [10],
     );
+    const nonHeroOther = await (
+      await req("/admin/image-options?field=members_background&mode=images&q=未关联其他资料")
+    ).json();
+    assert.equal(nonHeroOther.total, 0);
     const hero = await (await req("/admin/image-options?field=hero_photo&mode=images&group=production:2")).json();
     assert.deepEqual(
       hero.items.map((x) => x.id),
@@ -103,7 +117,9 @@ test("image picker separates null associations from broken work/version links, p
     const cover = await (await req("/admin/image-options?field=cover_id&production=1&mode=images&q=海报")).json();
     assert.equal(cover.total, 0);
     const html = await (await req("/admin/site")).text();
-    assert.match(html, /<option value="1" selected>原有选择<\/option>/);
+    assert.match(html, /data-stage-editor="home"/);
+    assert.doesNotMatch(html, /name="hero_photo"/);
+    assert.equal(db.prepare("SELECT hero_photo FROM site_profile").get().hero_photo, "1");
     const rejected = await req("/admin/site", 1, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded", Origin: "https://blackbox.test" },
@@ -113,10 +129,10 @@ test("image picker separates null associations from broken work/version links, p
     const saved = await req("/admin/site", 1, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded", Origin: "https://blackbox.test" },
-      body: new URLSearchParams({ csrf: "picker-csrf", hero_photo: "2" }),
+      body: new URLSearchParams({ csrf: "picker-csrf", hero_photo: "326" }),
     });
     assert.equal(saved.status, 303);
-    assert.equal(db.prepare("SELECT hero_photo FROM site_profile").get().hero_photo, "2");
+    assert.equal(db.prepare("SELECT hero_photo FROM site_profile").get().hero_photo, "326");
     assert.equal(
       JSON.stringify(db.prepare("SELECT id,production_id,edition_id FROM resource ORDER BY id").all()),
       before,

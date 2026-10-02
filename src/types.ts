@@ -32,5 +32,5 @@ export type AccountRow = UserSession & { password_hash: string };
 
 export type AppEnv = {
   Bindings: Bindings;
-  Variables: { user: UserSession | null };
+  Variables: { user: UserSession | null; stageTexts?: string };
 };

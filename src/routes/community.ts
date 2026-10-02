@@ -109,7 +109,7 @@ communityRoutes.get("/thanks", async (c) => {
   return c.html(
     layout(
       "鸣谢",
-      '<section class="page-heading"><p class="eyebrow">WITH THANKS</p><h1>每一份心意，都留在这里。</h1><p>感谢一起完善黑匣子的朋友。</p><a href="/feedback">我也有个建议 ↗</a></section>' +
+      '<section class="page-heading"><h1>鸣谢</h1><p>感谢一起完善黑匣子的你。</p><a href="/feedback">留下建议 ↗</a></section>' +
         dedication +
         editThanks +
         '<section class="thanks-grid" data-paginate="12">' +
