@@ -15,28 +15,28 @@ body.design-public:has([data-theatre-scene])::before,body.design-public:has([dat
 .navigation-stage{min-height:calc(100dvh - 110px)}
 .navigation-stage-content{position:relative;min-height:inherit;padding-right:84px}
 .navigation-stage-content .page-heading{max-width:800px;text-shadow:0 2px 10px #0009}
-.navigation-stage-content :is(.page-heading,.filters,.section-tabs,.thanks-person,.special-thanks){background:#191510d9;padding:22px;border-radius:4px;color:#f3ead8}
-.navigation-stage-content :is(.page-heading,.thanks-person) p{color:#e1d8c7}
+.navigation-stage-content :is(.page-heading,.filters,.section-tabs,.thanks-person){background:#191510d9;padding:22px;border-radius:4px;color:var(--ink)}
+.navigation-stage-content :is(.page-heading,.thanks-person) p{color:var(--muted)}
 /* Readable document fallback before scene controls initialize. */
 html:has(.theatre-stage){height:auto;overflow:auto;background:#f4e6cb;scroll-padding-top:76px}
 body.design-public:has(.theatre-stage){height:auto;min-height:100vh;overflow:visible;display:block;background:#f4e6cb}
 body.design-public:has(.theatre-stage)>.top{position:sticky;top:0}
 body.design-public:has(.theatre-stage)>main{height:auto;overflow:visible;padding:0}
-.design-public .theatre-stage{height:auto;overflow:visible;background:transparent;padding-bottom:0;color:#29251d}
-.design-public .theatre-stage .stage-scene{height:auto;min-height:calc(100svh - 56px);overflow:visible;scroll-margin-top:56px;color:#29251d}
+.design-public .theatre-stage{--ink:var(--text-dark);--muted:var(--text-dark-muted);height:auto;overflow:visible;background:transparent;padding-bottom:0;color:var(--ink)}
+.design-public .theatre-stage .stage-scene{height:auto;min-height:calc(100svh - 56px);overflow:visible;scroll-margin-top:56px;color:var(--ink)}
 .design-public .theatre-stage #welcome{background:transparent;isolation:auto}
 .design-public #welcome .welcome-copy{top:36%;left:5vw;max-width:75%;padding:12px 24px;background:#fff4dde8;border-radius:3px}
-.design-public #welcome .welcome-copy h1{font-size:clamp(56px,10vh,112px);margin:12px 0;color:#29251d}
-.design-public .theatre-stage .eyebrow,.design-public #welcome .stage-news span,.design-public #welcome .stage-explore{color:#55442b}
+.design-public #welcome .welcome-copy h1{font-size:clamp(56px,10vh,112px);margin:12px 0;color:var(--ink)}
+.design-public .theatre-stage .eyebrow,.design-public #welcome .stage-news span,.design-public #welcome .stage-explore{color:var(--muted)}
 .design-public #welcome .stage-news,.design-public #welcome .stage-explore{background:#fff4ddeb;padding:10px 14px;border-radius:3px}
 .design-public .theatre-stage .stage-playbill{background:linear-gradient(180deg,#f4e6cb00,#f4e6cbe8 140px,#f4e6cbee);padding:150px max(9vw,24px) 72px 5vw}
 .design-public .theatre-stage .stage-about{background:linear-gradient(#f4e6cbee,#f4e6cbf7);padding:64px max(9vw,24px) 100px 5vw}
-.design-public .theatre-stage :is(.stage-playbill,.stage-about){--ink:#29251d;--muted:#554b3c;--line:#79684655;--panel:#fff5e4;--amber:#66451f}
-.design-public .theatre-stage .playbill-feature{height:auto;min-height:320px;background:#fff7e9d9;border-color:#79684655;color:#29251d}
+.design-public .theatre-stage :is(.stage-playbill,.stage-about){--ink:var(--text-dark);--muted:var(--text-dark-muted);--line:#79684655;--panel:#fff5e4;--amber:#66451f}
+.design-public .theatre-stage .playbill-feature{height:auto;min-height:320px;background:#fff7e9d9;border-color:#79684655;color:var(--ink)}
 .design-public .theatre-stage .playbill-feature>img{max-height:460px}
-.design-public .theatre-stage .playbill-feature p:not(.eyebrow){color:#554b3c;display:block;overflow:visible}
+.design-public .theatre-stage .playbill-feature p:not(.eyebrow){color:var(--muted);display:block;overflow:visible}
 .design-public .theatre-stage .playbill-list>a{border-color:#79684655}
-.design-public .theatre-stage .playbill-list small{color:#554b3c}
+.design-public .theatre-stage .playbill-list small{color:var(--muted)}
 /* Dedicated story layout: no inherited full-screen poster gutter or absolute caption. */
 .design-public #about .about-copy,.design-public #about .about-copy:has(.recruitment-poster){height:auto;max-width:none;display:block;padding:0;min-width:0}
 .design-public #about .troupe-layout{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(280px,1fr);gap:clamp(28px,4vw,64px);align-items:start;margin-top:0}
@@ -45,19 +45,19 @@ body.design-public:has(.theatre-stage)>main{height:auto;overflow:visible;padding
 .design-public #about .troupe-heading .edit-link{display:inline-block;margin-right:16px}
 .design-public #about .troupe-layout:not(:has(.troupe-poster)){grid-template-columns:minmax(0,760px)}
 .design-public #about .troupe-narrative{min-width:0;max-width:68ch}
-.design-public #about .troupe-narrative p{color:#403725;font:400 17px/1.9 var(--sans,"Microsoft YaHei",sans-serif);margin:0 0 1.25em;overflow-wrap:anywhere}
+.design-public #about .troupe-narrative p{color:var(--ink);font:400 17px/1.9 var(--sans);margin:0 0 1.25em;overflow-wrap:anywhere}
 .design-public #about .troupe-introduction{padding:0 0 20px;border-bottom:1px solid #79684655;margin-bottom:26px}
-.design-public #about .troupe-introduction p{font:500 clamp(19px,1.6vw,23px)/1.85 var(--serif);margin:0}
+.design-public #about .troupe-introduction p{font:500 clamp(19px,1.6vw,23px)/1.85 var(--sans);margin:0}
 .design-public #about .troupe-poster{min-width:0;position:static}
 .design-public #about .recruitment-poster{position:static;width:100%;height:auto;margin:0;max-width:100%;padding:8px;background:#fff9ed66;border:1px solid #79684633;box-shadow:0 10px 30px #49371914}
 .design-public #about .recruitment-poster a,.design-public #about .recruitment-poster picture{display:block;height:auto}
 .design-public #about .recruitment-poster img,.design-public #about .recruitment-poster.poster-portrait img{display:block;width:100%;height:auto;max-height:none;object-fit:contain}
-.design-public #about .recruitment-poster figcaption{position:static;margin:0;padding:12px 4px 2px;background:transparent;color:#55442b;font-size:13px}
+.design-public #about .recruitment-poster figcaption{position:static;margin:0;padding:12px 4px 2px;background:transparent;color:var(--muted);font-size:13px}
 .design-public #about .troupe-poster>.edit-link{display:inline-block;margin-top:12px}
 .design-public #about .stage-contact{overflow-wrap:anywhere;font-size:14px}
 .design-public #about .hall-of-fame-link{border-color:#79684666;color:#55442b}
 .design-public .poster-zoom:not(.is-zoomed) img{width:auto;height:auto;max-width:100%;max-height:65dvh;margin-inline:auto}
-.design-public .theatre-stage .stage-contact{color:#554b3c;border-color:#79684655;margin-top:40px}
+.design-public .theatre-stage .stage-contact{color:var(--muted);border-color:#79684655;margin-top:40px}
 .design-public .theatre-stage .edit-link{color:#66451f}
 .design-public .scene-nav{position:fixed;top:42%;right:12px;background:#fff4ddf2;border:1px solid #79684633;border-radius:4px;padding:6px;z-index:10}
 .design-public .scene-nav a{color:#493719;letter-spacing:0}
@@ -161,6 +161,8 @@ body.design-public:has(.theatre-stage.stage-ready)>main{height:100%;min-height:0
 /* Thanks: compact heading and light rules instead of heavy framed panels. */
 .design-public [data-theatre-scene="thanks"] .page-heading{padding:12px 0 24px;background:none;border:0;box-shadow:none}
 .design-public [data-theatre-scene="thanks"] .page-heading h1{font-size:clamp(36px,5vw,60px);margin:0 0 12px}
-.design-public [data-theatre-scene="thanks"] :is(.thanks-person,.special-thanks){background:#211d172b;border:0;border-top:1px solid #e4d8c53d;border-radius:0;box-shadow:none}
-.design-public [data-theatre-scene="thanks"] .special-thanks{padding:28px 0}
+.design-public [data-theatre-scene="thanks"] .thanks-person{background:#211d172b;border:0;border-top:1px solid #e4d8c53d;border-radius:0;box-shadow:none}
+/* The dedication sits directly on the artwork. A small glyph halo separates it from the beam. */
+.design-public [data-theatre-scene="thanks"] .special-thanks{--ink:var(--text-light);--muted:var(--text-light);padding:28px 0;background:none;border:0;border-radius:0;box-shadow:none;color:var(--ink);text-shadow:0 1px 2px #15130f,0 0 6px #15130f99}
+.design-public [data-theatre-scene="thanks"] .special-thanks :is(h2,.eyebrow,.thanks-letter,.thanks-signature){color:var(--ink);opacity:1}
 .playbill-recommendation>strong{justify-self:start;max-width:100%}

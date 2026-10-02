@@ -1,7 +1,8 @@
 /* Shared archive palette. Homepage geometry and curtain styles remain owned by their original files. */
-body.design-public,body.design-admin{--serif:"Blackbox Display","Noto Serif SC","Songti SC","SimSun",serif;--archive-radius:3px;--archive-focus:#c7a66c;font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif}
-body.design-public{--paper:#15130f;--panel:#1d1a15;--surface:#252119;--ink:#f1e9da;--muted:#b9b0a0;--line:#f1e9da30;--brand-light:#c7a66c;--brand:#aa874e;--amber:#c7a66c;--amber-dark:#b5935d;--wine:#c7a66c;background:var(--paper);color:var(--ink)}
-body.design-admin{--paper:#f4f1e9;--panel:#fffdf8;--surface:#ede8df;--ink:#302a22;--muted:#6d6254;--line:#d9d1c3;--brand-light:#805f2e;--brand:#805f2e;--amber:#805f2e;--amber-dark:#624822;--wine:#805f2e;--archive-focus:#805f2e;background:var(--paper);color:var(--ink)}
+/* Reading colors belong to the surface, independently of the purple/gold accents. */
+body.design-public,body.design-admin{--serif:"Blackbox Display","Noto Serif SC","Songti SC","SimSun",serif;--sans:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;--text-dark:#211d17;--text-dark-muted:#514737;--text-light:#fff9ed;--text-light-muted:#e4dccd;--archive-radius:3px;--archive-focus:#c7a66c;font-family:var(--sans)}
+body.design-public{--paper:#15130f;--panel:#1d1a15;--surface:#252119;--ink:var(--text-light);--muted:var(--text-light-muted);--line:#f1e9da30;--brand-light:#c7a66c;--brand:#aa874e;--amber:#c7a66c;--amber-dark:#b5935d;--wine:#c7a66c;background:var(--paper);color:var(--ink)}
+body.design-admin{--paper:#f4f1e9;--panel:#fffdf8;--surface:#ede8df;--ink:var(--text-dark);--muted:var(--text-dark-muted);--line:#d9d1c3;--brand-light:#805f2e;--brand:#805f2e;--amber:#805f2e;--amber-dark:#624822;--wine:#805f2e;--archive-focus:#805f2e;background:var(--paper);color:var(--ink)}
 body.design-public .top,body.design-public:has(.theatre-stage) .top{background:#15130ff5;border-color:var(--line)}
 body.design-public::after{background:linear-gradient(180deg,#15130ff0,#15130fdb)}
 body:is(.design-public,.design-admin) :is(h1,h2,h3){font-family:var(--serif)}
@@ -17,7 +18,7 @@ body:is(.design-public,.design-admin) :is(a,button,summary,input,select,textarea
 body:is(.design-public,.design-admin) :is(.card,.resource-card,.production-card,.production-management-panel){border-color:var(--line);border-radius:var(--archive-radius)}
 body.design-admin :is(.card,.production-management-panel){background:var(--panel);box-shadow:none}
 body:is(.design-public,.design-admin) :is(th,td){border-color:var(--line)}
-body.design-public .eyebrow{color:var(--brand-light)}
+body.design-public .eyebrow{color:var(--muted)}
 body.design-public .contributor-tag{color:var(--brand-light);border-color:var(--brand-light);background:#c7a66c12}
 /* Member dossier: portrait dimensions never depend on the active tab's content. */
 body.design-public main:has(.member-dossier){width:100%;max-width:none;margin:0;padding:14px clamp(24px,4.5vw,80px) 24px;overflow:auto}
@@ -120,4 +121,10 @@ body .dossier-panel h2{font-size:22px;margin-bottom:16px}
 /* Management screens use the same typography hierarchy at a working, form-friendly scale. */
 body.design-admin main h1{font-size:clamp(28px,3vw,40px);line-height:1.3}
 body.design-admin main h2{font-size:24px;line-height:1.4}
-body.design-admin :is(label,.hint,th,td){font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif}
+body.design-admin :is(label,.hint,th,td){font-family:var(--sans)}
+/* Light paper islands keep dark reading text inside the otherwise dark public site. */
+body.design-public :is(.auth-stage>.auth,.announcement-notice,.weekly-star){--ink:var(--text-dark);--muted:var(--text-dark-muted);color:var(--ink)}
+body.design-public :is(.announcement-notice h1,.announcement-notice h2,.announcement-notice>p,.announcement-letter>p.preline){color:var(--ink)}
+body.design-public :is(.announcement-notice .eyebrow,.announcement-letter .announcement-back a){color:var(--muted)}
+body.design-public :is(.edition-heading-copy>h2,.timeline-year>h2,.photo-lightbox-context){color:var(--ink)}
+body.design-public :is(.production-hero-copy .lead,.profile-story p,.edition-description){color:var(--muted)}
