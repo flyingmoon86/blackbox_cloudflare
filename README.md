@@ -136,6 +136,8 @@ npm run smoke:production          # 5. 冒烟检查
 
 ## 阅读顺序建议（新接手的开发者）
 
+历史静态设计演示已收在 [docs/archive](docs/archive/README.md)，不参与构建或部署；现行源字体维护说明见 [assets/fonts](assets/fonts/README.md)。文件保留与整理依据见 [docs/file-cleanup.md](docs/file-cleanup.md)。
+
 1. 本文件 —— 知道网站是干什么的。
 2. [docs/glossary.md](docs/glossary.md) —— 搞清名词（如果 Cloudflare 熟可以跳过）。
 3. [docs/architecture.md](docs/architecture.md) —— 理解请求怎么走、数据怎么存。

@@ -1,12 +1,12 @@
 """Offline font asset generation; the website and normal npm builds do not need Python.
-Requires fonttools[woff]. Source: design-proposal/assets/NotoSerifSC-900.woff2 (OFL).
+Requires fonttools[woff]. Source: assets/fonts/NotoSerifSC-900.woff2 (OFL).
 """
 from pathlib import Path
 from fontTools import subset
 from fontTools.ttLib import TTFont
 import hashlib
 root = Path(__file__).resolve().parents[1]
-source = root / 'design-proposal/assets/NotoSerifSC-900.woff2'
+source = root / 'assets/fonts/NotoSerifSC-900.woff2'
 out = root / 'public/fonts'
 out.mkdir(exist_ok=True)
 chars = sorted(TTFont(source).getBestCmap())

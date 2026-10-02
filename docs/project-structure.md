@@ -16,7 +16,7 @@ blackbox-drama-archive/cloudflare
 ├── config/               环境配置文件（R2 CORS 等）
 ├── test-fixtures/        测试数据夹具
 ├── docs/                 维护文档与截图
-├── design-proposal/      设计方案稿与素材
+├── assets/fonts/         离线字体生成使用的源字体（不直接发布）
 ├── migration-work/       迁移交接工作区（备份/发布/线上同步）
 ├── outputs/              临时输出与诊断脚本
 ├── .agents/              项目专用 Agent 技能
@@ -130,7 +130,7 @@ migrations/
 
 ```
 public/
-├── assets/    浏览器脚本与样式
+├── assets/    构建生成的带哈希资源；保留旧版本供已打开的页面加载
 ├── fonts/     字体文件
 └── images/    站点图片
 ```
@@ -187,15 +187,20 @@ docs/
 ├── system-info-visualization.md    系统信息可视化
 ├── workbench-refactor.md           工作台重构记录
 ├── project-structure.md            本文
+├── file-cleanup.md                 文件整理依据与验证记录
+├── archive/                       历史设计稿（不参与部署）
+├── releases/                      发布记录与公告草稿
 └── screenshots/                    文档配图
 ```
 
 ### 其他目录
 
 ```
-design-proposal/        设计方案稿
+assets/fonts/           现行展示字体源文件、生成说明与许可证入口
+
+docs/archive/design-proposal/  历史静态设计演示
 ├── assets/
-│   └── av/             方案用音视频素材
+│   └── av/             演示用头像图片（历史公开数据快照）
 
 templates/              演职记录批量导入 Excel 模板
 ├── production-credit-import-v1.xlsx
