@@ -1,0 +1,264 @@
+/* C / 背景留白画廊. Only /members loads this sheet; dossiers keep their layout. */
+html:has(body.layout-members) {
+  height: auto;
+  overflow: auto;
+}
+body.layout-members {
+  --ink: var(--text-light);
+  --muted: var(--text-light-muted);
+  --line: #fff9ed50;
+  --brand-light: #66547b;
+  --amber: #66547b;
+  --archive-focus: #dcc092;
+  display: block;
+  height: auto;
+  min-height: 100dvh;
+  overflow: visible;
+  background: #25231f;
+  color: var(--ink);
+}
+body.design-public.layout-members > .top {
+  --ink: var(--text-dark);
+  --muted: var(--text-dark-muted);
+  --nav-surface: #f4eddd;
+  --nav-text: var(--text-dark);
+  --nav-muted: var(--text-dark-muted);
+  background: #f4edddf5;
+  border-bottom: 1px solid #574a3238;
+}
+body.layout-members .top :is(.brand, .desktop-nav > a, .nav-menu-link, .nav-menu-toggle, .account-link, .menu-toggle) {
+  color: var(--text-dark) !important;
+}
+body.layout-members .top :is(.nav-panel, .desktop-nav.is-open) {
+  background: #faf5e9;
+  color: var(--text-dark);
+}
+body.layout-members .top .nav-panel :is(a, .nav-caption) {
+  color: var(--text-dark);
+}
+body.design-public.layout-members > main {
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 38px 6vw 90px;
+  height: auto;
+  overflow: visible;
+}
+.layout-members .navigation-stage-content {
+  padding-right: 74px;
+}
+.layout-members .theatre-art {
+  background: #25231f;
+}
+/* Keep the administrator's shade setting and the original image/light crop plane. */
+body.layout-members .theatre-art::after {
+  background: #181510;
+  opacity: calc(var(--stage-shade) * 0.86);
+}
+body.layout-members [data-lights="on"] .theatre-art::after {
+  opacity: calc(var(--stage-shade) * 0.62);
+}
+body.layout-members .navigation-stage .page-heading {
+  max-width: none;
+  margin: 0 0 36px;
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  text-shadow: 0 1px 3px #15130f;
+  color: var(--ink);
+}
+.layout-members .member-heading-title {
+  padding: 18px 0 130px;
+  text-align: right;
+}
+.layout-members .member-heading-title .eyebrow {
+  margin: 0 0 14px;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+}
+.layout-members .member-heading-title h1 {
+  max-width: none;
+  margin: 0;
+  font-size: clamp(48px, 5.3vw, 76px);
+  line-height: 1.35;
+  letter-spacing: 0.12em;
+}
+body.design-public.layout-members .navigation-stage[data-theatre-scene="members"] .filters {
+  gap: 16px;
+  padding: 14px 0;
+  margin: 0;
+  border-block: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+body.design-public.layout-members .navigation-stage[data-theatre-scene="members"] .filters :is(input, select) {
+  padding: 10px 0;
+  background: #18151077;
+  color: var(--ink);
+  font-size: 13px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+}
+body.design-public.layout-members .navigation-stage[data-theatre-scene="members"] .filters input::placeholder {
+  color: var(--muted);
+}
+body.design-public.layout-members :is(button, .button):not(.secondary):not(.danger):not(.theatre-light-switch) {
+  color: #fff9ed;
+}
+body.design-public.layout-members .navigation-stage[data-theatre-scene="members"] .filters button {
+  padding: 9px 18px;
+  background: #66547b;
+  color: #fff9ed;
+  font-size: 13px;
+  border-radius: 0;
+  box-shadow: none;
+}
+body.design-public.layout-members .theatre-light-switch {
+  background: #fff4ddd9 !important;
+  color: #32263d;
+  border-color: #66547644;
+}
+body.design-public.layout-members .member-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 30px 24px;
+  margin-top: 32px;
+  align-items: start;
+}
+body.design-public.layout-members .member-card {
+  margin: 0;
+  height: auto;
+  aspect-ratio: auto;
+  min-height: 0;
+  max-height: none;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.layout-members .member-card-link {
+  position: relative;
+  inset: auto;
+  display: block;
+  overflow: visible;
+  color: var(--ink);
+}
+.layout-members :is(.member-card-media, .member-card-art) {
+  position: static;
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  object-fit: cover;
+  object-position: center 25%;
+  transition: filter 0.3s ease;
+}
+body.design-public.layout-members .member-card-art {
+  display: grid;
+  place-items: center;
+  background: #e9dfc9;
+  color: #3b3243;
+  text-shadow: none;
+  -webkit-text-stroke: 0;
+  font-size: 68px;
+  font-weight: 900;
+}
+.layout-members .member-card-shade {
+  display: none;
+}
+body.design-public.layout-members .member-card-copy {
+  position: static;
+  display: grid;
+  padding: 16px 0 0;
+  gap: 6px;
+  transform: none;
+  transition: none;
+  text-shadow: 0 1px 3px #15130f;
+}
+.layout-members .member-card-copy .eyebrow {
+  font-size: 10px;
+  color: var(--muted);
+}
+body.design-public.layout-members .member-card-copy > strong {
+  font-size: 23px;
+  line-height: 1.4;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+}
+.layout-members .member-card-details {
+  gap: 10px;
+  padding-top: 2px;
+}
+.layout-members .member-card-details > span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.7;
+  -webkit-line-clamp: 2;
+}
+.layout-members .member-card-details small {
+  color: var(--muted);
+  font-size: 10px;
+}
+body.design-public.layout-members
+  .member-card-link:is(:hover, :focus-visible)
+  :is(.member-card-media, .member-card-art) {
+  filter: brightness(1.04);
+  transform: none;
+}
+.layout-members .member-card-link:focus-visible {
+  outline: 2px solid var(--archive-focus);
+  outline-offset: 6px;
+}
+.layout-members .contributor-tag {
+  width: max-content;
+  font-size: 10px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+}
+.layout-members .pagination {
+  margin-top: 40px;
+}
+@media (max-width: 1100px) and (min-width: 901px) {
+  body.design-public.layout-members .member-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (max-width: 900px) {
+  body.design-public.layout-members > main {
+    padding: 28px 6vw 110px;
+  }
+  .layout-members .navigation-stage-content {
+    padding-right: 0;
+  }
+  .layout-members .member-heading-title {
+    padding: 24px 0 110px;
+  }
+  .layout-members .member-heading-title h1 {
+    font-size: clamp(34px, 11.8vw, 46px);
+  }
+  body.design-public.layout-members .navigation-stage[data-theatre-scene="members"] .filters {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    margin: 0 0 28px;
+  }
+  .layout-members .filters > input {
+    grid-column: 1 / -1;
+  }
+  .layout-members .filters > select {
+    min-width: 0;
+  }
+  body.design-public.layout-members .member-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 32px 22px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .layout-members :is(.member-card-media, .member-card-art) {
+    transition: none;
+  }
+}

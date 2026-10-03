@@ -23,9 +23,16 @@ export function layout(title: string, content: string, signedIn = false, admin =
   const preview = context?.get("user")?.role === "admin" && context.req.query("stage-preview") === "1";
   const portal = context && !preview ? adminPortal(context) : null;
   const workspace = admin && Boolean(portal?.active || context?.req.path.startsWith("/admin"));
+  const bookLayout =
+    !portal?.active &&
+    (["/", "/thanks"].includes(context?.req.path || "") || /^\/announcements(?:\/\d+)?$/.test(context?.req.path || ""));
+  const archiveGallery = !portal?.active && ["/productions", "/resources"].includes(context?.req.path || "");
+  const memberGallery = !portal?.active && context?.req.path === "/members";
   const artPage =
-    !portal?.active && ["/productions", "/members", "/thanks"].includes(context?.req.path || "")
-      ? (context!.req.path.slice(1) as StageScene)
+    !portal?.active && ["/productions", "/resources", "/members", "/thanks"].includes(context?.req.path || "")
+      ? context!.req.path === "/resources"
+        ? "productions"
+        : (context!.req.path.slice(1) as StageScene)
       : null;
   if (artPage)
     content =
@@ -174,6 +181,9 @@ export function layout(title: string, content: string, signedIn = false, admin =
     '"><link rel="stylesheet" href="' +
     assetUrl("/fonts.css") +
     '">' +
+    (bookLayout ? '<link rel="stylesheet" href="' + assetUrl("/layout-book.css") + '">' : "") +
+    (memberGallery ? '<link rel="stylesheet" href="' + assetUrl("/layout-members.css") + '">' : "") +
+    (archiveGallery ? '<link rel="stylesheet" href="' + assetUrl("/layout-gallery.css") + '">' : "") +
     '<script src="' +
     assetUrl("/app.js") +
     '" defer></script><script src="' +
@@ -201,6 +211,9 @@ export function layout(title: string, content: string, signedIn = false, admin =
     (portal?.active || context?.req.path.startsWith("/admin") ? " design-admin" : " design-public") +
     (portal?.active ? " admin-portal" : "") +
     (workspace ? " admin-workspace" : "") +
+    (bookLayout ? " layout-book" : "") +
+    (memberGallery ? " layout-members" : "") +
+    (archiveGallery ? " layout-gallery" : "") +
     (content.includes('class="section-tabs"') ? " archive-page" : "") +
     '" data-section="' +
     (/^\/(productions|resources|my-resources|suggestions)(?:\/|$)/.test(context?.req.path || "")
@@ -342,7 +355,7 @@ export function memberListPage(
       : "";
   return layout(
     "队员名录",
-    `<section class="page-heading"><p class="eyebrow">HALL OF FAME</p><h1>队员名录</h1>${admin ? '<p><a class="button" href="/admin/members/new">＋ 新建队员档案</a></p>' : ""}<form method="get" class="filters"><input name="q" value="${escapeHtml(search)}" aria-label="搜索队员" placeholder="搜索姓名、入学年级或作品"><select name="year" aria-label="入队年份"><option value="">全部入队年份</option><option value="missing"${selectedYear === "missing" ? " selected" : ""}>未填写入队年份</option>${olderYear}${options}</select><span class="filter-actions"><button>查找</button>${search || selectedYear !== null ? '<a href="/members">清除筛选</a>' : ""}</span></form></section><section class="card-grid member-grid" data-server-paged>${cards}</section>${pagination(page)}`,
+    `<section class="page-heading"><div class="member-heading-title"><p class="eyebrow">HALL OF FAME</p><h1>队员名录</h1></div>${admin ? '<p><a class="button" href="/admin/members/new">＋ 新建队员档案</a></p>' : ""}<form method="get" class="filters"><input name="q" value="${escapeHtml(search)}" aria-label="搜索队员" placeholder="搜索姓名、入学年级或作品"><select name="year" aria-label="入队年份"><option value="">全部入队年份</option><option value="missing"${selectedYear === "missing" ? " selected" : ""}>未填写入队年份</option>${olderYear}${options}</select><span class="filter-actions"><button>查找</button>${search || selectedYear !== null ? '<a href="/members">清除筛选</a>' : ""}</span></form></section><section class="card-grid member-grid" data-server-paged>${cards}</section>${pagination(page)}`,
     signedIn,
     admin,
   );

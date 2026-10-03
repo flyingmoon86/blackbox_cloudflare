@@ -13,6 +13,18 @@
 .site-editor-save{position:sticky;bottom:0;z-index:6;display:flex;align-items:center;justify-content:space-between;gap:16px;background:var(--paper,#f7f4eb);border-top:1px solid var(--line);padding:14px 0;margin-top:20px}
 .site-editor-save span{color:var(--muted);font-size:13px}
 .site-editor-save button{margin:0;min-height:44px}
+/* B: clear sections and quiet rules, retaining the existing editing workflow. */
+body.design-admin .site-editor{background:transparent;border:0;box-shadow:none;padding-inline:clamp(16px,3vw,40px)}
+body.design-admin .site-editor>h1{font-size:clamp(32px,3.4vw,48px);margin-bottom:16px}
+.site-editor .site-editor-nav{background:transparent;gap:24px;padding:0}
+.site-editor .site-editor-nav a{border:0;border-radius:0;padding:14px 0;letter-spacing:.04em}
+.site-editor .site-editor-nav a[aria-selected=true]{background:transparent;color:var(--ink);border-bottom:2px solid #66547b}
+.site-editor .stage-editor-nav{background:transparent}
+.site-editor .stage-editor-nav a{border-radius:0;border:0;border-bottom:1px solid var(--line)}
+.site-editor .stage-editor-nav a[aria-selected=true]{background:transparent;box-shadow:none;border-color:#66547b}
+.site-editor .stage-editor{border-radius:0;border:0;border-top:1px solid var(--line);padding:24px 0}
+.site-editor .stage-editor legend{font-family:var(--serif);font-weight:900;font-size:24px;padding:0 18px 0 0}
+.site-editor .stage-preview-shell{border:0}
 @media(max-width:1000px){.site-editor .site-edit-section [id],.site-editor .site-edit-section h2,.site-editor .stage-editor{scroll-margin-top:calc(var(--wb-top,64px) + 24px)}}
 @media(max-width:700px){
  .site-editor-nav{gap:5px;padding:9px 0}

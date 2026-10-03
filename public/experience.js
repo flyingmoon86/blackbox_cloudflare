@@ -393,7 +393,9 @@
     let index = sceneIndex(location.hash),
       last = -Infinity,
       accumulated = 0,
-      lastWheel = -Infinity;
+      lastWheel = -Infinity,
+      wheelDirection = 0,
+      transitionDirection = 0;
     const show = (next, update = false) => {
       const previous = index;
       const moveFocus = scenes[previous].contains(document.activeElement);
@@ -405,6 +407,9 @@
       // Background and switch belong to stage, so hiding a scene cannot hide them.
       stage.dataset.activeScene = scenes[index].id;
       if (previous !== index) {
+        accumulated = 0;
+        last = lastWheel = -Infinity;
+        wheelDirection = transitionDirection = 0;
         scenes[index].scrollTop = 0;
         if (moveFocus) {
           scenes[index].tabIndex = -1;
@@ -447,19 +452,30 @@
         if (event.ctrlKey || Math.abs(event.deltaX) > Math.abs(event.deltaY) || blocked(event.target)) return;
         const now = performance.now(),
           direction = Math.sign(event.deltaY);
-        const continued = now - lastWheel < 220;
+        if (!direction) return;
+        // A deliberate reversal is a new gesture, not the previous gesture's inertia.
+        const continued = now - lastWheel < 220 && direction === wheelDirection;
+        wheelDirection = direction;
         lastWheel = now;
-        if (now - last < 750 || (continued && accumulated === Infinity)) {
+        if (!continued) accumulated = 0;
+        if ((now - last < 750 && direction === transitionDirection) || (continued && accumulated === Infinity)) {
           event.preventDefault();
           return;
         }
-        if (!continued) accumulated = 0;
         if (canScroll(event.target, direction)) return;
         event.preventDefault();
+        // Scrolling past the first/last act must not lock a later reverse gesture.
+        if (index + direction < 0 || index + direction >= scenes.length) {
+          accumulated = 0;
+          return;
+        }
         accumulated += event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? stage.clientHeight : 1);
         if (Math.abs(accumulated) > 45) {
           show(index + Math.sign(accumulated), true);
           last = now;
+          lastWheel = now;
+          wheelDirection = direction;
+          transitionDirection = direction;
           accumulated = Infinity;
         }
       },

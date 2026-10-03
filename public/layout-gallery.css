@@ -1,0 +1,482 @@
+/* C / 放映画廊. Only the public /productions and /resources lists load this sheet. */
+html:has(body.layout-gallery) {
+  height: auto;
+  overflow: auto;
+}
+body.design-public.layout-gallery {
+  --ink: var(--text-light);
+  --muted: var(--text-light-muted);
+  --line: #fff9ed50;
+  --brand-light: #66547b;
+  --amber: #66547b;
+  background: #25231f;
+  color: var(--ink);
+  display: block;
+  height: auto;
+  overflow: visible;
+  min-height: 100dvh;
+}
+body.design-public.layout-gallery > .top {
+  --ink: var(--text-dark);
+  --muted: var(--text-dark-muted);
+  --nav-surface: #f4eddd;
+  --nav-text: var(--text-dark);
+  --nav-muted: var(--text-dark-muted);
+  background: #f4edddf5;
+  border-color: #6c605444;
+}
+body.layout-gallery
+  > .top
+  :is(.brand, .desktop-nav > a, .nav-menu-link, .nav-menu-toggle, .account-link, .menu-toggle) {
+  color: var(--text-dark) !important;
+}
+body.layout-gallery .top :is(.nav-panel, .desktop-nav.is-open) {
+  background: #faf5e9;
+  color: var(--text-dark);
+}
+body.layout-gallery .top .nav-panel :is(a, .nav-caption) {
+  color: var(--text-dark);
+}
+body.design-public.layout-gallery > main {
+  max-width: 1440px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 28px 6vw 90px;
+  height: auto;
+  overflow: visible;
+}
+.layout-gallery .navigation-stage-content {
+  padding-right: 74px;
+}
+.layout-gallery .theatre-art {
+  background: #25231f;
+}
+/* Use the existing administrator shade and shared base/light crop plane. */
+body.layout-gallery .theatre-art::after {
+  background: #181510;
+  opacity: calc(var(--stage-shade) * 0.96);
+}
+body.layout-gallery [data-lights="on"] .theatre-art::after {
+  opacity: calc(var(--stage-shade) * 0.74);
+}
+body.design-public.layout-gallery .navigation-stage .page-heading {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 24px;
+  padding: 18px 0 24px;
+  margin: 0;
+  max-width: none;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  color: var(--ink);
+  text-shadow: 0 1px 3px #15130f;
+}
+.layout-gallery .page-heading > .eyebrow {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: end;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  margin: 0;
+  padding-bottom: 10px;
+}
+.layout-gallery .page-heading > h1 {
+  grid-column: 2;
+  grid-row: 1;
+  margin: 0;
+  font-size: 54px;
+  line-height: 1.35;
+  text-align: right;
+}
+.layout-gallery .page-heading > .filters {
+  grid-column: 1/-1;
+  grid-row: 2;
+}
+.layout-gallery .page-heading > .button {
+  grid-column: 2;
+  justify-self: end;
+  align-self: start;
+}
+.layout-gallery .page-heading > p {
+  font-size: 12px;
+  line-height: 1.8;
+  margin: 12px 0;
+}
+.layout-gallery .page-heading > p:last-child {
+  margin-bottom: 0;
+}
+.layout-gallery .page-heading .button {
+  padding: 8px 14px;
+  font-size: 12px;
+}
+body.design-public.layout-gallery .navigation-stage .section-tabs {
+  padding: 0;
+  margin: 0 0 14px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+}
+.layout-gallery .section-tabs > a {
+  padding: 8px 16px 8px 0;
+  margin-right: 20px;
+  font-size: 13px;
+  color: var(--ink);
+}
+body.design-public.layout-gallery .section-tabs > a.active {
+  background: none;
+  color: var(--ink);
+  border-bottom: 1px solid var(--ink);
+  box-shadow: none;
+  border-radius: 0;
+}
+.layout-gallery .timeline-entry {
+  margin: 0 0 12px;
+  font-size: 11px;
+}
+.layout-gallery .timeline-entry a {
+  color: var(--muted);
+}
+body.design-public.layout-gallery .navigation-stage[data-theatre-scene="productions"] .filters {
+  border-block: 1px solid var(--line);
+  padding: 10px 0;
+  margin: 0;
+  gap: 14px;
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+body.design-public.layout-gallery .navigation-stage[data-theatre-scene="productions"] .filters :is(input, select) {
+  padding: 9px 0;
+  background: #18151077;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  border-radius: 0;
+  font-size: 13px;
+}
+.layout-gallery .filters input::placeholder {
+  color: var(--muted) !important;
+}
+.layout-gallery .filters select option {
+  background: #25231f;
+  color: #fff9ed;
+}
+.layout-gallery .filters label {
+  margin: 0;
+  font-size: 11px;
+  gap: 6px;
+}
+body.design-public.layout-gallery
+  .navigation-stage[data-theatre-scene="productions"]
+  .filters:has(> input):has(> label) {
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 180px) auto;
+}
+.layout-gallery .filters > a {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+body.design-public.layout-gallery :is(button, .button):not(.secondary):not(.danger):not(.theatre-light-switch) {
+  color: #fff9ed;
+}
+.layout-gallery .filters button {
+  padding: 9px 16px;
+  font-size: 13px;
+}
+body.design-public.layout-gallery .theatre-light-switch {
+  background: #fff4ddd9 !important;
+  color: #32263d;
+  border-color: #66547644;
+}
+body.design-public.layout-gallery .production-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 26px;
+}
+.layout-gallery .production-grid > .production-year-heading {
+  grid-column: 1/-1;
+  font-size: 21px !important;
+  margin: 12px 0 0 !important;
+  padding: 12px 0 !important;
+  border-bottom: 1px solid var(--line);
+}
+body.design-public.layout-gallery .production-grid > .production-card {
+  display: flex;
+  flex-direction: column;
+  grid-column: auto;
+  min-height: 380px;
+  max-height: none;
+  height: auto;
+  aspect-ratio: auto;
+  position: relative;
+  padding: 24px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: #15130fbb;
+  justify-content: flex-end;
+}
+body.design-public.layout-gallery .production-grid > .production-featured-card {
+  grid-column: 1/-1;
+  min-height: 350px;
+}
+body.design-public.layout-gallery .production-grid .production-card > :is(.production-cover, .production-stage-image) {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  object-fit: cover;
+  aspect-ratio: auto;
+  z-index: 0;
+  border-radius: 0;
+}
+.layout-gallery .production-stage-shade {
+  display: none;
+}
+.layout-gallery .production-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, #15130ff5, #15130f18 85%);
+  pointer-events: none;
+  z-index: 1;
+}
+.layout-gallery .production-card > :not(img):not(.production-stage-shade) {
+  position: relative;
+  z-index: 2;
+}
+.layout-gallery .production-card:is(:hover, :focus-within)::after {
+  background: linear-gradient(0deg, #15130ff5, #15130fb3 60%, #15130f18 95%);
+}
+.layout-gallery .production-card :is(.eyebrow, h2, .production-stage-intro) {
+  text-shadow: 0 1px 3px #15130f;
+}
+.layout-gallery .production-visibility button {
+  font-size: 11px;
+  padding: 7px 12px;
+}
+body.design-public.layout-gallery .production-grid .production-card > .production-stage-copy {
+  position: relative;
+  inset: auto;
+  padding: 0;
+  transform: none;
+  max-width: none;
+  background: none;
+  color: var(--ink);
+}
+.layout-gallery .production-card h2 {
+  font-size: 32px;
+  line-height: 1.4;
+  margin: 10px 0;
+  overflow-wrap: anywhere;
+}
+.layout-gallery .production-card h2 a {
+  color: var(--ink);
+  text-decoration: none;
+}
+.layout-gallery .production-card :is(.eyebrow, .production-stage-intro) {
+  color: var(--muted);
+}
+.layout-gallery .production-card p:not(.eyebrow) {
+  font-size: 13px;
+  line-height: 1.85;
+  margin: 10px 0;
+  color: var(--muted);
+}
+.layout-gallery .production-card .production-actions {
+  padding: 10px 0;
+  margin: 0;
+  flex-wrap: wrap;
+}
+.layout-gallery .production-card .button {
+  font-size: 11px;
+  padding: 7px 12px;
+  min-height: 0;
+}
+/* Keep the title reachable; keyboard focus also reveals the existing actions. */
+.layout-gallery .production-stage-details {
+  display: grid;
+  grid-template-rows: 0fr;
+  max-height: none;
+  opacity: 0;
+  transform: none;
+  margin-top: 0;
+  transition:
+    grid-template-rows 0.28s ease,
+    opacity 0.28s ease,
+    margin-top 0.28s ease;
+}
+.layout-gallery .production-stage-details > div {
+  display: block;
+  min-height: 0;
+  overflow: hidden;
+  transform: none;
+}
+.layout-gallery .production-card:is(:hover, :focus-within) .production-stage-details {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  margin-top: 12px;
+}
+.layout-gallery .production-card > p:not(.eyebrow) {
+  display: none;
+}
+.layout-gallery .production-card:is(:hover, :focus-within) > p:not(.eyebrow) {
+  display: block;
+}
+body.design-public.layout-gallery
+  .production-card:is(:hover, :focus-within)
+  :is(.production-stage-image, .production-cover) {
+  filter: none;
+  transform: none;
+}
+.layout-gallery .review-grid {
+  gap: 24px;
+}
+.layout-gallery .archive-group {
+  margin: 8px 0 24px;
+}
+.layout-gallery .archive-group > h2 {
+  font-size: 24px;
+  margin: 0;
+  padding: 12px 0;
+}
+.layout-gallery .archive-group > h2 a {
+  color: var(--ink);
+  text-decoration: none;
+}
+.layout-gallery .archive-group > p {
+  font-size: 11px;
+  margin: 12px 0 20px;
+}
+.layout-gallery .archive-group > .card-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 30px;
+}
+body.design-public.layout-gallery .resource-card {
+  height: auto;
+  min-height: 0;
+  aspect-ratio: auto;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
+}
+.layout-gallery .resource-card-link {
+  position: relative;
+  inset: auto;
+  min-height: 360px;
+  display: flex;
+  align-items: flex-end;
+  padding: 24px;
+  overflow: hidden;
+  background: #15130fbb;
+  color: var(--ink);
+}
+.layout-gallery .resource-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+.layout-gallery .resource-art > :is(strong, small),
+.layout-gallery .resource-art > div > strong {
+  display: none;
+}
+.layout-gallery .resource-card-shade {
+  display: block;
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, #15130ff2, transparent 90%);
+  pointer-events: none;
+}
+body.design-public.layout-gallery .resource-card-copy {
+  position: relative;
+  inset: auto;
+  z-index: 2;
+  display: grid;
+  gap: 8px;
+  transform: none;
+  padding: 0;
+  color: var(--ink);
+}
+.layout-gallery .resource-card-copy > strong {
+  font: 900 26px/1.4 var(--serif);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.layout-gallery .resource-card-copy > span:not(.eyebrow) {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.layout-gallery .resource-card-copy .eyebrow {
+  font-size: 10px;
+  color: var(--muted);
+}
+body.design-public.layout-gallery .resource-card-link:is(:hover, :focus-visible) .resource-art {
+  transform: none;
+  filter: none;
+}
+.layout-gallery .photo-archive {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  grid-column: 1/-1;
+}
+.layout-gallery :is(.production-card a, .resource-card-link):focus-visible {
+  outline: 2px solid #dcc092;
+  outline-offset: 3px;
+}
+@media (max-width: 900px) {
+  body.design-public.layout-gallery > main {
+    padding: 24px 6vw 110px;
+  }
+  .layout-gallery .navigation-stage-content {
+    padding-right: 0;
+  }
+  .layout-gallery .page-heading > h1 {
+    font-size: 38px;
+    text-align: left;
+  }
+  body.design-public.layout-gallery .navigation-stage .page-heading {
+    display: block;
+  }
+  body.design-public.layout-gallery
+    .navigation-stage[data-theatre-scene="productions"]
+    .filters:has(> input):has(> label) {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .layout-gallery .filters:has(> label) > input {
+    grid-column: 1 / -1;
+  }
+  body.design-public.layout-gallery .production-grid,
+  .layout-gallery .archive-group > .card-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 900px), (hover: none), (pointer: coarse) {
+  .layout-gallery .production-card::after {
+    background: linear-gradient(0deg, #15130ff5, #15130fb3 60%, #15130f18 95%);
+  }
+  .layout-gallery .production-stage-details {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    margin-top: 12px;
+  }
+  .layout-gallery .production-card > p:not(.eyebrow) {
+    display: block;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .layout-gallery .production-stage-details {
+    transition: none;
+  }
+}

@@ -27,7 +27,7 @@ export function siteEditor(
     `<div id="site-panel-${key}" class="site-editor-panel" data-site-panel aria-labelledby="site-tab-${key}">${content}</div>`;
   const groups = [
     ["backgrounds", "背景图片", "section_backgrounds"],
-    ["home", "明星与精选大戏", "featured_production_id"],
+    ["home", "精选大戏", "featured_production_id"],
     ["troupe", "招新信息", "about_heading"],
     ["messages", "鸣谢与提示", "special_thanks"],
     ["appearance", "颜色", "appearance"],
@@ -38,7 +38,7 @@ export function siteEditor(
  ${section("appearance", "颜色", `<p>整站颜色联动变化，保存后生效。作品可在各自编辑页单独选色。</p><div data-theme-editor>${input("brand_accent", "主题颜色编号", color)}<label>色盘<input type="color" value="${color}" data-theme-picker></label><button type="button" data-theme-reset>恢复默认</button> <button type="button" class="secondary" data-theme-cancel>取消颜色修改</button><p role="status" data-theme-status></p><div class="theme-sample">当前页面即为预览</div></div>`)}
  </div><div id="site-panel-home" class="site-editor-panel" data-site-panel aria-labelledby="site-tab-home">
  ${section("featured_production_id", "精选大戏编辑", `<label>精选大戏<select name="featured_production_id"><option value="">不展示精选作品</option>${productions.map((x) => `<option value="${x.id}"${p.featured_production_id === x.id ? " selected" : ""}>${e(x.title)}</option>`).join("")}</select></label>`)}
- ${section("home_welcome", "首页明星照片", image("mascot_photo", "本周明星照片", t.mascot_photo || "", "默认照片（小象）"))}
+ <input type="hidden" name="mascot_photo" value="${e(t.mascot_photo || "")}"><p id="home_welcome">首屏仅展示剧场背景；精选大戏展示在首页第二幕。原明星照片配置保留。</p>
  </div><div id="site-panel-troupe" class="site-editor-panel" data-site-panel aria-labelledby="site-tab-troupe">
  ${section("about_heading", "招新信息", `${area("about_heading", "剧团页标题（自动去除标点）", t.about_heading || "在黑匣子\n一起成为故事")}<div id="about_text">${area("about_text", "剧团介绍正文", t.about_text || "我们是某大学生艺术团话剧队！祝大家晚安！")}</div>${area("recruitment", "招新正文", p.recruitment)}${area("requirements", "招新补充说明", p.requirements)}<div id="recruitment_poster">${image("recruitment_poster", "通用海报", t.recruitment_poster || "", "不设置")}${image("recruitment_poster_mobile", "手机海报", t.recruitment_poster_mobile || "", "沿用通用海报")}${input("recruitment_poster_alt", "海报文字说明", t.recruitment_poster_alt || "")}</div>`)}
  ${section("contact_intro", "联系信息编辑", `${input("troupe_name", "剧团名称", p.troupe_name)}${input("contact_email", "联系邮箱", p.contact_email, "email")}${input("qq_group", "招新QQ群", p.qq_group)}`)}

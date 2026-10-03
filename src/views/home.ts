@@ -21,9 +21,6 @@ export function theatreHome(
   const edit = (field: string, label: string) =>
     admin ? '<a class="edit-link" href="/admin/site#' + field + '">' + label + " ↗</a>" : "";
   const image = stageArt("home", profile.page_texts);
-  const mascot = texts.mascot_photo
-    ? "/site/mascot?v=" + encodeURIComponent(texts.mascot_photo)
-    : assetUrl("/images/elephant-mascot-360-v1.webp");
   const notice = news[0]
     ? '<a href="/announcements/' + news[0].id + '"><span>最新公告</span> ' + e(news[0].title) + " ↗</a>"
     : '<a href="/announcements">剧团公告 ↗</a>';
@@ -78,11 +75,12 @@ export function theatreHome(
     "</div></div></section>";
   const testNotice = texts.test_notice || "网站正在测试。欢迎浏览与提交建议，测试阶段暂不支持视频上传。";
   const playbill =
-    '<section class="stage-scene stage-playbill" id="playbill" aria-label="近期作品"><p class="eyebrow">RECENT WORKS</p><h2>近期作品</h2>' +
+    '<section class="stage-scene stage-playbill" id="playbill" aria-label="近期作品"><header class="playbill-heading"><p class="eyebrow">RECENT WORKS</p><h2>近期作品</h2></header>' +
     (featured
       ? '<a class="playbill-feature" href="/productions/' +
         featured.id +
         '">' +
+        '<div class="playbill-art">' +
         (featured.cover_id
           ? '<img src="/site/featured-cover?v=' +
             featured.cover_id +
@@ -90,7 +88,7 @@ export function theatreHome(
             e(featured.title) +
             '封面" loading="lazy">'
           : '<span class="playbill-empty" aria-hidden="true">剧</span>') +
-        '<div><p class="eyebrow">精选作品 · ' +
+        '</div><div class="playbill-copy"><p class="eyebrow">精选作品 · ' +
         e(featured.year) +
         "</p><h3>" +
         e(featured.title) +
@@ -113,12 +111,12 @@ export function theatreHome(
               p.hover_photo_id +
               '/preview" alt="" aria-hidden="true" loading="lazy" decoding="async">'
             : "") +
-          "<strong>" +
+          "<small>" +
+          e(p.year || "年份待补") +
+          "</small><strong>" +
           e(p.title) +
           (admin && p.is_hidden ? " · 已隐藏" : "") +
-          "</strong><small>" +
-          e(p.year || "年份待补") +
-          "</small><span>↗</span></a>",
+          "</strong><span>↗</span></a>",
       )
       .join("") +
     '</div><a class="playbill-all" href="/productions">查看全部作品 →</a></section>';
@@ -148,9 +146,6 @@ export function theatreHome(
       ">" +
       image +
       '<section class="stage-scene" id="welcome" aria-label="黑匣子首页">' +
-      '<div class="welcome-copy"><p class="eyebrow">BLACK BOX THEATRE</p><h1>黑匣子</h1></div><figure class="weekly-star"><img class="weekly-star-photo" src="' +
-      e(mascot) +
-      '" alt="本周明星照片" width="360" height="360" decoding="async"><figcaption>本周明星<span aria-hidden="true">✦</span></figcaption></figure>' +
       '<div class="stage-news">' +
       notice +
       '</div><a class="stage-explore" href="#playbill">浏览近期作品 <span>↓</span></a></section>' +

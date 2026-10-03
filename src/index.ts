@@ -44,7 +44,7 @@ app.use("*", adminPortalGate);
 app.use("*", reviewResponse);
 
 app.use("*", async (c, next) => {
-  if (["/productions", "/members", "/thanks"].includes(c.req.path))
+  if (["/productions", "/resources", "/members", "/thanks"].includes(c.req.path))
     c.set("stageTexts", (await getSiteProfile(c))?.page_texts);
   await next();
 });

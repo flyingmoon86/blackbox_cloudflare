@@ -130,6 +130,7 @@ npm run smoke:production          # 5. 冒烟检查
 | [docs/glossary.md](docs/glossary.md) | 术语表（D1、R2、Worker、迁移……） | 不熟悉 Cloudflare 名词的人 |
 | [docs/project-structure.md](docs/project-structure.md) | 目录结构树（每个文件夹干什么） | 找代码在哪的人 |
 | [docs/design-language.md](docs/design-language.md) | 设计语言 | 改界面的人 |
+| [docs/layout-book.md](docs/layout-book.md) | v3.6 首页、队员与放映画廊排版及滚动切换 | 改界面的人 |
 | [docs/admin-page-organization.md](docs/admin-page-organization.md) | 后台页面组织 | 改后台的人 |
 | [docs/workbench-refactor.md](docs/workbench-refactor.md) | 工作台重构记录 | 改后台工作台的人 |
 | [docs/system-info-visualization.md](docs/system-info-visualization.md) | 系统信息可视化 | 改系统信息页的人 |

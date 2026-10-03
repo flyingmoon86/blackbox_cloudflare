@@ -1,0 +1,165 @@
+/* B / 留白剧本. Loaded only on the selected lists, homepage and announcements.
+   Work details, member pages and authentication keep their existing styles. */
+body.layout-book{--paper:#f4eddd;--panel:#faf5e9;--ink:var(--text-dark);--muted:var(--text-dark-muted);--line:#574a3238;--brand-light:#66547b;--amber:#66547b;background:var(--paper);color:var(--ink)}
+body.design-public.layout-book:has(main)>.top{background:#f4edddf5;border-color:var(--line)}
+body.layout-book>.top :is(.brand,.desktop-nav>a,.nav-menu-link,.nav-menu-toggle,.account-link,.menu-toggle){color:var(--ink)}
+body.layout-book .top .nav-panel{background:#faf5e9;color:var(--ink)}
+body.layout-book .top .nav-panel :is(a,.nav-caption){color:var(--ink)}
+body.design-public.layout-book :is(button,.button):not(.secondary):not(.danger):not(.theatre-light-switch){color:#fff9ed}
+body.design-public.layout-book .section-tabs>a.active{background:transparent;color:#66547b;border-bottom:1px solid #66547b;border-radius:0}
+body.layout-book::after{background:#f4eddded}
+body.layout-book .theatre-stage .stage-scene[hidden]{display:none!important}
+/* The three existing scenes still switch as whole pages. */
+body.layout-book .theatre-stage :is(.stage-playbill,.stage-about),body.layout-book .theatre-stage.stage-ready :is(.stage-playbill,.stage-about){background:#f4eddded;padding:clamp(24px,4dvh,48px) 10vw clamp(24px,4dvh,44px) 6vw}
+body.layout-book .theatre-stage .stage-playbill{display:grid;grid-template-columns:minmax(90px,17%) minmax(0,1fr);grid-template-rows:max-content max-content;align-content:center;gap:clamp(18px,3dvh,32px) 4vw}
+.layout-book .playbill-heading{grid-column:1;grid-row:1/3;position:relative;align-self:start;padding-top:24px;justify-self:center}
+.layout-book .playbill-heading h2{writing-mode:vertical-rl;letter-spacing:.18em;font-size:clamp(36px,4.4vw,64px);line-height:1.4;margin:0}
+.layout-book .playbill-heading .eyebrow{position:absolute;left:-30px;top:28px;writing-mode:vertical-rl;font-size:10px;letter-spacing:.2em;white-space:nowrap;margin:0}
+body.layout-book .theatre-stage .playbill-feature,body.layout-book .theatre-stage.stage-ready .playbill-feature{position:relative;z-index:2;grid-column:2;display:block;height:auto;min-height:0;border:0;border-radius:0;overflow:visible;background:transparent;color:var(--ink)}
+.layout-book .playbill-art{width:100%;height:clamp(230px,52dvh,580px);display:grid;place-items:center}
+body.layout-book .theatre-stage .playbill-feature>.playbill-art,body.layout-book .theatre-stage.stage-ready .playbill-feature>.playbill-art{padding:0;align-self:stretch}
+.layout-book .playbill-art>img{width:100%;height:100%;object-fit:contain;object-position:center;min-height:0}
+.layout-book .playbill-empty{width:100%;height:100%;background:#e6dcc7}
+body.layout-book .theatre-stage .playbill-feature>.playbill-copy,body.layout-book .theatre-stage.stage-ready .playbill-feature>.playbill-copy{padding:24px 0 0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:32px;row-gap:8px;align-items:end}
+.layout-book .playbill-copy .eyebrow{grid-column:1;grid-row:1;margin:0;font-size:11px}
+body.layout-book .theatre-stage .playbill-feature h3{grid-column:1;grid-row:2/4;font-size:clamp(30px,3.4vw,48px);line-height:1.35;margin:0;overflow-wrap:anywhere}
+body.layout-book .theatre-stage .playbill-feature p:not(.eyebrow),body.layout-book .theatre-stage.stage-ready .playbill-feature p:not(.eyebrow){grid-column:2;grid-row:1/3;text-align:right;display:block;overflow:visible;font:400 15px/1.8 var(--sans);margin:0;color:var(--muted)}
+.layout-book .playbill-copy>span{grid-column:2;justify-self:end;font-size:13px;border-bottom:1px solid var(--line);padding:8px 0;min-width:130px}
+.layout-book .playbill-list{grid-column:2;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;margin:0;overflow:visible}
+body.layout-book .theatre-stage .playbill-list>a,body.layout-book .theatre-stage.stage-ready .playbill-list>a{display:grid;grid-template-columns:minmax(0,1fr) 18px;grid-template-rows:auto auto;gap:9px 10px;padding:14px 0;align-items:center;border-top:1px solid var(--line);border-bottom:0;color:var(--ink);text-decoration:none;min-width:0}
+.layout-book .playbill-list>a>small{grid-column:1;grid-row:1;font-size:11px;text-align:left;justify-self:start}
+.layout-book .playbill-list>a>strong{grid-column:1;grid-row:2;font:900 clamp(19px,1.6vw,25px)/1.4 var(--serif);overflow-wrap:anywhere}
+.layout-book .playbill-list>a>span{grid-column:2;grid-row:2}
+.layout-book .playbill-all{grid-column:1;grid-row:1/3;writing-mode:vertical-rl;letter-spacing:.1em;justify-self:center;align-self:end;font-size:12px;margin:0;text-decoration:none}
+.layout-book .recommendation-still{z-index:1}
+.layout-book .playbill-recommendation.is-previewing .recommendation-still{opacity:.46}
+body.design-public.layout-book [data-theatre-scene] .theatre-light-switch{background:#fff4ddd9!important;color:#32263d;border-color:#66547644}
+/* Keep every administrator-authored paragraph; only its arrangement changes. */
+body.layout-book #about .troupe-layout{grid-template-columns:minmax(0,1fr) minmax(0,1.12fr);gap:7vw}
+body.layout-book #about .troupe-heading{position:relative;min-height:170px;margin-bottom:24px;padding-left:80px}
+body.layout-book #about .troupe-heading h2{writing-mode:vertical-rl;position:absolute;left:0;top:24px;max-height:220px;font-size:clamp(32px,3vw,45px);letter-spacing:.12em;margin:0;line-height:1.5}
+body.layout-book #about .troupe-heading .eyebrow{font-size:11px;margin:0}
+body.layout-book #about .troupe-narrative{max-width:52ch}
+body.layout-book #about .troupe-narrative p{font-size:15px;line-height:1.95}
+body.layout-book #about .troupe-introduction p{font-size:18px;line-height:1.8}
+body.layout-book #about .recruitment-poster{padding:0;background:none;border:0;border-radius:0;box-shadow:none}
+body.layout-book #about .recruitment-poster img{object-position:right center}
+body.layout-book #about .recruitment-poster figcaption{padding:8px 0 0;font-size:11px;text-align:right}
+body.layout-book #about .stage-contact{font-size:12px;gap:12px}
+body.layout-book .poster-dialog{width:fit-content;max-width:98vw;max-height:98dvh;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;color:#fff9ed}
+.layout-book .poster-dialog::backdrop{background:#15130feb}
+body.layout-book .poster-dialog>[data-poster-close]{position:fixed;top:12px;right:16px;z-index:5;padding:10px 14px;background:#15130f99!important;color:#fff9ed;border:1px solid #fff9ed55}
+.layout-book .poster-dialog>p{position:fixed;bottom:8px;left:0;right:0;margin:0;text-align:center;font-size:11px;pointer-events:none;color:#fff9ed}
+.layout-book .poster-zoom{max-height:98dvh;max-width:98vw;overflow:auto}
+body.layout-book .poster-zoom:not(.is-zoomed) img{max-height:98dvh;max-width:98vw;width:auto;height:auto}
+/* Lists share a quiet page heading and a single search rail. No global card rules. */
+body.layout-book:has(.navigation-stage)>main{max-width:1440px;width:100%;padding:36px 6vw 72px}
+body.layout-book .navigation-stage-content{padding-right:70px}
+body.layout-book [data-theatre-scene="productions"] .theatre-art::after{background:#f4eddd;opacity:calc(.72 + var(--stage-shade) * .24)}
+body.layout-book [data-theatre-scene="productions"][data-lights="on"] .theatre-art::after{opacity:calc(.68 + var(--stage-shade) * .24)}
+body.layout-book [data-theatre-scene="productions"] :is(.page-heading,.section-tabs,.filters){background:transparent;box-shadow:none;border:0;color:var(--ink);text-shadow:none}
+body.layout-book [data-theatre-scene="productions"] .page-heading{max-width:none;padding:38px 0 28px}
+.layout-book [data-theatre-scene="productions"] .page-heading>h1{font-size:clamp(34px,4vw,56px);line-height:1.3;margin:0 0 24px;text-align:right}
+.layout-book [data-theatre-scene="productions"] .page-heading>.eyebrow{font-size:11px;letter-spacing:.2em}
+body.layout-book [data-theatre-scene="productions"] .filters{max-width:none;border-block:1px solid var(--line);padding:16px 0;gap:16px}
+body.design-public.layout-book .navigation-stage[data-theatre-scene="productions"] .filters :is(input,select){background:#faf5e977;border:0;border-bottom:1px solid var(--line);color:var(--ink);border-radius:0}
+body.design-public.layout-book .navigation-stage[data-theatre-scene="productions"] .filters input::placeholder{color:var(--muted)}
+.layout-book .production-grid{gap:36px}
+body.layout-book .production-grid .production-card{background:transparent;border:0;border-radius:0;padding:0;overflow:hidden}
+body.layout-book .production-grid .production-card:not(.production-stage-card) .production-cover{width:100%;margin:0 0 20px;max-height:500px;object-fit:contain}
+.layout-book .production-year-heading{font-size:26px!important;font-weight:900;padding-top:24px!important}
+.layout-book .production-card>.eyebrow{margin-bottom:8px}
+.layout-book .production-card .production-stage-copy{color:#fff9ed;--ink:#fff9ed;--muted:#e4dccd}
+.layout-book .production-actions{padding:8px 0 16px}
+body.layout-book .resource-card{border:0;border-radius:0;box-shadow:none}
+.layout-book .resource-card-copy{color:#fff9ed;--ink:#fff9ed;--muted:#e4dccd}
+body.layout-book .photo-archive{background:transparent;border:0;border-top:1px solid var(--line);padding:24px 0}
+.layout-book .archive-group{margin:32px 0 48px}
+/* Thanks keeps the full-page artwork, existing words and original dedication. */
+body.layout-book [data-theatre-scene="thanks"]{--ink:#fff9ed;--muted:#e4dccd;--line:#fff9ed45;color:var(--ink)}
+body.layout-book [data-theatre-scene="thanks"] .navigation-stage-content{display:grid;grid-template-columns:minmax(130px,24%) minmax(0,1fr);gap:30px 5vw;padding-top:36px}
+body.layout-book [data-theatre-scene="thanks"] .page-heading{grid-column:1;padding:0;max-width:none;min-height:280px;text-shadow:0 1px 4px #15130f}
+body.layout-book [data-theatre-scene="thanks"] .page-heading h1{writing-mode:vertical-rl;font-size:clamp(48px,5vw,70px);letter-spacing:.2em;margin:0 0 24px}
+.layout-book [data-theatre-scene="thanks"] .page-heading p{font-size:14px;max-width:15em;line-height:1.9}
+.layout-book [data-theatre-scene="thanks"] .page-heading a{font-size:13px}
+body.layout-book [data-theatre-scene="thanks"] .special-thanks{grid-column:1/-1;max-width:680px;justify-self:start;margin:0;padding:16px 0;color:var(--ink);background:none;border:0;text-shadow:0 1px 2px #15130f,0 0 6px #15130f}
+body.layout-book [data-theatre-scene="thanks"] .special-thanks h2{font-size:28px;margin:12px 0 20px}
+.layout-book [data-theatre-scene="thanks"] .thanks-letter{font-size:16px;line-height:2}
+.layout-book [data-theatre-scene="thanks"] .thanks-edit{grid-column:1/-1;margin:0;justify-self:start}
+.layout-book [data-theatre-scene="thanks"] .thanks-grid{grid-column:1/-1;margin-top:24px}
+body.layout-book [data-theatre-scene="thanks"] .thanks-person{background:transparent;border:0;border-top:1px solid var(--line);padding:20px 0}
+/* Existing notices become a reading column; text and administrative actions remain. */
+.layout-book .announcement-heading{max-width:840px;margin:28px auto 48px}
+body.layout-book .announcement-board{max-width:840px;margin:32px auto;background:none;border:0;padding:0;box-shadow:none;display:block}
+body.layout-book .announcement-notice{transform:none;margin:0 0 44px;border:0;border-top:1px solid var(--line);background:transparent;padding:28px 0;box-shadow:none;color:var(--ink)}
+.layout-book .announcement-notice::before,.layout-book .announcement-notice::after{display:none}
+.layout-book .announcement-notice h1{font-size:clamp(32px,4vw,54px);line-height:1.4;margin:24px 0 36px}
+.layout-book .announcement-notice h2{font-size:30px;line-height:1.5}
+.layout-book .announcement-notice>p{max-width:65ch;line-height:2}
+@media(min-width:901px){
+ body.layout-book .theatre-stage.stage-ready #about .troupe-copy{display:grid;grid-template-columns:80px minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto auto;gap:18px 24px}
+ body.layout-book #about .troupe-heading{grid-column:1;grid-row:1;min-height:0;padding:0;margin:0}
+ body.layout-book #about .troupe-heading h2{position:static;white-space:normal;max-height:280px;margin:24px 0;letter-spacing:.15em}
+ body.layout-book #about .troupe-heading .eyebrow{font-size:9px}
+ body.layout-book #about .troupe-heading .edit-link{font-size:11px;display:block;margin:12px 0}
+ body.layout-book #about .troupe-narrative{grid-column:2;grid-row:1}
+ body.layout-book #about :is(.stage-contact,.hall-of-fame-link){grid-column:1/-1;margin:0!important}
+ body.layout-book #about .stage-contact{grid-row:2}
+ body.layout-book #about .hall-of-fame-link{grid-row:3;justify-self:start}
+ body.layout-book .production-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ body.layout-book .production-grid>.production-card{grid-column:auto}
+ body.layout-book .production-grid>.production-featured-card{grid-column:1/-1;max-width:100%}
+ body.layout-book .production-grid .production-card.ratio-landscape:not(.production-stage-card){display:block}
+ body.layout-book .production-grid .production-stage-card.ratio-landscape{min-height:320px;aspect-ratio:2/1}
+ body.layout-book .production-grid .production-stage-card.ratio-portrait{min-height:440px;aspect-ratio:4/5}
+}
+@media(min-width:901px) and (max-height:760px){
+ .layout-book .playbill-art{height:42dvh;min-height:180px}
+ body.layout-book .theatre-stage .playbill-feature>.playbill-copy{padding-top:14px}
+ .layout-book .playbill-heading h2{font-size:42px}
+ body.layout-book #about .troupe-heading{min-height:135px;margin-bottom:10px}
+ body.layout-book #about .troupe-heading h2{font-size:32px}
+}
+@media(max-width:900px){
+ body.layout-book .theatre-stage .stage-playbill{display:block}
+ body.layout-book .theatre-stage :is(.stage-playbill,.stage-about),body.layout-book .theatre-stage.stage-ready :is(.stage-playbill,.stage-about){padding:30px 6vw 110px}
+ .layout-book .playbill-heading{padding:0;margin-bottom:28px}
+ .layout-book .playbill-heading h2{writing-mode:horizontal-tb;font-size:38px;letter-spacing:.06em;margin:12px 0}
+ .layout-book .playbill-heading .eyebrow{position:static;writing-mode:horizontal-tb;font-size:10px}
+ .layout-book .playbill-art{height:auto;min-height:0;max-height:none}
+ .layout-book .playbill-art>img{width:100%;height:auto;max-height:65svh;object-fit:contain}
+ body.layout-book .theatre-stage .playbill-feature>.playbill-copy,body.layout-book .theatre-stage.stage-ready .playbill-feature>.playbill-copy{display:block;padding:20px 0}
+ body.layout-book .theatre-stage .playbill-feature h3{font-size:34px;margin:10px 0 14px}
+ body.layout-book .theatre-stage .playbill-feature p:not(.eyebrow),body.layout-book .theatre-stage.stage-ready .playbill-feature p:not(.eyebrow){text-align:left;font-size:15px}
+ .layout-book .playbill-copy>span{display:block;width:max-content;margin-top:16px}
+ .layout-book .playbill-list{display:block;margin:14px 0 24px}
+ body.layout-book .theatre-stage .playbill-list>a:has(.recommendation-still:not([hidden])){grid-template-columns:88px minmax(0,1fr) 18px;grid-template-rows:auto auto;gap:8px 16px;padding:18px 0}
+ .layout-book .recommendation-still{grid-column:1;grid-row:1/3;width:88px;height:68px}
+ .layout-book .playbill-list>a>small{grid-column:2;grid-row:1}
+ .layout-book .playbill-list>a>strong{grid-column:2;grid-row:2;font-size:20px}
+ .layout-book .playbill-list>a>span{grid-column:3;grid-row:1/3}
+ .layout-book .playbill-all{writing-mode:horizontal-tb;font-size:13px}
+ body.layout-book #about .troupe-layout{display:flex;flex-direction:column;gap:36px;overflow:visible}
+ body.layout-book #about .troupe-heading{padding:0;min-height:0;margin-bottom:24px}
+ body.layout-book #about .troupe-heading h2{position:static;writing-mode:horizontal-tb;max-height:none;font-size:36px;letter-spacing:.03em;margin:12px 0}
+ body.layout-book #about .troupe-poster{width:100%;height:auto;max-width:none}
+ body.layout-book #about .recruitment-poster img{height:auto;max-height:none}
+ body.layout-book:has(.navigation-stage)>main{padding:24px 6vw 110px}
+ body.layout-book .navigation-stage-content{padding-right:0}
+ .layout-book [data-theatre-scene="productions"] .page-heading>h1{text-align:left;font-size:38px}
+ body.layout-book [data-theatre-scene="thanks"] .navigation-stage-content{display:block;padding-top:10px}
+ body.layout-book [data-theatre-scene="thanks"] .page-heading{min-height:230px;max-width:70%;margin-bottom:50px}
+ body.layout-book [data-theatre-scene="thanks"] .page-heading h1{writing-mode:horizontal-tb;font-size:44px;letter-spacing:.08em}
+ body.layout-book [data-theatre-scene="thanks"] .special-thanks{padding:20px 0;margin:0 0 32px}
+ body.layout-book .announcement-board{margin:16px 0}
+ body.layout-book .announcement-notice{padding:24px 0}
+ .layout-book .announcement-notice h1{font-size:34px}
+}
+@media(hover:none),(pointer:coarse){
+ body.layout-book .theatre-stage .playbill-list>a:has(.recommendation-still:not([hidden])){grid-template-columns:88px minmax(0,1fr) 18px;grid-template-rows:auto auto;gap:8px 16px}
+ .layout-book .playbill-list>a>small{grid-column:2;grid-row:1}
+ .layout-book .playbill-list>a>strong{grid-column:2;grid-row:2}
+ .layout-book .playbill-list>a>span{grid-column:3;grid-row:1/3}
+ .layout-book .recommendation-still{position:static;width:88px;height:68px;opacity:1!important;transform:none!important;filter:none;mask-image:none;mix-blend-mode:normal}
+ .layout-book .recommendation-still{grid-column:1;grid-row:1/3}
+}
