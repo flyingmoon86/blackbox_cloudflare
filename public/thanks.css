@@ -1,0 +1,43 @@
+/* Two acts share the homepage controller and the existing thanks stage artwork. */
+body.layout-book .thanks-stage .thanks-scene{padding:clamp(28px,5vh,60px) max(10vw,100px) 32px 7vw;box-sizing:border-box}
+body.layout-book .thanks-stage .thanks-dedication{display:flex;flex-direction:column;gap:30px;color:var(--text-light);background:transparent}
+body.layout-book .thanks-stage .special-thanks{flex:none;width:min(100%,780px);max-width:780px;margin:auto;padding:0;display:block;border:0;background:none;box-shadow:none}
+body.layout-book .thanks-stage .special-thanks>.eyebrow{display:block;font-size:11px;letter-spacing:.25em;margin:0 0 16px;color:var(--text-light)}
+body.layout-book .thanks-stage .special-thanks h1{font:500 clamp(38px,4.8vw,66px)/1.3 var(--serif);letter-spacing:.12em;color:var(--text-light);margin:0 0 clamp(24px,4vh,42px)}
+body.layout-book .thanks-stage .thanks-letter{font-size:clamp(16px,1.45vw,20px);line-height:1.95;white-space:pre-wrap;overflow-wrap:anywhere;max-width:42em}
+body.layout-book .thanks-stage .thanks-signature{margin:24px 0 0;font-size:14px;letter-spacing:.08em}
+body.layout-book .thanks-stage .thanks-edit{display:block;margin:16px 0 0;color:inherit;text-align:right;font-size:12px}
+.thanks-stage .thanks-scene-footer{display:flex;flex:none;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;width:100%;margin-top:24px;font-size:13px;color:inherit}
+.thanks-stage .thanks-scene-footer a{display:inline-flex;align-items:center;gap:20px;min-height:44px;color:inherit;text-decoration:none;border-bottom:1px solid currentColor}
+.thanks-stage .thanks-dedication .thanks-scene-footer{text-shadow:0 1px 3px #15130f}
+.thanks-stage .thanks-act{font-size:11px;letter-spacing:.2em;opacity:.75}
+body.layout-book .thanks-stage .thanks-contributors{background:#f4eddded;--ink:var(--text-dark);--muted:var(--text-dark-muted);--line:#574a3238;color:var(--ink)}
+.thanks-contributors-inner{width:min(100%,1100px);margin:0 auto;display:flex;flex-direction:column;min-height:100%}
+.thanks-contributors-heading{position:relative;margin:10px 0 40px;padding-right:140px}
+.thanks-stage .thanks-contributors-heading .eyebrow{color:var(--muted);font-size:11px;letter-spacing:.22em;margin:0 0 14px}
+.thanks-stage .thanks-contributors-heading h2{font:500 clamp(34px,4vw,54px)/1.35 var(--serif);letter-spacing:.1em;margin:0 0 14px;color:var(--ink)}
+.thanks-stage .thanks-contributors-heading p:not(.eyebrow){font-size:14px;color:var(--muted);margin:0}
+.thanks-contributors-heading>a{position:absolute;right:0;bottom:0;display:inline-flex;align-items:center;min-height:44px;font-size:13px;color:inherit}
+body.layout-book .thanks-stage .thanks-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 36px;margin:0}
+body.layout-book .thanks-stage .thanks-person{min-width:0;padding:24px 0 32px;border:0;border-top:1px solid var(--line);background:none;box-shadow:none}
+.thanks-stage .thanks-person h3{font:600 clamp(22px,2vw,30px)/1.45 var(--serif);color:var(--ink);margin:0;overflow-wrap:anywhere}
+.thanks-stage .thanks-person h3 a{color:inherit;text-decoration:none}
+.thanks-stage .thanks-person h3 a:hover{text-decoration:underline;text-underline-offset:5px}
+.thanks-stage .thanks-person small{display:block;margin-top:10px;overflow-wrap:anywhere;color:var(--muted);font-size:12px}
+.thanks-stage .thanks-contributors .thanks-scene-footer{margin-top:auto;padding-top:36px}
+.thanks-stage .thanks-empty{grid-column:1/-1;padding:28px 0;color:var(--muted)}
+.thanks-stage .pagination{flex-wrap:wrap}
+.thanks-stage .pagination button{color:var(--ink)!important;background:transparent;border:1px solid var(--line);box-shadow:none;transform:none}
+@media(max-width:900px){
+ body.layout-book .thanks-stage .thanks-scene{padding:36px 7vw calc(112px + env(safe-area-inset-bottom))}
+ body.layout-book .thanks-stage .special-thanks{margin:auto;padding:0}
+ body.layout-book .thanks-stage .thanks-letter{font-size:16px;line-height:1.9}
+ body.layout-book .thanks-stage .special-thanks h1{font-size:38px;margin-bottom:26px}
+ .thanks-stage .thanks-scene-footer{padding-right:58px;gap:8px;font-size:12px}
+ .thanks-stage .thanks-scene-footer a{gap:10px}
+ .thanks-contributors-heading{margin:0 0 28px;padding-right:0}
+ .thanks-contributors-heading>a{position:static;margin-top:12px}
+ body.layout-book .thanks-stage .thanks-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 24px}
+ .thanks-stage .thanks-contributors-heading h2{font-size:34px}
+}
+@media(max-width:420px){body.layout-book .thanks-stage .thanks-grid{grid-template-columns:minmax(0,1fr)}.thanks-stage .thanks-act{display:none}}

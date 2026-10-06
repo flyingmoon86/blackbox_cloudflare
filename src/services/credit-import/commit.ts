@@ -172,11 +172,12 @@ export async function purgeExpiredImports(db: D1Database) {
   // Bound scheduled work; compact batch/event audit remains, raw uploads are never retained.
   const expired =
     "SELECT id FROM credit_import_batch WHERE details_purged=0 AND created_at<datetime('now','-180 days') ORDER BY created_at LIMIT 20";
-  await db.batch([
+  const results = await db.batch([
     db.prepare(`DELETE FROM credit_import_row WHERE batch_id IN (${expired})`),
     db.prepare(`DELETE FROM credit_import_member_change WHERE batch_id IN (${expired})`),
     db.prepare(
       `UPDATE credit_import_batch SET details_purged=1,original_name='',status=CASE WHEN status IN ('preview','ready','committing') THEN 'failed' ELSE status END,revision=revision+1 WHERE id IN (${expired})`,
     ),
   ]);
+  return results[2].meta.changes;
 }

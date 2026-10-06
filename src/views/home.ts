@@ -86,16 +86,16 @@ export function theatreHome(
             featured.cover_id +
             '" alt="' +
             e(featured.title) +
-            '封面" loading="lazy">'
+            '封面" loading="lazy" decoding="async">'
           : '<span class="playbill-empty" aria-hidden="true">剧</span>') +
-        '</div><div class="playbill-copy"><p class="eyebrow">精选作品 · ' +
-        e(featured.year) +
-        "</p><h3>" +
+        '</div><div class="playbill-copy"><h3>' +
         e(featured.title) +
         (admin && featured.is_hidden ? " · 已隐藏" : "") +
-        "</h3><p>" +
+        '</h3><p class="eyebrow">精选作品 · ' +
+        e(featured.year || "年份待补") +
+        '</p></div><div class="playbill-caption"><p>' +
         e(featured.promo || featured.synopsis) +
-        "</p><span>进入作品 →</span></div></a>"
+        '</p><span>进入作品 <b aria-hidden="true">↓</b></span></div></a>'
       : "") +
     '<div class="playbill-list">' +
     latest

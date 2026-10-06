@@ -7,7 +7,7 @@ const source = code.slice(
   code.indexOf('  const stage = document.querySelector(".theatre-stage");'),
   code.indexOf('  document.querySelectorAll("[data-contribution-thanks]")'),
 );
-function setup(hash = "") {
+function setup(hash = "", ids = ["welcome", "playbill", "about"]) {
   let time = 1000;
   const stage = {
     dataset: {},
@@ -18,7 +18,7 @@ function setup(hash = "") {
       this.events[k] = f;
     },
   };
-  const scenes = ["welcome", "playbill", "about"].map((id) => ({
+  const scenes = ids.map((id) => ({
     id,
     hidden: false,
     inert: false,
@@ -144,4 +144,17 @@ test("scene changes transfer focus out of the hidden act; held keys do not skip 
   assert.equal(f.context.document.activeElement, f.scenes[1]);
   f.events.keydown({ key: "PageDown", repeat: true, target: f.scenes[1], preventDefault() {} });
   assert.deepEqual(f.visible(), ["playbill"]);
+});
+
+test("thanks shares two-act navigation, direct hashes and reverse gestures", () => {
+  const f = setup("#contributors", ["dedication", "contributors"]);
+  assert.deepEqual(f.visible(), ["contributors"]);
+  f.links[0].events.click({ preventDefault() {} });
+  assert.deepEqual(f.visible(), ["dedication"]);
+  assert.equal(f.wheel(), true);
+  assert.deepEqual(f.visible(), ["contributors"]);
+  assert.equal(f.wheel(undefined, -100), true);
+  assert.deepEqual(f.visible(), ["dedication"]);
+  f.links[1].events.click({ preventDefault() {} });
+  assert.equal(f.context.location.hash, "#contributors");
 });

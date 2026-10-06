@@ -65,7 +65,8 @@ for (const section of Object.keys(systemSections) as SystemSection[]) {
 operationsRoutes.get("/admin/system/data", async (c) => {
   const section = c.req.query("section");
   if (section && !Object.hasOwn(systemSections, section)) return c.text("未知系统信息主题。", 400);
-  return c.html(systemInfoSnapshot(await readSystemInfo(c.env), section as SystemSection | undefined));
+  const selected = (section || "architecture") as SystemSection;
+  return c.html(systemInfoSnapshot(await readSystemInfo(c.env, selected), selected));
 });
 operationsRoutes.get("/admin/system/check", async (c) => {
   const retry = await consumeAccountLimit(c, "dependency-check", 6, 60);

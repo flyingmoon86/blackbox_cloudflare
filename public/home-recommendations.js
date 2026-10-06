@@ -31,9 +31,13 @@
       const preferredWidth = Math.max(280, Math.min(440, innerWidth * 0.31));
       const width = Math.min(preferredWidth, innerWidth - 32, innerHeight * 0.55 * ratio);
       image.style.setProperty("--preview-width", `${width}px`);
-      // The pointer is the image centre on both axes. Do not constrain it to a row corridor.
-      targetX = (event?.clientX ?? bounds.left + bounds.width / 2) - bounds.left;
-      targetY = (event?.clientY ?? bounds.top + bounds.height / 2) - bounds.top;
+      // Follow the pointer freely, keeping the photo within the visible stage.
+      const height = width / ratio;
+      const scene = row.closest(".stage-scene").getBoundingClientRect();
+      const centreX = event?.clientX ?? bounds.left + bounds.width / 2;
+      const centreY = event?.clientY ?? bounds.top + bounds.height / 2;
+      targetX = Math.max(width / 2 + 16, Math.min(innerWidth - width / 2 - 16, centreX)) - bounds.left;
+      targetY = Math.max(scene.top + height / 2 + 12, Math.min(scene.bottom - height / 2 - 12, centreY)) - bounds.top;
       if (!active || reduced.matches) {
         x = targetX;
         y = targetY;

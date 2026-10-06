@@ -1,13 +1,35 @@
 import { AwsClient } from "aws4fetch";
 import type { Bindings } from "../types";
+import { UploadError } from "../services/upload-policy";
 
 export type CompletedPart = { partNumber: number; etag: string };
 
-export function usesDirectR2(env: Bindings): boolean {
+export function uploadModeConfiguration(env: Bindings): {
+  mode: "proxy" | "direct" | null;
+  ready: boolean;
+  error?: string;
+} {
+  const mode = env.UPLOAD_MODE ?? (env.ENVIRONMENT === "development" ? "proxy" : null);
+  if (mode !== "proxy" && mode !== "direct")
+    return { mode: null, ready: false, error: "请明确配置 UPLOAD_MODE 为 proxy 或 direct。" };
+  if (mode === "direct" && !hasDirectCredentials(env))
+    return { mode, ready: false, error: "直传配置不完整，请检查 R2 配置后重试。" };
+  return { mode, ready: true };
+}
+
+function hasDirectCredentials(env: Bindings): boolean {
   return Boolean(env.R2_ACCOUNT_ID && env.R2_ACCESS_KEY_ID && env.R2_SECRET_ACCESS_KEY && env.R2_BUCKET_NAME);
 }
 
+export function usesDirectR2(env: Bindings): boolean {
+  const configuration = uploadModeConfiguration(env);
+  if (!configuration.ready) throw new UploadError(configuration.error!, 503);
+  return configuration.mode === "direct";
+}
+
 function client(env: Bindings): AwsClient {
+  // Persisted direct tasks still need their original transport after a configuration switch.
+  if (!hasDirectCredentials(env)) throw new UploadError("直传配置不完整，请检查 R2 配置后重试。", 503);
   return new AwsClient({
     accessKeyId: env.R2_ACCESS_KEY_ID!,
     secretAccessKey: env.R2_SECRET_ACCESS_KEY!,

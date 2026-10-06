@@ -62,10 +62,16 @@ export async function consumeRules(c: Context<AppEnv>, rules: LimitRule[]): Prom
   return 0;
 }
 
-export async function cleanExpiredRequestLimits(env: Bindings): Promise<void> {
-  await env.DB.prepare(
-    "DELETE FROM request_limit WHERE key IN (SELECT key FROM request_limit WHERE expires_at <= ? ORDER BY expires_at LIMIT 200)",
-  )
-    .bind(Math.floor(Date.now() / 1000))
-    .run();
+export async function cleanExpiredRequestLimits(env: Bindings, deadline = Date.now() + 15_000): Promise<number> {
+  let removed = 0;
+  for (let batch = 0; batch < 20 && Date.now() < deadline; batch++) {
+    const result = await env.DB.prepare(
+      "DELETE FROM request_limit WHERE key IN (SELECT key FROM request_limit WHERE expires_at <= ? ORDER BY expires_at LIMIT 200)",
+    )
+      .bind(Math.floor(Date.now() / 1000))
+      .run();
+    removed += result.meta.changes;
+    if (result.meta.changes < 200) break;
+  }
+  return removed;
 }

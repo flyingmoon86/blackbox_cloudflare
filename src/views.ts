@@ -29,7 +29,7 @@ export function layout(title: string, content: string, signedIn = false, admin =
   const archiveGallery = !portal?.active && ["/productions", "/resources"].includes(context?.req.path || "");
   const memberGallery = !portal?.active && context?.req.path === "/members";
   const artPage =
-    !portal?.active && ["/productions", "/resources", "/members", "/thanks"].includes(context?.req.path || "")
+    !portal?.active && ["/productions", "/resources", "/members"].includes(context?.req.path || "")
       ? context!.req.path === "/resources"
         ? "productions"
         : (context!.req.path.slice(1) as StageScene)
@@ -184,6 +184,9 @@ export function layout(title: string, content: string, signedIn = false, admin =
     (bookLayout ? '<link rel="stylesheet" href="' + assetUrl("/layout-book.css") + '">' : "") +
     (memberGallery ? '<link rel="stylesheet" href="' + assetUrl("/layout-members.css") + '">' : "") +
     (archiveGallery ? '<link rel="stylesheet" href="' + assetUrl("/layout-gallery.css") + '">' : "") +
+    (!portal?.active && !workspace && !preview
+      ? '<link rel="stylesheet" href="' + assetUrl("/navigation-light.css") + '">'
+      : "") +
     '<script src="' +
     assetUrl("/app.js") +
     '" defer></script><script src="' +
@@ -191,7 +194,17 @@ export function layout(title: string, content: string, signedIn = false, admin =
     '" defer></script><script src="' +
     assetUrl("/experience.js") +
     '" defer></script>' +
+    (!portal?.active && !workspace && !preview
+      ? '<script src="' + assetUrl("/navigation-light.js") + '" defer></script>'
+      : "") +
     (admin ? '<script src="' + assetUrl("/review.js") + '" defer></script>' : "") +
+    (content.includes("data-resource-picker")
+      ? '<link rel="stylesheet" href="' +
+        assetUrl("/resource-picker.css") +
+        '"><script src="' +
+        assetUrl("/resource-picker.js") +
+        '" defer></script>'
+      : "") +
     (admin
       ? '<link rel="stylesheet" href="' +
         assetUrl("/image-picker.css") +
@@ -410,7 +423,7 @@ export function memberDetailPage(
     <div class="dossier-toolbar"><a data-member-return href="${back}">← 返回查找结果</a>${edit}</div>
     ${notice}<div class="dossier-grid">
     <header class="dossier-heading"><p class="eyebrow">队员档案</p><h1${member.name.length > 10 ? ' class="dossier-long-name"' : ""}>${escapeHtml(member.name)}</h1><div class="dossier-identity"><p>${escapeHtml(cohortLabel(member.cohort) || "剧团成员")}${member.join_year ? ` · ${member.join_year} 年入队` : ""}</p>${member.contributor ? '<span class="contributor-tag">网站贡献者</span>' : ""}</div>${member.bio ? `<p class="dossier-intro">${escapeHtml(member.bio.replace(/\s+/g, " ").slice(0, 72))}${member.bio.replace(/\s+/g, " ").length > 72 ? "…" : ""}</p>` : ""}</header>
-    <figure class="dossier-portrait">${member.photo ? `<a href="/members/${member.id}/avatar" data-dossier-photo aria-label="放大查看${escapeHtml(member.name)}的头像"><img src="/members/${member.id}/avatar" alt="${escapeHtml(member.name)}的头像" fetchpriority="high"><span>放大查看 ↗</span></a>` : `<div class="dossier-placeholder"><span aria-hidden="true">${escapeHtml(member.name.slice(0, 1))}</span><p>照片待补充</p></div>`}</figure>
+    <figure class="dossier-portrait">${member.photo ? `<a href="/members/${member.id}/avatar?size=original" data-dossier-photo aria-label="放大查看${escapeHtml(member.name)}的头像"><img src="/members/${member.id}/avatar?size=original" alt="${escapeHtml(member.name)}的头像" fetchpriority="high"><span>放大查看 ↗</span></a>` : `<div class="dossier-placeholder"><span aria-hidden="true">${escapeHtml(member.name.slice(0, 1))}</span><p>照片待补充</p></div>`}</figure>
     <div class="dossier-content"><nav class="dossier-tabs" aria-label="队员资料栏目"><a id="tab-about" href="#member-about">关于 TA</a><a id="tab-stage" href="#member-stage">舞台经历</a><a id="tab-flowers" href="#member-flowers">送来的心意</a></nav>
     <div class="dossier-panels"><section id="member-about" class="dossier-panel" aria-labelledby="tab-about"><h2>关于 TA</h2><p class="preline">${escapeHtml(member.bio || "这位队员的故事，等待慢慢补充。")}</p></section>
     <section id="member-stage" class="dossier-panel" aria-labelledby="tab-stage"><h2>舞台经历</h2>${experience}</section>

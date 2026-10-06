@@ -51,7 +51,7 @@ export function systemInfoPage(section: SystemSection = "architecture", flowKey 
                 `<a href="/admin/system/flows?flow=${key}"${key === selectedFlow ? ' aria-current="page"' : ""}>${label}</a>`,
             )
             .join("")}</nav><p>以下步骤均来自现有业务代码；此面板仅展示，不执行这些操作。</p>
-    ${flow("资料上传与审核", ["前端上传表单 → /api/uploads", "会话、CSRF、作品可见性与文件类型/大小校验", "D1：upload_task / upload_part、容量预留", "R2：Worker 分片上传；配置齐全时使用签名直传", "完成校验 → D1 resource；管理员审核接口 → review_history"], "src/routes/uploads.ts、src/services/uploads.ts、src/services/upload-policy.ts、src/routes/resources.ts、src/services/reviews.ts")}
+    ${flow("资料上传与审核", ["前端上传表单 → /api/uploads", "会话、CSRF、作品可见性与文件类型/大小校验", "D1：upload_task / upload_part、容量预留", "R2：按明确配置选择 Worker 代理或签名直传", "完成校验 → 管理员上传直接发布，其他账号待审核 → review_history"], "src/routes/uploads.ts、src/services/uploads.ts、src/services/upload-policy.ts、src/routes/resources.ts、src/services/reviews.ts")}
     ${flow("资料查看与文件读取", ["前端资料页 → /resources/:id 及文件读取路由", "查询 D1 resource、作品可见性及资料审核/上传者/管理员权限", "获准后通过 FILES 读取 R2 文件 → 返回内容；公开图片可使用边缘缓存"], "src/routes/resources.ts、src/services/production-visibility.ts、src/services/resource-files.ts")}
     ${flow("队员认证", ["用户提交认证申请 → D1 join_request", "管理员工作台 → /admin/requests/:id/approve 或 reject", "管理员身份与 CSRF 校验 → reviewRequest", "D1 更新申请、账号/档案关联并保存审核历史；不涉及文件存储"], "src/routes/members.ts、src/routes/admin.ts、src/services/reviews.ts")}</section>
     `
@@ -72,6 +72,41 @@ export function systemInfoPage(section: SystemSection = "architecture", flowKey 
   );
 }
 
+function maintenanceSnapshot(info: SystemInfo) {
+  if (info.maintenance.status === "error") return '<p role="alert">维护状态查询失败，请稍后重试。</p>';
+  const snapshot = info.maintenance.value;
+  if (!snapshot?.counts) return "";
+  const counts = snapshot.counts;
+  const age = (value: string | null) => {
+    if (!value) return "无积压";
+    const hours = Math.max(
+      0,
+      Math.floor((Date.parse(info.checkedAt) - Date.parse(value.replace(" ", "T") + "Z")) / 3_600_000),
+    );
+    return `${hours} 小时`;
+  };
+  const labels: Record<string, string> = {
+    uploads: "上传恢复与文件清理",
+    "request-limits": "过期限流记录",
+    imports: "过期导入明细",
+  };
+  const statuses = { running: "执行中", ok: "本轮执行成功", partial: "部分任务失败，等待重试", error: "执行失败" };
+  return `<section class="card"><h2>日常维护</h2><p>待审核：${counts.pending_reviews}；待恢复上传：${counts.upload_backlog}（最老 ${age(counts.oldest_upload)}）；待清理文件：${counts.cleanup_backlog}（最老 ${age(counts.oldest_cleanup)}）。</p><p>过期限流记录：${counts.expired_limits}；待清理导入批次：${counts.expired_imports}。每轮有处理上限，执行成功不等于积压已全部清空。</p><ul>${Object.entries(
+    labels,
+  )
+    .map(([key, label]) => {
+      const job = snapshot.jobs.find((item) => item.job === key);
+      if (!job) return `<li>${label}：尚无执行记录。</li>`;
+      const stale =
+        !job.last_success_at ||
+        Date.parse(info.checkedAt) - Date.parse(job.last_success_at.replace(" ", "T") + "Z") > 2 * 3_600_000;
+      return `<li${job.status === "error" || job.status === "partial" || stale ? ' role="alert"' : ""}>${label}：${statuses[job.status]}；本轮处理 ${job.processed_count}，失败 ${job.failure_count}；最近成功：${e(job.last_success_at || "尚无成功记录")}${job.last_success_at ? " UTC" : ""}${stale ? "。请检查定时任务是否持续运行。" : "。"}</li>`;
+    })
+    .join(
+      "",
+    )}</ul><p class="muted">来源：当前资料审核状态、维护队列与定时任务记录。备份和恢复校验由离线维护工具执行，此页不读取本地备份状态。</p></section>`;
+}
+
 export function systemInfoSnapshot(info: SystemInfo, section?: SystemSection) {
   const bytes = (value: number) => `${e(value)} 字节`;
   const tables = info.database.tables
@@ -85,9 +120,9 @@ export function systemInfoSnapshot(info: SystemInfo, section?: SystemSection) {
     .join("");
   const ledger = info.ledger.value;
   return `<div data-system-meta data-table-count="${info.database.tables.length}" data-db-status="${e(info.database.status)}" data-r2-status="${e(info.storage)}" data-bucket="${e(info.bucket || "不可获取")}" data-checked="${e(info.checkedAt)}" hidden></div><p>查询完成时间：<time>${e(info.checkedAt)}</time>（UTC） · 当前环境：${e(info.environment)}</p>
-    ${
+    ${section === "architecture" || section === "storage" ? maintenanceSnapshot(info) : ""}${
       !section || section === "database"
-        ? `<section id="system-database"><h2>数据库表结构</h2><p>来源：当前 DB 绑定的 sqlite_schema、PRAGMA table_info / foreign_key_list；用途说明来自 migrations 与业务代码。只展示字段定义，不查询业务行或字段默认值。排除 SQLite / Cloudflare 内部表。</p>
+        ? `<section id="system-database"><h2>数据库表结构</h2><p>来源：当前 DB 绑定的 sqlite_schema、PRAGMA table_info / foreign_key_list；用途说明来自 migrations 与业务代码。只展示字段定义，不查询业务行或字段默认值。排除 SQLite / Cloudflare 内部表及已退役的邮箱令牌表；遗留数据仍保留。</p>
     ${info.database.status !== "error" && info.database.tables.length ? `<div class="schema-explorer"><div class="schema-toolbar"><label>查找表<input type="search" id="schema-search" placeholder="表名或用途"></label><label>关系焦点<select id="schema-focus">${info.database.tables.map((t) => `<option value="${e(t.name)}"${t.name === "resource" ? " selected" : ""}>${e(t.name)}</option>`).join("")}</select></label></div><p class="muted">选择一张表查看其直接外键关系；点击图中表名展开字段。连线表示已确认的外键关联；×N 表示同一对表有多条外键。引用字段、方向与删除规则见图下清单。</p><div id="schema-graph" class="schema-graph" aria-label="数据库外键关系图"></div><p id="schema-result" role="status"></p></div>` : ""}
     ${info.database.status === "error" ? '<p role="alert" class="notice">数据库结构查询失败，请稍后刷新重试。</p>' : tables || '<p class="card">当前数据库没有可展示的表。</p>'}
     <p>代码确认的文件关联：resource.filename / preview_filename、upload_task.object_key → FILES 对象；storage_object.object_key 是文件台账键（src/services/uploads.ts、src/services/upload-policy.ts）。这是业务关联，不是数据库外键；未展示未经核实的推断关系。</p></section>
@@ -96,11 +131,11 @@ export function systemInfoSnapshot(info: SystemInfo, section?: SystemSection) {
     }${
       !section || section === "storage"
         ? `<section id="system-storage" class="card"><h2>资源桶信息</h2><div class="storage-visual" aria-hidden="true"><div class="storage-stack"><i></i><i></i><i></i></div><div><strong>FILES / R2</strong><span>文件存储 · 经业务权限校验访问</span></div></div><p>绑定：FILES（R2）。桶名称配置：${e(info.bucket || "不可获取（未配置 R2_BUCKET_NAME）")}。</p><p>来源：当前环境 R2_BUCKET_NAME；绑定无法自报物理桶名称，配置与实际绑定是否一致尚未独立验证。项目 wrangler.jsonc 配置开发桶 blackbox-files、生产桶 blackbox-files-production。</p>
-    <p>用途：资料原文件、预览图、队员头像与网站展示图片。访问方式：业务接口校验后由 Worker 读写；${info.directUpload ? "直传所需配置齐全，上传可使用签名分片 URL" : "直传配置未齐全，使用 Worker 上传"}。不展示对象路径、文件内容或签名 URL。</p>
+    <p${!info.uploadConfiguration.ready ? ' role="alert"' : ""}>用途：资料原文件、预览图、队员头像与网站展示图片。访问方式：业务接口校验后由 Worker 读写；${!info.uploadConfiguration.ready ? "上传配置不可用，请检查上传模式及所需凭据" : info.directUpload ? "已明确配置签名分片直传" : "已选择 Worker 代理上传"}。不展示对象路径、文件内容或签名 URL。</p>
     <p${info.storage === "error" ? ' role="alert"' : ""}>实时连接检查：${info.storage === "ok" ? "R2 HEAD 请求成功（仅代表连接可用）" : "查询失败，请稍后重试"}。来源：FILES.head；时间同本次查询。</p>
     <dl><dt>平台对象总数</dt><dd>不可获取</dd><dt>平台已用容量</dt><dd>不可获取</dd><dt>平台剩余容量</dt><dd>不可获取</dd><dt>平台容量限额</dt><dd>不可获取（未接入平台配额数据）</dd></dl><p>现有绑定未提供这些汇总数据；本面板不全桶扫描，也不将应用台账当作平台统计。</p>
     <details><summary>应用上传预算与台账（非 R2 实际容量）</summary><p>代码配置的新上传预算：${bytes(info.uploadBudgetBytes)}；来源：src/services/upload-policy.ts。不是 Cloudflare 配额或可用空间。</p>
     ${info.ledger.status === "error" ? '<p role="alert">应用台账查询失败。</p>' : !ledger ? "<p>暂无应用台账数据。</p>" : `<p>初始化核对：${ledger.initialized ? "已完成" : "尚未完成，台账可能不完整"}；记录文件字节：${bytes(ledger.used_bytes)}；预留字节：${bytes(ledger.reserved_bytes)}；待清理任务：${ledger.cleanup_tasks}。</p><p>来源：D1 storage_budget / file_cleanup_task；台账更新时间：${e(ledger.updated_at)} UTC；读取时间同本次查询。台账可能与 R2 不一致，不计算平台剩余容量。</p>`}</details></section>`
         : ""
-    }${section === "architecture" ? `<p${info.database.status === "error" || info.storage === "error" ? ' role="alert"' : ""}>${info.database.status === "error" ? "数据库结构查询失败。" : `数据库结构查询成功，共 ${info.database.tables.length} 张表。`} ${info.storage === "ok" ? "R2 连接检查成功。" : "R2 连接检查失败。"} 请选择地图模块查看详情。</p>` : ""}`;
+    }${section === "architecture" ? `<p${info.database.status === "error" || info.storage === "error" ? ' role="alert"' : ""}>${info.database.status === "error" ? "数据库连接检查失败。" : "数据库连接正常。"} ${info.storage === "ok" ? "R2 连接检查成功。" : "R2 连接检查失败。"} 表结构仅在数据库主题中查询。</p>` : ""}`;
 }

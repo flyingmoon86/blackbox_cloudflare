@@ -260,7 +260,9 @@ memberRoutes.get("/members/:id/avatar", async (c) => {
     .bind(Number(c.req.param("id")))
     .first<{ photo: string; avatar_preview: string }>();
   if (!row?.photo) return c.text("头像不存在。", 404);
-  return serveResourceFile(c.req.raw, c.env.FILES, { key: row.avatar_preview || row.photo });
+  // Detail portraits and zoom need the original; list cards retain the lightweight preview.
+  const key = c.req.query("size") === "original" ? row.photo : row.avatar_preview || row.photo;
+  return serveResourceFile(c.req.raw, c.env.FILES, { key });
 });
 
 memberRoutes.get("/admin/members/new", async (c) => {

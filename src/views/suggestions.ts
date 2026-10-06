@@ -1,4 +1,6 @@
 import type { SuggestionRow } from "../routes/suggestions";
+import { adminPageUrl, type AdminPage } from "../http/pagination";
+import { adminPagination, filterSelect, listReturnInput } from "./admin-pagination";
 import { yearSelect } from "./shared";
 import { escapeHtml, layout } from "../views";
 
@@ -29,18 +31,18 @@ export function suggestionPermissionPage(admin: boolean): string {
   );
 }
 
-export function suggestionInboxPage(rows: SuggestionRow[], csrf: string): string {
+export function suggestionInboxPage(rows: SuggestionRow[], csrf: string, page: AdminPage): string {
   const items = rows.length
     ? rows
         .map(
           (row) =>
-            `<article class="card"><p class="eyebrow">${row.category === "production" ? "作品建档申请" : "网站建议"} · ${row.status === "open" ? "待处理" : "已处理"} · ${escapeHtml(row.created_at.slice(0, 16))}</p><h2>${row.category === "production" ? escapeHtml(row.production_title || "未填写作品名") : escapeHtml(row.username)}</h2>${row.category === "production" ? `<p>申请人：${escapeHtml(row.username)}${row.production_year ? ` · 演出年份：${row.production_year}` : ""}</p>` : ""}<p class="preline">${escapeHtml(row.content)}</p>${row.admin_note ? `<p class="notice">管理员记录：${escapeHtml(row.admin_note)}</p>` : ""}<form method="post" action="/admin/suggestions/${row.id}/resolve"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>处理记录（可选）<input name="admin_note" maxlength="1000" value="${escapeHtml(row.admin_note)}"></label><button>${row.status === "open" ? "标记已处理" : "更新处理记录"}</button></form></article>`,
+            `<article class="card"><p class="eyebrow">${row.category === "production" ? "作品建档申请" : "网站建议"} · ${row.status === "open" ? "待处理" : "已处理"} · ${escapeHtml(row.created_at.slice(0, 16))}</p><h2>${row.category === "production" ? escapeHtml(row.production_title || "未填写作品名") : escapeHtml(row.username)}</h2>${row.category === "production" ? `<p>申请人：${escapeHtml(row.username)}${row.production_year ? ` · 演出年份：${row.production_year}` : ""}</p>` : ""}<p class="preline">${escapeHtml(row.content)}</p>${row.admin_note ? `<p class="notice">管理员记录：${escapeHtml(row.admin_note)}</p>` : ""}<form method="post" action="/admin/suggestions/${row.id}/resolve"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}">${listReturnInput(adminPageUrl(page))}<label>处理记录（可选）<input name="admin_note" maxlength="1000" value="${escapeHtml(row.admin_note)}"></label><button>${row.status === "open" ? "标记已处理" : "更新处理记录"}</button></form></article>`,
         )
         .join("")
     : '<p class="card">收件箱里还没有建议。</p>';
   return layout(
     "意见箱收件箱",
-    `<section class="page-heading"><p class="eyebrow">ADMIN INBOX</p><h1>建议与建档申请</h1><p>网站建议和队员提交的作品建档申请都会集中在这里。</p></section><section class="review-grid">${items}</section>`,
+    `<section class="page-heading"><p class="eyebrow">ADMIN INBOX</p><h1>建议与建档申请</h1><p>网站建议和队员提交的作品建档申请都会集中在这里。</p><form class="filters" method="get" action="/admin/suggestions" role="search"><label>作品、申请人或内容<input type="search" name="q" maxlength="100" value="${escapeHtml(page.params.q)}"></label><label>状态${filterSelect("status", page.params.status, { "": "全部状态", open: "待处理", resolved: "已处理" })}</label><label>类别${filterSelect("category", page.params.category, { "": "全部类别", website: "网站建议", production: "作品建档申请" })}</label><button>查找</button><a class="button secondary" href="/admin/suggestions">清除</a></form></section><section class="review-grid" data-server-paged>${items}</section>${adminPagination(page)}`,
     true,
     true,
   );

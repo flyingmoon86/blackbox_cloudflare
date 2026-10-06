@@ -10,6 +10,7 @@ export type Bindings = {
   TURNSTILE_HOSTNAMES?: string;
   ADMIN_ORIGIN?: string;
   PUBLIC_ORIGIN?: string;
+  UPLOAD_MODE?: "proxy" | "direct";
   R2_BUCKET_NAME?: string;
   R2_ACCOUNT_ID?: string;
   R2_ACCESS_KEY_ID?: string;

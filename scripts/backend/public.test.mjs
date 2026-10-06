@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFileSync } from "node:fs";
 import { createDatabase, d1, loadWorker, loadModule, fakeBucket, context } from "./harness.mjs";
 const worker = await loadWorker();
 const { createSession } = await loadModule("src/auth/session.ts");
@@ -183,7 +184,7 @@ test("named flowers show cumulative names and retain anonymous counts", async ()
   assert.equal(s.db.prepare("SELECT COUNT(*) n FROM flower").get().n, 1);
 });
 
-test("feedback is idempotent, private text stays private and opting out hides thanks", async () => {
+test("feedback is idempotent and sends a private receipt without creating contributors", async () => {
   const s = await setup(),
     nonce = crypto.randomUUID();
   for (let i = 0; i < 2; i++)
@@ -199,13 +200,37 @@ test("feedback is idempotent, private text stays private and opting out hides th
       303,
     );
   assert.equal(s.db.prepare("SELECT COUNT(*) n FROM website_feedback").get().n, 1);
-  assert.equal(s.db.prepare("SELECT COUNT(*) n FROM contribution_event").get().n, 1);
+  assert.equal(s.db.prepare("SELECT COUNT(*) n FROM site_contributor").get().n, 0);
+  assert.equal(s.db.prepare("SELECT COUNT(*) n FROM contribution_event").get().n, 0);
+  const receipt = s.db.prepare("SELECT request_key FROM website_feedback").get().request_key;
+  assert.match(await (await s.req(0, "/feedback?sent=" + encodeURIComponent(receipt))).text(), /建议已经送达管理员/);
+  assert.doesNotMatch(
+    await (await s.req(3, "/feedback?sent=" + encodeURIComponent(receipt))).text(),
+    /data-contribution-thanks/,
+  );
   let html = await (await s.req(0, "/thanks")).text();
-  assert.match(html, /热心朋友/);
+  assert.doesNotMatch(html, /热心朋友/);
   assert.ok(!html.includes("非公开建议正文"));
   await s.post(0, "/feedback", { request_key: crypto.randomUUID(), display_name: "热心朋友", content: "选择不公开" });
   html = await (await s.req(0, "/thanks")).text();
   assert.ok(!html.includes("热心朋友"));
+});
+
+test("retiring the feedback trigger preserves historical contributors, consent and events", () => {
+  const db = createDatabase(19);
+  db.exec(
+    "INSERT INTO website_feedback(request_key,identity_key,display_name,public_consent,content) VALUES('before','visitor:historical','保留的鸣谢',0,'原始建议')",
+  );
+  const contributors = db.prepare("SELECT * FROM site_contributor").all();
+  const events = db.prepare("SELECT * FROM contribution_event").all();
+  db.exec(readFileSync("migrations/0020_feedback_manual_thanks.sql", "utf8"));
+  db.exec(
+    "INSERT INTO website_feedback(request_key,identity_key,display_name,public_consent,content) VALUES('after','visitor:historical','新称呼',1,'新建议')",
+  );
+  assert.deepEqual(db.prepare("SELECT * FROM site_contributor").all(), contributors);
+  assert.deepEqual(db.prepare("SELECT * FROM contribution_event").all(), events);
+  assert.equal(db.prepare("SELECT COUNT(*) n FROM website_feedback").get().n, 2);
+  db.close();
 });
 test("admin grant and revoke are protected; repeated suggestions cannot undo a revocation", async () => {
   const s = await setup();
@@ -219,7 +244,10 @@ test("admin grant and revoke are protected; repeated suggestions cannot undo a r
   assert.ok(!adminPage.includes("了解黑匣子"));
   assert.ok(!(await (await s.req(0, "/")).text()).includes('<a href="/admin">管理</a>'));
   assert.equal((await s.post(3, "/admin/community", { action: "grant", target: "user:2" })).status, 403);
-  assert.equal((await s.post(1, "/admin/community", { action: "grant", target: "user:2" })).status, 303);
+  assert.equal(
+    (await s.post(1, "/admin/community", { action: "grant", target: "user:2", public_consent: "1" })).status,
+    303,
+  );
   let html = await (await s.req(0, "/members/1")).text();
   assert.match(html, /contributor-tag/);
   const id = s.db.prepare("SELECT id FROM site_contributor").get().id;
@@ -228,6 +256,40 @@ test("admin grant and revoke are protected; repeated suggestions cannot undo a r
   assert.ok(s.db.prepare("SELECT revoked_at FROM site_contributor").get().revoked_at);
   html = await (await s.req(0, "/members/1")).text();
   assert.ok(!html.includes('class="contributor-tag"'));
+});
+
+test("manual thanks preserve recorded consent and require consent for new public names", async () => {
+  const s = await setup();
+  await s.post(2, "/feedback", { request_key: crypto.randomUUID(), content: "请勿公开姓名" });
+  await s.post(1, "/admin/community", { action: "grant", target: "user:2", public_consent: "1" });
+  assert.equal(
+    s.db.prepare("SELECT public_consent FROM site_contributor WHERE identity_key='user:2'").get().public_consent,
+    0,
+  );
+  await s.post(2, "/feedback", { request_key: crypto.randomUUID(), content: "新的建议", public_consent: "1" });
+  await s.post(1, "/admin/community", { action: "grant", target: "user:2", public_consent: "1" });
+  assert.equal(
+    s.db.prepare("SELECT public_consent FROM site_contributor WHERE identity_key='user:2'").get().public_consent,
+    0,
+  );
+  await s.post(1, "/admin/community", { action: "grant", target: "user:3" });
+  assert.equal(
+    s.db.prepare("SELECT public_consent FROM site_contributor WHERE identity_key='user:3'").get().public_consent,
+    0,
+  );
+  s.db.exec("INSERT INTO member(id,name) VALUES(2,'已同意的队员')");
+  await s.post(1, "/admin/community", { action: "grant", target: "member:2", public_consent: "1" });
+  assert.equal(
+    s.db.prepare("SELECT public_consent FROM site_contributor WHERE identity_key='member:2'").get().public_consent,
+    1,
+  );
+  assert.equal(
+    (await s.post(1, "/admin/community", { action: "grant", target: "visitor:anonymous", public_consent: "1" })).status,
+    400,
+  );
+  const html = await (await s.req(0, "/thanks")).text();
+  assert.match(html, /已同意的队员/);
+  assert.doesNotMatch(html, /队员账号|普通账号/);
 });
 test("withdrawal immediately denies public previews including conditional requests", async () => {
   const s = await setup();
@@ -272,10 +334,10 @@ test("administrators cannot create or rename duplicate member profiles and can d
   assert.equal((await s.post(1, "/admin/members/21/delete", { confirm_name: "待删档案" })).status, 303);
   assert.equal(s.db.prepare("SELECT id FROM member WHERE id=21").get(), undefined);
 });
-test("ordinary account uploads stay pending; member uploads record system approval once", async () => {
+test("ordinary and member uploads stay pending; administrator uploads publish with one attributed review", async () => {
   const s = await setup(),
     bytes = new Uint8Array([255, 216, 255, 224, 0, 16, 74, 70, 73, 70, 0, 1, 0, 0, 255, 217]);
-  for (const id of [3, 2]) {
+  for (const id of [3, 2, 1]) {
     const headers = { "x-csrf-token": "public-csrf", "content-type": "application/json" };
     const start = await s.req(id, "/api/uploads", {
       method: "POST",
@@ -299,17 +361,24 @@ test("ordinary account uploads stay pending; member uploads record system approv
     const finished = await s.req(id, "/api/uploads/" + task.id + "/complete", { method: "POST", headers });
     assert.equal(finished.status, 200, await finished.clone().text());
     const result = await finished.json();
-    assert.equal(result.status, id === 2 ? "approved" : "pending");
+    assert.equal(result.status, id === 1 ? "approved" : "pending");
     await s.req(id, "/api/uploads/" + task.id + "/complete", { method: "POST", headers });
     const count = s.db
       .prepare("SELECT COUNT(*) n FROM review_history WHERE entity_id=? AND entity_type='resource'")
       .get(result.resourceId).n;
-    assert.equal(count, id === 2 ? 1 : 0);
+    assert.equal(count, id === 1 ? 1 : 0);
+    if (id === 1)
+      assert.equal(
+        s.db
+          .prepare("SELECT actor_id FROM review_history WHERE entity_id=? AND entity_type='resource'")
+          .get(result.resourceId).actor_id,
+        1,
+      );
   }
   assert.deepEqual(s.db.prepare("PRAGMA foreign_key_check").all(), []);
 });
 
-test("uncertain formats and duplicate fingerprints go to manual review", async () => {
+test("member uploads always require manual review, including uncertain formats and duplicate fingerprints", async () => {
   const s = await setup();
   const { completeUpload } = await loadModule("src/services/uploads.ts");
   const bytes = new Uint8Array([255, 216, 255, 224, 255, 217]);
@@ -481,7 +550,7 @@ test("selected display assets serve original bytes without exposing unselected o
   assert.equal((await s.req(0, "/site/background?section=productions")).status, 204);
 });
 
-test("all production covers expose only the selected approved original", async () => {
+test("production covers select only the approved cover, with previews in lists and originals in details", async () => {
   const s = await setup();
   const bytes = new Uint8Array([255, 216, 255, 5, 6, 255, 217]);
   await s.env.FILES.put("original.jpg", bytes);
@@ -489,8 +558,8 @@ test("all production covers expose only the selected approved original", async (
   const response = await s.req(0, "/productions/1/cover?id=2");
   assert.equal(response.status, 200);
   assert.deepEqual(new Uint8Array(await response.arrayBuffer()), bytes);
-  for (const path of ["/productions", "/productions/1"])
-    assert.match(await (await s.req(0, path)).text(), /src="\/productions\/1\/cover\?v=1"/);
+  assert.match(await (await s.req(0, "/productions")).text(), /src="\/productions\/1\/cover\?size=preview&amp;v=1"/);
+  assert.match(await (await s.req(0, "/productions/1")).text(), /src="\/productions\/1\/cover\?v=1"/);
   assert.equal((await s.req(0, "/productions/999/cover")).status, 404);
   s.db.exec("UPDATE resource SET status='pending' WHERE id=1");
   assert.equal((await s.req(0, "/productions/1/cover")).status, 404);

@@ -85,9 +85,8 @@ function updateLive() {
   const time = " · 查询于 " + meta.dataset.checked + " UTC";
   target.textContent =
     selected === "db"
-      ? (meta.dataset.dbStatus === "error"
-          ? "数据库结构查询失败"
-          : "结构查询成功 · " + meta.dataset.tableCount + " 张表") + time
+      ? (meta.dataset.dbStatus === "error" ? "数据库连接检查失败" : "数据库连接正常 · 表结构请在数据库主题中查看") +
+        time
       : selected === "r2"
         ? (meta.dataset.r2Status === "ok" ? "HEAD 检查成功 · 仅代表连接可用" : "R2 连接查询失败") + time
         : "代码或配置已确认；线上部署版本与实际流量未核实。";

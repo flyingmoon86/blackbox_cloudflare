@@ -1,6 +1,7 @@
 import { consumeAccountLimit } from "../middleware/request-limits";
 import { Hono } from "hono";
 import { csrfFor, csrfValid } from "../http/cookies";
+import { adminPage, filterChoice, likeTerm, safeListReturn, searchTerm } from "../http/pagination";
 import type { AppEnv } from "../types";
 import { suggestionFormPage, suggestionInboxPage, suggestionPermissionPage } from "../views/suggestions";
 
@@ -47,10 +48,7 @@ suggestionRoutes.post("/suggestions", async (c) => {
   const productionYear = productionYearText ? Number(productionYearText) : null;
   if (content.length > 3000) return c.text("补充说明不能超过 3000 字。", 400);
   if (category === "website")
-    return c.text(
-      "网站建议入口已更新，请到 /feedback 提交，保存成功后会记录网站贡献。当前内容尚未保存，请复制后再前往。",
-      409,
-    );
+    return c.text("网站建议入口已更新，请到 /feedback 提交。当前内容尚未保存，请复制后再前往。", 409);
   if (
     category === "production" &&
     (!productionTitle ||
@@ -73,11 +71,42 @@ suggestionRoutes.post("/suggestions", async (c) => {
 
 suggestionRoutes.get("/admin/suggestions", async (c) => {
   if (c.get("user")!.role !== "admin") return c.text("没有管理员权限。", 403);
+  const params = {
+    q: searchTerm(c.req.query("q")),
+    status: filterChoice(c.req.query("status"), ["open", "resolved"]),
+    category: filterChoice(c.req.query("category"), ["website", "production"]),
+  };
+  const clauses: string[] = [],
+    values: string[] = [];
+  if (params.q) {
+    clauses.push(
+      "(s.production_title LIKE ? ESCAPE '\\' OR s.content LIKE ? ESCAPE '\\' OR u.username LIKE ? ESCAPE '\\')",
+    );
+    values.push(...Array(3).fill(likeTerm(params.q)));
+  }
+  if (params.status) {
+    clauses.push("s.status=?");
+    values.push(params.status);
+  }
+  if (params.category) {
+    clauses.push("s.category=?");
+    values.push(params.category);
+  }
+  const from =
+    " FROM suggestion s JOIN user u ON u.id=s.user_id" + (clauses.length ? " WHERE " + clauses.join(" AND ") : "");
+  const total =
+    (await c.env.DB.prepare("SELECT COUNT(*) n" + from)
+      .bind(...values)
+      .first<number>("n")) || 0;
+  const page = adminPage(total, c.req.query("page"), "/admin/suggestions", params, 12);
   const rows = await c.env.DB.prepare(
-    `SELECT s.id,u.username,s.content,s.status,s.admin_note,s.created_at,s.category,s.production_title,s.production_year FROM suggestion s
-     JOIN user u ON u.id=s.user_id ORDER BY CASE s.status WHEN 'open' THEN 0 ELSE 1 END,s.created_at DESC`,
-  ).all<SuggestionRow>();
-  return c.html(suggestionInboxPage(rows.results, await csrfFor(c)));
+    "SELECT s.id,u.username,s.content,s.status,s.admin_note,s.created_at,s.category,s.production_title,s.production_year" +
+      from +
+      " ORDER BY CASE s.status WHEN 'open' THEN 0 ELSE 1 END,s.created_at DESC,s.id DESC LIMIT ? OFFSET ?",
+  )
+    .bind(...values, page.size, (page.page - 1) * page.size)
+    .all<SuggestionRow>();
+  return c.html(suggestionInboxPage(rows.results, await csrfFor(c), page));
 });
 
 suggestionRoutes.post("/admin/suggestions/:id/resolve", async (c) => {
@@ -93,5 +122,5 @@ suggestionRoutes.post("/admin/suggestions/:id/resolve", async (c) => {
     .bind(note, Number(c.req.param("id")))
     .run();
   if (result.meta.changes !== 1) return c.text("建议不存在。", 404);
-  return c.redirect("/admin/suggestions", 303);
+  return c.redirect(safeListReturn(form.get("return_to"), "/admin/suggestions"), 303);
 });

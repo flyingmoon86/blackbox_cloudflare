@@ -3,7 +3,16 @@ import test from "node:test";
 import vm from "node:vm";
 import { readFileSync } from "node:fs";
 const source = readFileSync("public/home-light.js", "utf8");
-function fixture({ preview = false, failedBase = false, failedLight = false, mismatch = false, mobile = false } = {}) {
+function fixture({
+  preview = false,
+  failedBase = false,
+  failedLight = false,
+  mismatch = false,
+  mobile = false,
+  firstVisit = false,
+  seen = false,
+  storageBlocked = false,
+} = {}) {
   const handlers = {};
   const element = (props = {}) => ({
     style: {
@@ -40,6 +49,7 @@ function fixture({ preview = false, failedBase = false, failedLight = false, mis
   });
   const toggle = element({ disabled: true }),
     status = element({ textContent: "" }),
+    hint = element({ hidden: true }),
     art = element({ clientWidth: mobile ? 390 : 1280, clientHeight: mobile ? 788 : 664 }),
     plane = element();
   const config = { intensity: 85, shade: 58, desktopX: 50, desktopY: 45, mobileX: 64, mobileY: 40 };
@@ -48,6 +58,7 @@ function fixture({ preview = false, failedBase = false, failedLight = false, mis
     "[data-theatre-light]": light,
     ".theatre-light-switch": toggle,
     ".theatre-light-status": status,
+    ".theatre-light-hint": hint,
     ".theatre-art": art,
     ".stage-image-plane": plane,
   };
@@ -56,7 +67,8 @@ function fixture({ preview = false, failedBase = false, failedLight = false, mis
     querySelector: (s) => nodes[s],
     hasAttribute: () => preview,
   });
-  const storage = new Map([["blackbox-stage-lights", "on"]]);
+  const storage = new Map(firstVisit ? [] : [["blackbox-stage-lights", "on"]]);
+  if (seen) storage.set("blackbox-stage-light-hint", "seen");
   const parent = { postMessage() {} };
   vm.runInNewContext(source, {
     document: { querySelector: () => scene, documentElement: { classList: { add() {} } }, addEventListener() {} },
@@ -67,14 +79,23 @@ function fixture({ preview = false, failedBase = false, failedLight = false, mis
     },
     parent,
     location: { origin: "http://localhost", href: "http://localhost/productions" },
-    localStorage: { getItem: (k) => storage.get(k), setItem: (k, v) => storage.set(k, v) },
+    localStorage: {
+      getItem: (k) => {
+        if (storageBlocked) throw Error("blocked");
+        return storage.get(k);
+      },
+      setItem: (k, v) => {
+        if (storageBlocked) throw Error("blocked");
+        return storage.set(k, v);
+      },
+    },
     matchMedia: () => ({ matches: mobile }),
     ResizeObserver: class {
       observe() {}
     },
     URL,
   });
-  return { base, light, toggle, status, plane, scene, storage, handlers, parent, config };
+  return { base, light, toggle, status, hint, plane, scene, storage, handlers, parent, config };
 }
 test("shared switch persists state, synchronizes storage and uses one responsive crop for all layers", () => {
   for (const mobile of [false, true]) {
@@ -129,7 +150,7 @@ test("reduced motion disables all light transitions and artwork remains outside 
   const css = readFileSync("public/home-light.css", "utf8");
   assert.match(css, /@media\(prefers-reduced-motion:reduce\)[\s\S]*stage-direction[\s\S]*transition:none/);
   const home = readFileSync("src/views/home.ts", "utf8");
-  assert.match(home, /<h1>黑匣子<\/h1>/);
+  assert.match(home, /id="welcome" aria-label="黑匣子首页"/);
   assert.doesNotMatch(home, /永远是你家/);
   assert.match(home, /stageAttributes\("home"[\s\S]*\+\s+image[\s\S]*id="welcome"/);
   assert.doesNotMatch(readFileSync("src/views/stage-art.ts", "utf8"), /stage-lamp-label/);
@@ -146,4 +167,26 @@ test("story text and poster have independent flowing columns with uncropped post
   assert.match(css, /@media\(max-width:900px\)[\s\S]*\.troupe-layout\{grid-template-columns:minmax\(0,1fr\)/);
   assert.match(css, /\.stage-direction\{z-index:2\}/);
   assert.match(css, /\.theatre-art::after\{[^}]*z-index:1/);
+});
+
+test("first-visit light hint follows readiness and disappears permanently after lighting", () => {
+  const f = fixture({ firstVisit: true });
+  assert.equal(f.hint.hidden, false);
+  assert.equal(f.toggle.attrs["aria-describedby"], "stage-light-hint");
+  f.toggle.events.click();
+  assert.equal(f.hint.hidden, true);
+  assert.equal(f.storage.get("blackbox-stage-light-hint"), "seen");
+  f.toggle.events.click();
+  assert.equal(f.hint.hidden, true);
+  assert.equal(fixture({ firstVisit: true, seen: true }).hint.hidden, true);
+  for (const options of [{ preview: true }, { failedBase: true }, { failedLight: true }, { mismatch: true }])
+    assert.equal(fixture({ firstVisit: true, ...options }).hint.hidden, true);
+  const blocked = fixture({ firstVisit: true, storageBlocked: true });
+  assert.equal(blocked.hint.hidden, false);
+  blocked.toggle.events.click();
+  assert.equal(blocked.hint.hidden, true);
+  const tab = fixture({ firstVisit: true });
+  tab.storage.set("blackbox-stage-light-hint", "seen");
+  tab.handlers.storage({ key: "blackbox-stage-light-hint" });
+  assert.equal(tab.hint.hidden, true);
 });

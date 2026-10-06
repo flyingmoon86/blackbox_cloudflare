@@ -26,7 +26,13 @@ export function multipartCleanupStatements(
   ];
 }
 
-export async function drainFileCleanup(env: Bindings, limit = 20): Promise<void> {
+export async function drainFileCleanup(
+  env: Bindings,
+  limit = 20,
+  deadline = Infinity,
+): Promise<{ processed: number; failed: number }> {
+  let processed = 0;
+  let failed = 0;
   const rows = await env.DB.prepare(
     "SELECT object_key,reservation_id,multipart_upload_id,upload_mode FROM file_cleanup_task WHERE next_attempt_at<=CURRENT_TIMESTAMP AND (lease_token IS NULL OR lease_expires_at<CURRENT_TIMESTAMP) ORDER BY created_at LIMIT ?",
   )
@@ -38,6 +44,7 @@ export async function drainFileCleanup(env: Bindings, limit = 20): Promise<void>
       upload_mode: string | null;
     }>();
   for (const task of rows.results) {
+    if (Date.now() >= deadline) break;
     const token = crypto.randomUUID();
     const lock = await env.DB.prepare(
       "UPDATE file_cleanup_task SET lease_token=?,lease_expires_at=datetime('now','+5 minutes') WHERE object_key=? AND (lease_token IS NULL OR lease_expires_at<CURRENT_TIMESTAMP)",
@@ -45,6 +52,7 @@ export async function drainFileCleanup(env: Bindings, limit = 20): Promise<void>
       .bind(token, task.object_key)
       .run();
     if (lock.meta.changes !== 1) continue;
+    processed++;
     try {
       const referenced = await env.DB.prepare(
         "SELECT 1 FROM resource WHERE filename=? OR preview_filename=? UNION ALL SELECT 1 FROM member WHERE photo=? OR avatar_preview=? UNION ALL SELECT 1 FROM upload_task WHERE (object_key=? OR preview_filename=? OR object_key||'.preview.jpg'=?) AND status IN ('uploading','completing') LIMIT 1",
@@ -88,6 +96,7 @@ export async function drainFileCleanup(env: Bindings, limit = 20): Promise<void>
         ).bind(task.reservation_id, task.reservation_id),
       ]);
     } catch (error) {
+      failed++;
       console.error(JSON.stringify({ event: "file_cleanup_retry", attempted: true }));
       await env.DB.prepare(
         "UPDATE file_cleanup_task SET attempts=attempts+1,next_attempt_at=datetime('now','+5 minutes'),lease_token=NULL,lease_expires_at=NULL WHERE object_key=? AND lease_token=?",
@@ -96,4 +105,5 @@ export async function drainFileCleanup(env: Bindings, limit = 20): Promise<void>
         .run();
     }
   }
+  return { processed, failed };
 }

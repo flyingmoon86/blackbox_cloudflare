@@ -82,7 +82,7 @@ test("actual truncated/oversized parts are rejected and a retry can finish exact
   const first = await s.complete(2, task.id);
   assert.equal(first.status, 200);
   const result = await first.json();
-  assert.equal(result.status, "approved");
+  assert.equal(result.status, "pending");
   const second = await s.complete(2, task.id);
   assert.equal(second.status, 200);
   assert.equal((await second.json()).resourceId, result.resourceId);

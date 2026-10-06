@@ -300,6 +300,7 @@
     header = document.querySelector(".top");
   const menus = [...document.querySelectorAll(".nav-menu")];
   let closeTimer,
+    openTimer,
     restoringFocus = false;
   const sync = () => {
     menus.forEach((m) => {
@@ -318,11 +319,13 @@
     );
   };
   const close = () => {
+    clearTimeout(openTimer);
     clearTimeout(closeTimer);
     menus.forEach((m) => m.classList.remove("is-open"));
     sync();
   };
   const open = (m) => {
+    clearTimeout(openTimer);
     clearTimeout(closeTimer);
     menus.forEach((other) => other.classList.toggle("is-open", other === m));
     sync();
@@ -332,8 +335,20 @@
     toggleMenu.setAttribute("aria-expanded", "false");
     toggleMenu.addEventListener("click", () => (m.classList.contains("is-open") ? close() : open(m)));
     m.addEventListener("pointerenter", (event) => {
-      if (event.pointerType !== "touch" && matchMedia("(min-width:901px)").matches) open(m);
+      if (event.pointerType !== "touch" && matchMedia("(min-width:901px)").matches) {
+        clearTimeout(openTimer);
+        clearTimeout(closeTimer);
+        openTimer = setTimeout(() => open(m), 150);
+      }
     });
+    m.addEventListener("pointerleave", () => clearTimeout(openTimer));
+    m.querySelectorAll("a[href]").forEach((link) =>
+      link.addEventListener("click", () => {
+        close();
+        nav?.classList.remove("is-open");
+        toggle?.setAttribute("aria-expanded", "false");
+      }),
+    );
     m.addEventListener("focusin", (event) => {
       if (
         !restoringFocus &&
@@ -434,7 +449,8 @@
       document.body.classList.contains("navigation-open");
     stage.classList.add("stage-ready");
     show(index);
-    stage.querySelectorAll('a[href="#about"],a[href="#welcome"],a[href="#playbill"]').forEach((link) => {
+    stage.querySelectorAll('a[href^="#"]').forEach((link) => {
+      if (!scenes.some((scene) => "#" + scene.id === link.hash)) return;
       link.addEventListener("click", (event) => {
         event.preventDefault();
         show(sceneIndex(link.hash), true);

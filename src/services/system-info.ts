@@ -1,12 +1,11 @@
 import type { Bindings } from "../types";
-import { usesDirectR2 } from "../storage/r2-s3";
+import { uploadModeConfiguration } from "../storage/r2-s3";
 import { uploadPolicy } from "./upload-policy";
 
 // Descriptions only; fields and foreign keys always come from the connected database.
 export const tablePurposes: Record<string, string> = {
   member: "队员档案",
   user: "账号、身份与档案绑定",
-  email_token: "邮箱验证令牌",
   join_request: "队员认证申请",
   announcement: "公告",
   production: "作品",
@@ -37,6 +36,7 @@ export const tablePurposes: Record<string, string> = {
   credit_import_guard: "导入并发保护",
   credit_import_event: "导入操作历史",
   d1_migrations: "D1 数据库版本记录",
+  maintenance_status: "定时维护最近执行结果",
 };
 type Column = { name: string; type: string; notnull: number; pk: number };
 type ForeignKey = { table: string; from: string; to: string; on_delete: string };
@@ -49,14 +49,55 @@ type Ledger = {
   cleanup_tasks: number;
 };
 
-export async function readSystemInfo(env: Bindings) {
+type MaintenanceCounts = {
+  pending_reviews: number;
+  expired_limits: number;
+  upload_backlog: number;
+  oldest_upload: string | null;
+  cleanup_backlog: number;
+  oldest_cleanup: string | null;
+  expired_imports: number;
+};
+type MaintenanceJob = {
+  job: string;
+  status: "running" | "ok" | "partial" | "error";
+  started_at: string;
+  last_success_at: string | null;
+  processed_count: number;
+  failure_count: number;
+};
+async function readMaintenance(env: Bindings) {
+  const [counts, jobs] = await Promise.all([
+    env.DB.prepare(
+      `SELECT
+      (SELECT COUNT(*) FROM resource WHERE status='pending') + (SELECT COUNT(*) FROM join_request WHERE status='pending') + (SELECT COUNT(*) FROM production_join_request WHERE status='pending') pending_reviews,
+      (SELECT COUNT(*) FROM request_limit WHERE expires_at<=unixepoch()) expired_limits,
+      (SELECT COUNT(*) FROM upload_task WHERE status='completing' OR (status='uploading' AND expires_at<CURRENT_TIMESTAMP)) upload_backlog,
+      (SELECT MIN(updated_at) FROM upload_task WHERE status='completing' OR (status='uploading' AND expires_at<CURRENT_TIMESTAMP)) oldest_upload,
+      (SELECT COUNT(*) FROM file_cleanup_task) cleanup_backlog,
+      (SELECT MIN(created_at) FROM file_cleanup_task) oldest_cleanup,
+      (SELECT COUNT(*) FROM credit_import_batch WHERE details_purged=0 AND created_at<datetime('now','-180 days')) expired_imports`,
+    ).first<MaintenanceCounts>(),
+    env.DB.prepare(
+      "SELECT job,status,started_at,last_success_at,processed_count,failure_count FROM maintenance_status ORDER BY job",
+    ).all<MaintenanceJob>(),
+  ]);
+  return { counts, jobs: jobs.results };
+}
+
+export async function readSystemInfo(
+  env: Bindings,
+  section: "architecture" | "database" | "storage" | "flows" = "architecture",
+) {
+  const withSchema = section === "database";
+  const withOperations = section === "architecture" || section === "storage";
   const schema = async () => {
     const rows = await env.DB.prepare("SELECT name FROM sqlite_schema WHERE type='table' ORDER BY name").all<{
       name: string;
     }>();
     const names = rows.results
       .map((row) => row.name)
-      .filter((name) => !name.startsWith("sqlite_") && !name.startsWith("_cf_"));
+      .filter((name) => !name.startsWith("sqlite_") && !name.startsWith("_cf_") && name !== "email_token");
     const tables: Table[] = [];
     // Small read-only batches avoid one binding round trip for every metadata query.
     for (let offset = 0; offset < names.length; offset += 10) {
@@ -83,29 +124,43 @@ export async function readSystemInfo(env: Bindings) {
     }
     return tables;
   };
-  const [database, ledger, storage] = await Promise.allSettled([
-    schema(),
-    env.DB.prepare(
-      "SELECT initialized,used_bytes,reserved_bytes,updated_at,(SELECT COUNT(*) FROM file_cleanup_task) cleanup_tasks FROM storage_budget WHERE id=1",
-    ).first<Ledger>(),
+  const [database, ledger, storage, maintenance] = await Promise.allSettled([
+    withSchema
+      ? schema()
+      : section === "architecture"
+        ? env.DB.prepare("SELECT 1")
+            .first()
+            .then(() => [] as Table[])
+        : Promise.resolve(null),
+    withOperations
+      ? env.DB.prepare(
+          "SELECT initialized,used_bytes,reserved_bytes,updated_at,(SELECT COUNT(*) FROM file_cleanup_task) cleanup_tasks FROM storage_budget WHERE id=1",
+        ).first<Ledger>()
+      : Promise.resolve(null),
     // Read-only connectivity probe, also used by the existing dependency check. No inventory scan.
-    env.FILES.head("__blackbox_connection_check__"),
+    withOperations ? env.FILES.head("__blackbox_connection_check__") : Promise.resolve(null),
+    withOperations ? readMaintenance(env) : Promise.resolve(null),
   ]);
   return {
     checkedAt: new Date().toISOString(),
     environment: env.ENVIRONMENT === "production" ? "生产" : env.ENVIRONMENT === "development" ? "开发" : "未确认",
     bucket: env.R2_BUCKET_NAME || null,
-    directUpload: usesDirectR2(env),
+    directUpload: uploadModeConfiguration(env).mode === "direct",
+    uploadConfiguration: uploadModeConfiguration(env),
     uploadBudgetBytes: uploadPolicy.budgetBytes,
     database:
       database.status === "fulfilled"
-        ? { status: "ok" as const, tables: database.value }
+        ? { status: database.value === null ? ("skipped" as const) : ("ok" as const), tables: database.value ?? [] }
         : { status: "error" as const, tables: [] },
     ledger:
       ledger.status === "fulfilled"
         ? { status: "ok" as const, value: ledger.value }
         : { status: "error" as const, value: null },
-    storage: storage.status === "fulfilled" ? "ok" : "error",
+    storage: !withOperations ? "skipped" : storage.status === "fulfilled" ? "ok" : "error",
+    maintenance:
+      maintenance.status === "fulfilled"
+        ? { status: "ok" as const, value: maintenance.value }
+        : { status: "error" as const, value: null },
   };
 }
 export type SystemInfo = Awaited<ReturnType<typeof readSystemInfo>>;

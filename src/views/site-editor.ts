@@ -43,7 +43,7 @@ export function siteEditor(
  ${section("about_heading", "招新信息", `${area("about_heading", "剧团页标题（自动去除标点）", t.about_heading || "在黑匣子\n一起成为故事")}<div id="about_text">${area("about_text", "剧团介绍正文", t.about_text || "我们是某大学生艺术团话剧队！祝大家晚安！")}</div>${area("recruitment", "招新正文", p.recruitment)}${area("requirements", "招新补充说明", p.requirements)}<div id="recruitment_poster">${image("recruitment_poster", "通用海报", t.recruitment_poster || "", "不设置")}${image("recruitment_poster_mobile", "手机海报", t.recruitment_poster_mobile || "", "沿用通用海报")}${input("recruitment_poster_alt", "海报文字说明", t.recruitment_poster_alt || "")}</div>`)}
  ${section("contact_intro", "联系信息编辑", `${input("troupe_name", "剧团名称", p.troupe_name)}${input("contact_email", "联系邮箱", p.contact_email, "email")}${input("qq_group", "招新QQ群", p.qq_group)}`)}
  </div><div id="site-panel-messages" class="site-editor-panel" data-site-panel aria-labelledby="site-tab-messages">
- ${section("special_thanks", "致谢编辑", `<p>显示在鸣谢页的网站贡献者上方，留空则隐藏。支持分段文字。</p>${area("special_thanks", "想对大家说的话", t.special_thanks || "")}`)}
+ ${section("special_thanks", "致谢编辑", `<p>显示在鸣谢页第一幕。支持分段文字；留空时只展示标题与剧团落款。</p>${area("special_thanks", "想对大家说的话", t.special_thanks || "")}`)}
  ${section("test_notice", "测试须知编辑", area("test_notice", "确认后不再重复；内容修改后重新提示", t.test_notice || "网站正在测试，暂不支持视频上传。欢迎提交建议。"))}
  </div><div class="site-editor-save"><span>统一保存全部分区的修改</span><button type="submit">保存页面内容</button></div></form></section>`;
 }

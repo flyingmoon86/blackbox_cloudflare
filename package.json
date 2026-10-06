@@ -21,10 +21,15 @@
     "deploy:check": "node scripts/predeploy.mjs check",
     "db:production:migrate": "node scripts/predeploy.mjs migrate",
     "db:production:backup": "node scripts/predeploy.mjs backup",
+    "archive:backup": "node scripts/archive-backup.mjs snapshot",
+    "archive:verify": "node scripts/archive-backup.mjs verify",
+    "archive:restore": "node scripts/archive-backup.mjs restore-local",
+    "archive:drill": "node scripts/archive-backup.mjs drill",
     "r2:production:cors": "node scripts/predeploy.mjs cors",
     "smoke:production": "node scripts/predeploy.mjs smoke",
     "deploy": "node scripts/predeploy.mjs deploy",
-    "test:backend": "node --test scripts/backend/*.test.mjs"
+    "test:backend": "node --test scripts/backend/*.test.mjs",
+    "performance:query": "node scripts/query-performance.mjs"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260908.1",
@@ -33,6 +38,7 @@
     "miniflare": "5.20260907.0-alpha",
     "prettier": "^3.9.6",
     "typescript": "^7.0.2",
+    "undici": "7.29.0",
     "wrangler": "4.129.1"
   },
   "dependencies": {

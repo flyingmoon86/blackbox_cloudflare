@@ -2,6 +2,7 @@ import type { EditionRow } from "./productions";
 import { productionVisible, resourceVisible } from "../services/production-visibility";
 import { reviewRequest } from "../services/reviews";
 import { pageNumber } from "../views/shared";
+import { adminPage, filterChoice, likeTerm, safeListReturn, searchTerm } from "../http/pagination";
 import { canViewResource, serveResourceFile } from "../services/resource-files";
 import { fileCleanupStatements, drainFileCleanup } from "../services/file-cleanup";
 import { invalidateSiteProfile } from "../services/site-profile";
@@ -68,6 +69,38 @@ resourceRoutes.use("*", async (c, next) => {
   await next();
 });
 const adminDenied = (c: any) => (c.get("user")?.role === "admin" ? null : c.text("没有管理员权限。", 403));
+
+function adminResourceFilter(raw: Record<string, string>, pending = false) {
+  const params = {
+    q: searchTerm(raw.q),
+    year: /^[1-9]\d{0,3}$/.test(raw.year || "") ? raw.year : "",
+    status: pending ? "pending" : filterChoice(raw.status, ["pending", "approved", "rejected"]),
+    type: filterChoice(raw.type, ["photo", "script", "audio", "video", "other"]),
+  };
+  const clauses: string[] = [],
+    values: (string | number)[] = [];
+  if (params.q) {
+    clauses.push("(r.title LIKE ? ESCAPE '\\' OR r.original_name LIKE ? ESCAPE '\\' OR p.title LIKE ? ESCAPE '\\')");
+    values.push(...Array(3).fill(likeTerm(params.q)));
+  }
+  if (params.year) {
+    clauses.push("COALESCE(e.year,p.year)=?");
+    values.push(Number(params.year));
+  }
+  if (params.status) {
+    clauses.push("r.status=?");
+    values.push(params.status);
+  }
+  if (params.type) {
+    clauses.push("r.res_type=?");
+    values.push(params.type);
+  }
+  const from =
+    " FROM resource r LEFT JOIN production p ON p.id=r.production_id LEFT JOIN production_edition e ON e.id=r.edition_id LEFT JOIN user u ON u.id=r.uploader_id";
+  return { params, values, from: from + (clauses.length ? " WHERE " + clauses.join(" AND ") : "") };
+}
+const adminResourceColumns =
+  "SELECT r.edition_id,COALESCE(e.year,'')||' · '||e.name edition_name,r.id,r.title,r.res_type,r.description,r.original_name,r.preview_filename,r.status,r.admin_note,r.created_at,r.production_id,p.title production_title,r.uploader_id,u.username uploader_name";
 
 resourceRoutes.get("/resources", async (c) => {
   const query = (c.req.query("q") || "").trim().slice(0, 100);
@@ -218,10 +251,16 @@ for (const mode of ["download", "media", "preview"] as const) {
 resourceRoutes.get("/admin/resources/reviews", async (c) => {
   const denied = adminDenied(c);
   if (denied) return denied;
-  const rows = await c.env.DB.prepare(
-    `SELECT r.edition_id,(SELECT COALESCE(year,'')||' · '||name FROM production_edition WHERE id=r.edition_id) edition_name,r.id,r.title,r.res_type,r.description,r.original_name,r.preview_filename,r.status,r.admin_note,r.created_at,r.production_id,p.title production_title,r.uploader_id,u.username uploader_name FROM resource r LEFT JOIN production p ON p.id=r.production_id LEFT JOIN user u ON u.id=r.uploader_id WHERE r.status='pending' ORDER BY r.id`,
-  ).all<ResourceRow>();
-  return c.html(resourceReviewsPage(rows.results, await csrfFor(c)));
+  const filter = adminResourceFilter(c.req.query(), true);
+  const total =
+    (await c.env.DB.prepare("SELECT COUNT(*) n" + filter.from)
+      .bind(...filter.values)
+      .first<number>("n")) || 0;
+  const page = adminPage(total, c.req.query("page"), "/admin/resources/reviews", filter.params);
+  const rows = await c.env.DB.prepare(adminResourceColumns + filter.from + " ORDER BY r.id LIMIT ? OFFSET ?")
+    .bind(...filter.values, page.size, (page.page - 1) * page.size)
+    .all<ResourceRow>();
+  return c.html(resourceReviewsPage(rows.results, await csrfFor(c), page));
 });
 resourceRoutes.post("/admin/resources/:id/review", async (c) => {
   const denied = adminDenied(c);
@@ -232,15 +271,21 @@ resourceRoutes.post("/admin/resources/:id/review", async (c) => {
   const note = String(f.get("admin_note") ?? "").trim();
   if (decision === "rejected" && !note) return c.text("驳回时必须填写理由。", 400);
   await reviewRequest(c.env.DB, "resource", Number(c.req.param("id")), c.get("user")!.id, decision, note);
-  return c.redirect("/admin/resources/reviews", 303);
+  return c.redirect(safeListReturn(f.get("return_to"), "/admin/resources/reviews"), 303);
 });
 resourceRoutes.get("/admin/resources", async (c) => {
   const denied = adminDenied(c);
   if (denied) return denied;
-  const rows = await c.env.DB.prepare(
-    `SELECT r.edition_id,(SELECT COALESCE(year,'')||' · '||name FROM production_edition WHERE id=r.edition_id) edition_name,r.id,r.title,r.res_type,r.description,r.original_name,r.preview_filename,r.status,r.admin_note,r.created_at,r.production_id,p.title production_title,r.uploader_id,u.username uploader_name FROM resource r LEFT JOIN production p ON p.id=r.production_id LEFT JOIN user u ON u.id=r.uploader_id ORDER BY r.id DESC LIMIT 300`,
-  ).all<ResourceRow>();
-  return c.html(resourceAdminPage(rows.results));
+  const filter = adminResourceFilter(c.req.query());
+  const total =
+    (await c.env.DB.prepare("SELECT COUNT(*) n" + filter.from)
+      .bind(...filter.values)
+      .first<number>("n")) || 0;
+  const page = adminPage(total, c.req.query("page"), "/admin/resources", filter.params);
+  const rows = await c.env.DB.prepare(adminResourceColumns + filter.from + " ORDER BY r.id DESC LIMIT ? OFFSET ?")
+    .bind(...filter.values, page.size, (page.page - 1) * page.size)
+    .all<ResourceRow>();
+  return c.html(resourceAdminPage(rows.results, page));
 });
 resourceRoutes.get("/admin/resources/:id/edit", async (c) => {
   const denied = adminDenied(c);
@@ -262,6 +307,7 @@ resourceRoutes.get("/admin/resources/:id/edit", async (c) => {
       await csrfFor(c),
       c.req.query("saved") === "1",
       (await c.env.DB.prepare("SELECT * FROM production_edition ORDER BY year DESC,id DESC").all<EditionRow>()).results,
+      safeListReturn(c.req.query("return_to"), "/admin/resources"),
     ),
   );
 });
@@ -307,7 +353,11 @@ resourceRoutes.post("/admin/resources/:id/edit", async (c) => {
     .bind(title, type, description, production, editionId, id)
     .run();
   if (result.meta.changes !== 1) return c.text("资料不存在。", 404);
-  return c.redirect(`/admin/resources/${id}/edit?saved=1`, 303);
+  return c.redirect(
+    `/admin/resources/${id}/edit?` +
+      new URLSearchParams({ saved: "1", return_to: safeListReturn(f.get("return_to"), "/admin/resources") }),
+    303,
+  );
 });
 resourceRoutes.post("/admin/resources/:id/delete", async (c) => {
   const denied = adminDenied(c);
@@ -328,7 +378,7 @@ resourceRoutes.post("/admin/resources/:id/delete", async (c) => {
   ]);
   await drainFileCleanup(c.env);
   await invalidateSiteProfile(c);
-  return c.redirect("/admin/resources", 303);
+  return c.redirect(safeListReturn(f.get("return_to"), "/admin/resources"), 303);
 });
 
 resourceRoutes.post("/admin/resources/:id/revoke", async (c) => {
@@ -348,5 +398,11 @@ resourceRoutes.post("/admin/resources/:id/revoke", async (c) => {
       "UPDATE resource SET status='pending',admin_note=?,reviewed_by=NULL,reviewed_at=NULL WHERE id=? AND status='approved'",
     ).bind(note, id),
   ]);
-  return c.redirect("/admin/resources/" + id + "/edit", 303);
+  return c.redirect(
+    "/admin/resources/" +
+      id +
+      "/edit?" +
+      new URLSearchParams({ return_to: safeListReturn(form.get("return_to"), "/admin/resources") }),
+    303,
+  );
 });

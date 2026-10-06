@@ -20,7 +20,6 @@ import { memberRoutes } from "./routes/members";
 import { adminRoutes } from "./routes/admin";
 import { productionRoutes } from "./routes/productions";
 import { creditImportRoutes } from "./routes/credit-import";
-import { purgeExpiredImports } from "./services/credit-import/commit";
 import { contentRoutes } from "./routes/content";
 import { resourceRoutes } from "./routes/resources";
 import { helpRoutes } from "./routes/help";
@@ -28,9 +27,8 @@ import { uploadRoutes } from "./routes/uploads";
 import { suggestionRoutes } from "./routes/suggestions";
 import { operationsRoutes } from "./routes/operations";
 import type { AppEnv } from "./types";
-import { cleanExpiredUploads } from "./storage/cleanup";
+import { runMaintenance } from "./services/maintenance";
 import { requestContext, handleError } from "./middleware/errors";
-import { cleanExpiredRequestLimits } from "./middleware/request-limits";
 
 const app = new Hono<AppEnv>();
 app.use("*", contextStorage());
@@ -76,8 +74,6 @@ app.onError(handleError);
 export default {
   fetch: app.fetch,
   scheduled(_controller, env, context) {
-    context.waitUntil(cleanExpiredUploads(env));
-    context.waitUntil(cleanExpiredRequestLimits(env));
-    context.waitUntil(purgeExpiredImports(env.DB));
+    context.waitUntil(runMaintenance(env));
   },
 } satisfies ExportedHandler<AppEnv["Bindings"]>;

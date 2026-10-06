@@ -6,11 +6,22 @@
   const status = scene?.querySelector(".theatre-light-status");
   const art = scene?.querySelector(".theatre-art");
   const plane = scene?.querySelector(".stage-image-plane");
+  const hint = scene?.querySelector(".theatre-light-hint");
   if (!base || !light || !toggle || !status || !art || !plane) return;
   const preview = scene.hasAttribute("data-stage-preview");
   let config = JSON.parse(scene.dataset.stageConfig || "{}");
   let failed = false;
   const key = "blackbox-stage-lights";
+  const hintKey = "blackbox-stage-light-hint";
+  let hintSeen = false;
+  try {
+    hintSeen = localStorage.getItem(hintKey) === "seen";
+  } catch {}
+  const updateHint = () => {
+    if (!hint) return;
+    hint.hidden = preview || failed || toggle.disabled || hintSeen || scene.dataset.lights === "on";
+    toggle.setAttribute("aria-describedby", hint.hidden ? "" : "stage-light-hint");
+  };
   const savedState = () => {
     try {
       return localStorage.getItem(key) === "on";
@@ -22,6 +33,13 @@
     scene.dataset.lights = on ? "on" : "off";
     toggle.setAttribute("aria-pressed", String(on));
     toggle.title = (on ? "关灯" : "开灯") + "（四页同步）";
+    if (on && !preview) {
+      hintSeen = true;
+      try {
+        localStorage.setItem(hintKey, "seen");
+      } catch {}
+    }
+    updateHint();
   };
   const crop = () => {
     const mobile = matchMedia("(max-width:900px)").matches;
@@ -48,6 +66,7 @@
       if (base.naturalWidth !== light.naturalWidth || base.naturalHeight !== light.naturalHeight)
         return failure(light, "底图与光层尺寸不一致，已保留底图。");
       toggle.disabled = false;
+      updateHint();
       crop();
     }
   };
@@ -76,6 +95,12 @@
   });
   window.addEventListener("storage", (event) => {
     if (!preview && !failed && (event.key === key || event.key === null)) setLights(savedState());
+    if (event.key === hintKey || event.key === null) {
+      try {
+        hintSeen = localStorage.getItem(hintKey) === "seen";
+      } catch {}
+      updateHint();
+    }
   });
   window.addEventListener("pageshow", () => {
     if (!preview && !failed) setLights(savedState());

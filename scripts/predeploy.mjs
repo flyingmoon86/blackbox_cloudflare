@@ -12,8 +12,12 @@ const route = production?.routes?.find((item) => item.custom_domain);
 const requiredSecrets = new Set(production?.secrets?.required || []);
 const expectedSecrets = ["SESSION_SECRET"];
 if (production?.vars?.TURNSTILE_ENABLED === "true") expectedSecrets.push("TURNSTILE_SECRET");
+if (production?.vars?.UPLOAD_MODE === "direct")
+  expectedSecrets.push("R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY");
 
 const problems = [];
+if (!["proxy", "direct"].includes(production?.vars?.UPLOAD_MODE))
+  problems.push("正式环境必须明确设置 UPLOAD_MODE 为 proxy 或 direct");
 if (production?.vars?.ADMIN_ORIGIN || production?.vars?.PUBLIC_ORIGIN) {
   for (const key of ["ADMIN_ORIGIN", "PUBLIC_ORIGIN"]) {
     const origin = production?.vars?.[key];

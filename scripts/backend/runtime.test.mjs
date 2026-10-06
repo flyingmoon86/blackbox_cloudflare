@@ -91,15 +91,24 @@ test(
           ...options,
           headers: { Cookie: cookie(id), "x-csrf-token": "runtime-csrf", ...options.headers },
         });
-      for (const path of ["/admin/system", "/admin/system/data"]) {
+      for (const path of [
+        "/admin/system",
+        "/admin/system/data",
+        "/admin/system/data?section=database",
+        "/admin/system/data?section=storage",
+      ]) {
         assert.equal((await request(2, path)).status, 403);
         const panel = await request(1, path);
         assert.equal(panel.status, 200);
         assert.equal(panel.headers.get("cache-control"), "private, no-store");
         const html = await panel.text();
-        if (path.endsWith("/data")) {
-          assert.match(html, /production_edition/);
-          assert.match(html, /R2 HEAD/);
+        if (path.includes("/data")) {
+          if (path.endsWith("database")) assert.match(html, /production_edition/);
+          else if (path.endsWith("storage")) assert.match(html, /R2 HEAD/);
+          else {
+            assert.match(html, /日常维护/);
+            assert.doesNotMatch(html, /data-schema-table/);
+          }
           assert.doesNotMatch(html, /role="alert"/);
           assert.doesNotMatch(html, /runtime-admin|runtime-applicant|runtime-fixture-secret/);
         }

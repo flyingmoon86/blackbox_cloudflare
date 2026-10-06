@@ -173,10 +173,10 @@ test("registration allowance supports thirty members on one network", async () =
 test("expired counters are reclaimed in bounded batches, live entries remain", async () => {
   const { db, env } = setup();
   const insert = db.prepare("INSERT INTO request_limit(key,hits,expires_at) VALUES(?,1,?)");
-  for (let index = 0; index < 250; index++) insert.run(`old-${index}`, 1);
+  for (let index = 0; index < 4250; index++) insert.run(`old-${index}`, 1);
   insert.run("live", Math.floor(Date.now() / 1000) + 3600);
-  await cleanExpiredRequestLimits(env);
-  assert.equal(db.prepare("SELECT COUNT(*) n FROM request_limit").get().n, 51);
+  assert.equal(await cleanExpiredRequestLimits(env), 4000);
+  assert.equal(db.prepare("SELECT COUNT(*) n FROM request_limit").get().n, 251);
   assert.ok(db.prepare("SELECT key FROM request_limit WHERE key='live'").get());
   await cleanExpiredRequestLimits(env);
   assert.equal(db.prepare("SELECT COUNT(*) n FROM request_limit").get().n, 1);

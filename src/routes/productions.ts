@@ -1,3 +1,4 @@
+import { EDITION_RESOURCES_SQL, EDITION_RESOURCE_COUNT_SQL } from "../services/resource-queries";
 import { serveResourceFile } from "../services/resource-files";
 import { canAccessProduction, productionVisible, resourceVisible } from "../services/production-visibility";
 import { invalidateSiteProfile } from "../services/site-profile";
@@ -60,6 +61,8 @@ export type ProductionResourceRow = {
   preview_filename: string;
 };
 export type ResourceChoice = {
+  original_name: string;
+  preview_filename: string;
   id: number;
   title: string;
   res_type: string;
@@ -212,7 +215,10 @@ productionRoutes.use("*", async (c, next) => {
   if (!c.req.path.startsWith("/productions") && !c.req.path.startsWith("/admin/production")) return next();
   const target = /^\/productions\/([^/]+)(?:\/|$)/.exec(c.req.path);
   if (target && !(await canAccessProduction(c, Number(target[1])))) return c.text("未找到这部作品。", 404);
-  if (!c.get("user") && !(c.req.method === "GET" && /^\/productions(?:\/\d+(?:\/cover)?)?$/.test(c.req.path)))
+  if (
+    !c.get("user") &&
+    !((c.req.method === "GET" || c.req.method === "HEAD") && /^\/productions(?:\/\d+(?:\/cover)?)?$/.test(c.req.path))
+  )
     return c.redirect(`/login?next=${encodeURIComponent(c.req.path)}`);
   await next();
 });
@@ -229,12 +235,12 @@ function selectedResourceIds(form: FormData): number[] | null {
 async function resourceChoices(c: Context<AppEnv>, productionId: number | null): Promise<ResourceChoice[]> {
   const result = productionId
     ? await c.env.DB.prepare(
-        "SELECT id,title,res_type,status,production_id FROM resource WHERE status IN ('pending','approved') AND (production_id IS NULL OR production_id=?) ORDER BY status,res_type,title",
+        "SELECT id,title,res_type,status,production_id,original_name,preview_filename FROM resource WHERE status IN ('pending','approved') AND (production_id IS NULL OR production_id=?) ORDER BY status,res_type,title",
       )
         .bind(productionId)
         .all<ResourceChoice>()
     : await c.env.DB.prepare(
-        "SELECT id,title,res_type,status,production_id FROM resource WHERE status IN ('pending','approved') AND production_id IS NULL ORDER BY status,res_type,title",
+        "SELECT id,title,res_type,status,production_id,original_name,preview_filename FROM resource WHERE status IN ('pending','approved') AND production_id IS NULL ORDER BY status,res_type,title",
       ).all<ResourceChoice>();
   return result.results;
 }
@@ -311,11 +317,20 @@ productionRoutes.get("/productions/:id/cover", async (c) => {
   const id = Number(c.req.param("id"));
   if (!Number.isSafeInteger(id) || id <= 0) return c.notFound();
   const photo = await c.env.DB.prepare(
-    `SELECT r.filename,r.original_name FROM production p JOIN resource r ON r.id=p.cover_id WHERE p.id=? AND ${productionVisible(c, "p")} AND ${resourceVisible(c, "r")} AND r.status='approved' AND r.res_type='photo'`,
+    `SELECT r.filename,r.original_name,r.preview_filename FROM production p JOIN resource r ON r.id=p.cover_id WHERE p.id=? AND ${productionVisible(c, "p")} AND ${resourceVisible(c, "r")} AND r.status='approved' AND r.res_type='photo'`,
   )
     .bind(id)
-    .first<{ filename: string; original_name: string }>();
+    .first<{ filename: string; original_name: string; preview_filename: string }>();
   if (!photo) return c.notFound();
+  const preview = c.req.query("size") === "preview" && photo.preview_filename;
+  if (preview) {
+    const response = await serveResourceFile(c.req.raw, c.env.FILES, {
+      key: preview,
+      filename: preview,
+      publicImage: true,
+    });
+    if (response.status !== 404) return response;
+  }
   return serveResourceFile(c.req.raw, c.env.FILES, {
     key: photo.filename,
     filename: photo.original_name || photo.filename,
@@ -341,18 +356,10 @@ productionRoutes.get("/productions/:id", async (c) => {
   const versions = await editions(c, id);
   const selected = versions.find((v) => v.id === Number(c.req.query("edition"))) || versions[0];
   const selectedId = selected?.id || 0;
-  const total =
-    (await c.env.DB.prepare(
-      "SELECT COUNT(*) n FROM resource WHERE production_id=? AND edition_id=? AND status='approved'",
-    )
-      .bind(id, selectedId)
-      .first<number>("n")) || 0;
+  const total = (await c.env.DB.prepare(EDITION_RESOURCE_COUNT_SQL).bind(id, selectedId).first<number>("n")) || 0;
   const size = 24,
     page = Math.min(pageNumber(c.req.query("page")), Math.max(1, Math.ceil(total / size)));
-  const resources = await c.env.DB.prepare(
-    `SELECT id,edition_id,title,res_type,description,original_name,preview_filename FROM resource
-    WHERE production_id=? AND edition_id=? AND status='approved' ORDER BY created_at DESC,id DESC LIMIT ? OFFSET ?`,
-  )
+  const resources = await c.env.DB.prepare(EDITION_RESOURCES_SQL)
     .bind(id, selectedId, size, (page - 1) * size)
     .all<ProductionResourceRow>();
   const user = c.get("user")!;

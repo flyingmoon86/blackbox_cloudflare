@@ -27,6 +27,7 @@
   ],
   "vars": {
     "ENVIRONMENT": "development",
+    "UPLOAD_MODE": "proxy",
     "R2_BUCKET_NAME": "blackbox-files"
   },
   "secrets": {
@@ -71,6 +72,7 @@
       ],
       "vars": {
         "ENVIRONMENT": "production",
+        "UPLOAD_MODE": "proxy",
         "TURNSTILE_ENABLED": "true",
         "TURNSTILE_SITE_KEY": "0x4AAAAAAEyw2TkArr24rmUI",
         "TURNSTILE_HOSTNAMES": "npublackbox.online",

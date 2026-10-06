@@ -78,9 +78,10 @@ test("metadata matches schema and foreign keys, excludes values/defaults and per
     return prepare(query);
   };
   const before = s.db.prepare("SELECT total_changes() n").get().n;
-  const info = await readSystemInfo(s.env);
+  const info = await readSystemInfo(s.env, "database");
   assert.equal(info.database.status, "ok");
-  assert.equal(info.storage, "ok");
+  assert.equal(info.storage, "skipped");
+  assert.ok(!info.database.tables.some((t) => t.name === "email_token"));
   assert.ok(info.database.tables.every((t) => t.name === "extra_table" || tablePurposes[t.name]));
   const user = info.database.tables.find((t) => t.name === "user");
   assert.ok(user.relations.some((r) => r.from === "member_id" && r.table === "member"));
@@ -89,8 +90,8 @@ test("metadata matches schema and foreign keys, excludes values/defaults and per
   assert.equal(extra.columns.length, 3);
   assert.equal(s.db.prepare("SELECT total_changes() n").get().n, before);
   assert.ok(sql.every((q) => /^(SELECT|PRAGMA (table_info|foreign_key_list))/.test(q)));
-  const html = systemInfoSnapshot(info);
-  assert.match(html, /不可获取/);
+  const html = systemInfoSnapshot(info, "database");
+  assert.match(html, /数据库表结构/);
   assert.doesNotMatch(html, /sensitive-default|private-admin|private-user|private-hash|private-session-secret/);
   assert.equal(s.env.FILES.writes, 0);
   s.db.close();
@@ -110,13 +111,15 @@ test("partial query failures, empty results and escaped metadata remain explicit
   s.env.FILES.head = async () => {
     throw Error("private-r2-error");
   };
-  const failed = systemInfoSnapshot(await readSystemInfo(s.env));
+  const failed =
+    systemInfoSnapshot(await readSystemInfo(s.env, "database"), "database") +
+    systemInfoSnapshot(await readSystemInfo(s.env, "storage"), "storage");
   assert.match(failed, /数据库结构查询失败/);
   assert.match(failed, /实时连接检查：查询失败/);
   assert.match(failed, /尚未完成/);
   assert.doesNotMatch(failed, /private-query-error|private-r2-error/);
   const empty = systemInfoSnapshot({
-    ...(await readSystemInfo(s.env)),
+    ...(await readSystemInfo(s.env, "database")),
     bucket: "<img src=x onerror=alert(1)>",
     database: { status: "ok", tables: [] },
     ledger: { status: "ok", value: null },
@@ -152,5 +155,38 @@ test("system themes have independent URLs, scoped content and admin protection",
   assert.match(flow, /<h3>队员认证<\/h3>/);
   assert.doesNotMatch(flow, /<h3>资料上传与审核<\/h3>/);
   assert.equal((await s.request("/admin/system/data?section=invalid", 1)).status, 400);
+  s.db.close();
+});
+
+test("overview and storage never load schema; database never probes R2 or reads operational queues", async () => {
+  const s = await fixture();
+  const queries = [];
+  const prepare = s.env.DB.prepare;
+  s.env.DB.prepare = (sql) => {
+    queries.push(sql);
+    return prepare(sql);
+  };
+  let heads = 0;
+  s.env.FILES.head = async () => {
+    heads++;
+    return null;
+  };
+  for (const section of ["architecture", "storage"]) {
+    queries.length = 0;
+    const response = await s.request("/admin/system/data?section=" + section, 1);
+    assert.equal(response.status, 200);
+    assert.match(await response.text(), /日常维护/);
+    assert.ok(queries.every((sql) => !/sqlite_schema|PRAGMA/.test(sql)));
+  }
+  const previousHeads = heads;
+  queries.length = 0;
+  const schema = await s.request("/admin/system/data?section=database", 1);
+  assert.match(await schema.text(), /data-schema-table="production"/);
+  assert.equal(heads, previousHeads);
+  assert.ok(queries.every((sql) => !/FROM (storage_budget|maintenance_status|file_cleanup_task)/.test(sql)));
+  assert.ok(
+    s.db.prepare("SELECT name FROM sqlite_schema WHERE name='email_token'").get(),
+    "legacy data remains in the database",
+  );
   s.db.close();
 });

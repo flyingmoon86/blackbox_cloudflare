@@ -97,7 +97,7 @@ npm run dev        # 启动本地网站
 
 ```bash
 npm run deploy:check              # 1. 检查（不发布）
-npm run db:production:backup      # 2. 备份生产数据库
+npm run archive:backup            # 2. 完整备份 D1 + R2 并校验
 npm run db:production:migrate     # 3. 应用数据库迁移（如有）
 npm run deploy                    # 4. 发布
 npm run smoke:production          # 5. 冒烟检查
@@ -111,10 +111,11 @@ npm run smoke:production          # 5. 冒烟检查
 
 ## 需要留意的事
 
-- **备份不完整**：现有备份只含数据库，不含 R2 文件。只靠备份恢复不了完整网站，需要另行安排文件备份。
+- **完整备份与隔离恢复**：`archive:backup` 保存 D1 + R2，`archive:restore` 只恢复到新的本地隔离目录，详见 [备份恢复](docs/备份恢复.md)。旧 `db:production:backup` 仍只导出 D1。2026-10-04 已完成生产 D1 + R2 完整备份并通过独立校验，保存在本地 `migration-work/archive-backups/`。
 - **视频上传已关闭**。照片 20 MB、剧本 50 MB、其他 100 MB 以内。
 - **数据库和文件无法一起回滚**：上传中途失败会留下待清理文件，靠定时任务重试删除。
-- **自动审核规则**的业务依据没有完整记录，修改前先和负责内容审核的人确认。
+- **审核规则**：管理员上传直接发布，普通账号和成员上传统一待审；文件和权限检查继续保留。
+- **上传模式明确配置**：当前开发及正式配置均为 `UPLOAD_MODE=proxy`；不会因新增密钥而自动切换直传。功能边界与遗留数据处理见 [后端收敛说明](docs/backend-scope.md)。
 - 线上状态、验收历史、待补事项见 [docs/验证记录.md](docs/验证记录.md)。
 
 ---

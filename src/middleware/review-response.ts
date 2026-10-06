@@ -22,7 +22,9 @@ export const reviewResponse: MiddlewareHandler<AppEnv> = async (c, next) => {
   const location = c.res.headers.get("Location") || "";
   if (
     expected &&
-    (expected.endsWith("=") ? [expected + "approved", expected + "rejected"].includes(location) : location === expected)
+    (expected.endsWith("=")
+      ? [expected + "approved", expected + "rejected"].includes(location)
+      : location === expected || location.startsWith(expected + "?"))
   ) {
     c.res.headers.delete("Location");
     c.res = c.json({ reviewed: true });

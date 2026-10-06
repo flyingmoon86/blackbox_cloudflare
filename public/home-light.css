@@ -70,6 +70,12 @@ body.design-public:has(.theatre-stage)>main{height:auto;overflow:visible;padding
 .design-public [data-theatre-scene] .theatre-light-switch:focus-visible{outline:3px solid #bd9750;outline-offset:3px}
 .theatre-light-status{position:fixed;top:156px;right:18px;z-index:45;max-width:240px;font-size:13px;padding:8px;background:#fff4dd;color:#29251d}
 .theatre-light-status:empty{display:none}
+.theatre-light-hint{position:fixed;top:82px;right:94px;z-index:44;display:flex;align-items:center;gap:12px;padding:10px 12px;color:#655333;background:#fff8e9f2;border:1px solid #b79b644f;border-radius:3px;box-shadow:0 3px 12px #2920120c;pointer-events:none;font-family:Georgia,"Songti SC","SimSun",serif}
+.theatre-light-hint[hidden]{display:none!important}
+.theatre-light-hint strong{display:block;font-size:14px;font-weight:500;letter-spacing:.12em;line-height:1.5}
+.theatre-light-hint small{display:block;margin-top:2px;font-size:11px;letter-spacing:.1em;color:#867556;line-height:1.4}
+.theatre-light-hint svg{flex:none;color:#a18a5c}
+@media(max-width:900px){.design-public .theatre-stage:has(.theatre-light-hint:not([hidden])) #welcome .stage-news{max-width:calc(93% - 106px)}.theatre-light-hint{top:auto;right:10px;bottom:calc(158px + env(safe-area-inset-bottom));width:84px;justify-content:center;padding:8px 10px;gap:0}.theatre-light-hint small{display:none}.theatre-light-hint svg{position:absolute;right:7px;bottom:-13px;width:20px;height:16px;transform:rotate(65deg)}.theatre-light-hint strong{font-size:13px;white-space:nowrap}}
 .stage-preview-page .announcement-update,.stage-preview-page .test-notice,.stage-preview-page .curtain-boot{display:none!important}
 @media(max-width:900px){
  .navigation-stage-content{padding-right:0}
