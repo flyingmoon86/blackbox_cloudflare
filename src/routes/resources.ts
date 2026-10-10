@@ -126,7 +126,7 @@ resourceRoutes.get("/resources", async (c) => {
     .bind(...params, size, (page - 1) * size)
     .all<ResourceRow>();
   return c.html(
-    resourceListPage(rows.results, c.get("user")!, await csrfFor(c), false, query, {
+    resourceListPage(rows.results, c.get("user")!, "", false, query, {
       page,
       total,
       size,

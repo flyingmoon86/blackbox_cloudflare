@@ -43,6 +43,7 @@ const files = [
   "experience.js",
   "navigation-light.css",
   "navigation-light.js",
+  "navigation-preload.js",
   "curtain-boot.js",
   "curtain.css",
   "upload.js",

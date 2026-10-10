@@ -5,6 +5,7 @@ import { assetUrl } from "./views/assets";
 import { turnstileWidget } from "./services/turnstile";
 import { tryGetContext } from "hono/context-storage";
 import { adminPortal } from "./services/admin-portal";
+import { publicNavigationRequest } from "./services/navigation-cache";
 import type { AppEnv } from "./types";
 import type { UserSession } from "./types";
 import type { MemberRow } from "./routes/members";
@@ -195,7 +196,11 @@ export function layout(title: string, content: string, signedIn = false, admin =
     assetUrl("/experience.js") +
     '" defer></script>' +
     (!portal?.active && !workspace && !preview
-      ? '<script src="' + assetUrl("/navigation-light.js") + '" defer></script>'
+      ? '<script src="' +
+        assetUrl("/navigation-preload.js") +
+        '" defer></script><script src="' +
+        assetUrl("/navigation-light.js") +
+        '"></script>'
       : "") +
     (admin ? '<script src="' + assetUrl("/review.js") + '" defer></script>' : "") +
     (content.includes("data-resource-picker")
@@ -219,7 +224,9 @@ export function layout(title: string, content: string, signedIn = false, admin =
         assetUrl("/workbench.js") +
         '" defer></script>'
       : "") +
-    '</head><body class="' +
+    '</head><body data-navigation-cache="' +
+    (context && publicNavigationRequest(context) ? "public-v1" : "none") +
+    '" class="' +
     (signedIn ? "signed-in" : "signed-out") +
     (portal?.active || context?.req.path.startsWith("/admin") ? " design-admin" : " design-public") +
     (portal?.active ? " admin-portal" : "") +

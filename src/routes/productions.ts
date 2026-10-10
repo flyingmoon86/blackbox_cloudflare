@@ -308,7 +308,7 @@ productionRoutes.get("/productions", async (c) => {
         query: search,
         visibility: c.get("user")?.role === "admin" ? visibility : undefined,
       },
-      await csrfFor(c),
+      c.get("user")?.role === "admin" ? await csrfFor(c) : "",
     ),
   );
 });

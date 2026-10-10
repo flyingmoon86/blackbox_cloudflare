@@ -266,7 +266,7 @@ test("changing a password invalidates the previously signed cookie", async () =>
 
 test("dynamic pages/JSON/errors are not cached and API errors retain existing text", async () => {
   const { db, request } = setup();
-  for (const path of ["/login", "/health", "/productions", "/api/uploads/missing"]) {
+  for (const path of ["/login", "/health", "/productions?q=filtered", "/api/uploads/missing"]) {
     const response = await request(path);
     assert.equal(response.headers.get("Cache-Control"), "private, no-store");
     assert.ok(response.headers.get("X-Request-Id"));

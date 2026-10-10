@@ -1,5 +1,6 @@
 import type { MiddlewareHandler } from "hono";
 import type { AppEnv } from "../types";
+import { NAVIGATION_CACHE_SECONDS, publicNavigationRequest } from "../services/navigation-cache";
 
 export const securityHeaders: MiddlewareHandler<AppEnv> = async (c, next) => {
   await next();
@@ -43,6 +44,25 @@ export const sameOriginWrites: MiddlewareHandler<AppEnv> = async (c, next) => {
 export const noStore: MiddlewareHandler<AppEnv> = async (c, next) => {
   await next();
   const contentType = c.res.headers.get("Content-Type") || "";
+  if (
+    c.res.status === 200 &&
+    contentType.includes("text/html") &&
+    !c.res.headers.has("Set-Cookie") &&
+    publicNavigationRequest(c)
+  ) {
+    c.header("Cache-Control", `private, max-age=${NAVIGATION_CACHE_SECONDS}, must-revalidate`);
+    const vary = new Set(
+      (c.res.headers.get("Vary") || "")
+        .split(",")
+        .map((v) => v.trim())
+        .filter(Boolean),
+    );
+    vary.add("Cookie");
+    vary.add("Authorization");
+    c.header("Vary", [...vary].join(", "));
+    c.header("X-Blackbox-Navigation", "public-v1");
+    return;
+  }
   if (
     /(?:text\/html|application\/(?:json|[^;]+\+json))/.test(contentType) ||
     c.res.headers.has("Set-Cookie") ||
