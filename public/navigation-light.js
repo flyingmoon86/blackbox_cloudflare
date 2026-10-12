@@ -37,7 +37,7 @@
     const compact = matchMedia("(max-width: 900px)");
     const sectionPaths = ["/", "/productions", "/resources", "/members", "/thanks"];
     const sectionOf = (url) => {
-      if (url.pathname === "/" && ["#about", "#contact"].includes(url.hash)) return "members";
+      // Homepage anchors select a scene within the home page.
       if (/^\/(productions|resources)(\/|$)/.test(url.pathname)) return "productions";
       if (/^\/members(\/|$)/.test(url.pathname)) return "members";
       if (/^\/(thanks|feedback)(\/|$)/.test(url.pathname)) return "thanks";

@@ -3,6 +3,8 @@ import { Hono } from "hono";
 import { csrfFor, csrfValid } from "../http/cookies";
 import type { AppEnv } from "../types";
 import { adminDashboardPage } from "../views/admin";
+import { parseArchiveRequest, readArchiveStatistics } from "../services/archive-statistics";
+import { archiveStatisticsPage } from "../views/archive-statistics";
 
 export type JoinReview = {
   id: number;
@@ -76,6 +78,22 @@ const requireAdmin = async (c: any, next: () => Promise<void>) => {
 
 adminRoutes.use("/admin", requireAdmin);
 adminRoutes.use("/admin/*", requireAdmin);
+
+adminRoutes.get("/admin/archive-statistics", async (c) => {
+  const params = new URL(c.req.url).searchParams;
+  const request = parseArchiveRequest(params);
+  if (!request) return c.text("筛选或页码格式不正确，请返回档案统计重新选择。", 400);
+  const data = await readArchiveStatistics(c.env.DB, request);
+  if (request.filter.productionId !== null && !data.productions.some((row) => row.id === request.filter.productionId))
+    return c.text("作品不存在，请返回档案统计重新选择。", 404);
+  const detail = params.get("detail");
+  return c.html(
+    archiveStatisticsPage(data, {
+      editions: detail === "editions" || (detail !== "members" && params.has("editions_page")),
+      members: detail === "members" || (detail !== "editions" && params.has("members_page")),
+    }),
+  );
+});
 
 for (const path of ["/admin", "/admin/member-requests", "/admin/accounts"]) {
   adminRoutes.get(path, async (c) => {

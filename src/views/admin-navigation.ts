@@ -18,6 +18,7 @@ export function adminNavigation(path: string, publicSite?: string): string {
     </div>
     ${item("/admin/resources", "资料管理", "resources", path.startsWith("/admin/resources") && path !== "/admin/resources/reviews")}
     <p class="workspace-caption">记录与设置</p>
+    ${item("/admin/archive-statistics", "档案统计", "resources")}
     ${item("/admin/credit-imports", "导入记录", "productions", path.startsWith("/admin/credit-imports") && path !== "/admin/credit-imports/new")}
     ${item("/admin/review-history", "审核记录", "help")}
     ${item("/admin/accounts", "账号管理", "account")}

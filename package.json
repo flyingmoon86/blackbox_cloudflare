@@ -6,7 +6,7 @@
   "scripts": {
     "assets:build": "node scripts/build-assets.mjs",
     "postinstall": "npm run assets:build",
-    "predev": "npm run assets:build",
+    "predev": "npm run db:init && npm run assets:build",
     "prebuild": "npm run assets:build",
     "pretypecheck": "npm run assets:build",
     "pretest:backend": "npm run assets:build",

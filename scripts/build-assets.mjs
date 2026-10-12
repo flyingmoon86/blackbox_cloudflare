@@ -53,6 +53,7 @@ const files = [
   "system-scene.js",
   "system-info.css",
   "workbench.css",
+  "archive-statistics.css",
   "workbench.js",
   "images/elephant-mascot-360-v1.webp",
 ];
