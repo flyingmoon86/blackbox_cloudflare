@@ -1,4 +1,4 @@
-import { escapeHtml as e } from "../views";
+import { escapeHtml as e } from "./html";
 import type { EditionRow } from "../routes/productions";
 
 export function backstageCard(v: EditionRow): string {

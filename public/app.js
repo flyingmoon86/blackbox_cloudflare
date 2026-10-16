@@ -127,7 +127,16 @@ if (notice instanceof HTMLDialogElement && !document.querySelector("[data-stage-
   try {
     understood = localStorage.getItem(key) === "understood";
   } catch {}
-  if (!understood) notice.showModal();
+  if (!understood) {
+    const showNotice = () => {
+      if (notice.isConnected && !notice.open) notice.showModal();
+    };
+    if (window.blackboxCurtain?.active)
+      document.addEventListener("blackbox:curtain-finished", showNotice, { once: true });
+    else if (window.blackboxSiteOpening?.active)
+      document.addEventListener("blackbox:opening-finished", showNotice, { once: true });
+    else showNotice();
+  }
   notice.addEventListener("close", () => {
     if (notice.returnValue === "understood") {
       try {

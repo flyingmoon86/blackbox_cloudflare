@@ -1,6 +1,7 @@
 import { reviewQueue, reviewAttributes } from "./review-queue";
 import type { JoinReview, ManagedUser, PendingCounts } from "../routes/admin";
-import { escapeHtml, layout } from "../views";
+import { escapeHtml } from "./html";
+import { layout } from "./layout";
 
 export function adminDashboardPage(
   requests: JoinReview[],

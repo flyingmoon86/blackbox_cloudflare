@@ -1,4 +1,4 @@
-import { escapeHtml as e } from "../views";
+import { escapeHtml as e } from "./html";
 import { stageEditor } from "./stage-editor";
 import { assetUrl } from "./assets";
 import type { SiteProfileRow } from "../routes/content";

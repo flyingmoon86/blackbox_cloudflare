@@ -1,201 +1,281 @@
-// One renderer for navigation, early boot and opening: no external media or work data.
-window.blackboxCreateCloth = () => {
-  const svgNS = "http://www.w3.org/2000/svg";
-  const cloth = document.createElementNS(svgNS, "svg");
-  cloth.setAttribute("class", "curtain-cloth");
-  cloth.setAttribute("viewBox", "0 0 1200 1000");
-  cloth.setAttribute("preserveAspectRatio", "none");
-  cloth.setAttribute("aria-hidden", "true");
-  cloth.innerHTML = `<defs>
-    <linearGradient id="curtain-fold"><stop stop-color="#210508"/><stop offset=".13" stop-color="#4e0b12"/><stop offset=".32" stop-color="#901d29"/><stop offset=".48" stop-color="#b93640"/><stop offset=".64" stop-color="#951d29"/><stop offset=".85" stop-color="#4b0911"/><stop offset="1" stop-color="#210508"/></linearGradient>
-    <linearGradient id="curtain-weight" x2="0" y2="1"><stop stop-color="#000" stop-opacity=".54"/><stop offset=".16" stop-color="#ff9b8e" stop-opacity=".12"/><stop offset=".55" stop-color="#530815" stop-opacity=".14"/><stop offset="1" stop-color="#000" stop-opacity=".58"/></linearGradient>
-    <filter id="curtain-nap" x="-3%" y="-1%" width="106%" height="102%">
-      <feTurbulence type="fractalNoise" baseFrequency="16 .42" numOctaves="2" seed="19" stitchTiles="stitch" result="fiber"/>
-      <feColorMatrix in="fiber" type="matrix" values="0 0 0 0 .82 0 0 0 0 .05 0 0 0 0 .08 0 0 0 .16 0" result="redFiber"/>
-      <feBlend in="SourceGraphic" in2="redFiber" mode="screen" result="velvet"/>
-      <feComposite in="velvet" in2="SourceGraphic" operator="in" result="clippedVelvet"/>
-      <feDisplacementMap in="clippedVelvet" in2="fiber" scale="1.2" xChannelSelector="R" yChannelSelector="G"/>
-    </filter>
-  </defs>`;
-  const folds = [];
-  const foldCount = matchMedia("(max-width:600px)").matches ? 6 : 10;
-  for (let side = 0; side < 2; side++) {
-    const group = document.createElementNS(svgNS, "g");
-    if (side) group.setAttribute("transform", "translate(1200 0) scale(-1 1)");
-    for (let index = 0; index < foldCount; index++) {
-      const path = document.createElementNS(svgNS, "path");
-      path.setAttribute("fill", "url(#curtain-fold)");
-      path.setAttribute("filter", "url(#curtain-nap)");
-      const shade = document.createElementNS(svgNS, "path");
-      shade.setAttribute("fill", "url(#curtain-weight)");
-      group.append(path, shade);
-      folds.push({ path, shade, index, side });
-    }
-    cloth.append(group);
-  }
-  const clamp = (value) => Math.max(0, Math.min(1, value));
-  const drawCloth = (progress) => {
-    for (const { path, shade, index, side } of folds) {
-      const edge = (i, depth) => {
-        const delayed = clamp((progress - depth * 0.045) / (1 - depth * 0.045));
-        const lead = 604 - 760 * delayed;
-        const rest = i * (604 / foldCount) + (i > 0 && i < foldCount ? Math.sin(i * 1.4) * 6 : 0);
-        const packed = 11 + Math.sin(i * 1.7) * 1.2;
-        const x = Math.min(rest, lead - (foldCount - i) * packed);
-        const slack = Math.sin(Math.PI * delayed);
-        const drape = x + Math.sin(i * 1.3 + side * 0.6 + depth * 2) * (3 + 5 * slack) * depth + 12 * slack * depth;
-        return i === 0 ? Math.min(-8, drape) : drape;
-      };
-      const a = [edge(index, 0), edge(index, 0.35), edge(index, 0.7), edge(index, 1)];
-      const b = [edge(index + 1, 0), edge(index + 1, 0.35), edge(index + 1, 0.7), edge(index + 1, 1)];
-      const d = `M ${a[0]} -8 C ${a[1]} 260 ${a[2]} 700 ${a[3]} 1010 L ${b[3] + 1} 1010 C ${b[2] + 1} 700 ${b[1] + 1} 260 ${b[0] + 1} -8 Z`;
-      path.setAttribute("d", d);
-      shade.setAttribute("d", d);
-    }
-  };
-  drawCloth(0);
-  return { cloth, drawCloth };
-};
-
-// Only curtain resources are prepared up front. Work URLs are never prefetched.
-// Identical system-font geometry before and after document navigation.
-window.blackboxCreateCurtainPanel = () => {
-  const panel = document.createElement("div");
-  panel.className = "curtain-status-panel curtain-navigation-status";
-  panel.innerHTML =
-    '<span class="curtain-bell" aria-hidden="true">🔔</span><p role="status">正在准备作品</p><div class="curtain-meter curtain-navigation-meter" role="progressbar" aria-label="等待作品页面响应"><span></span></div><p class="curtain-transfer">正在获取作品页面</p><button type="button" class="curtain-navigation-cancel">取消打开</button>';
-  return panel;
-};
-
+// Generated from src/client/curtain-boot.js by npm run assets:build. Do not edit this output.
+"use strict";
 (() => {
-  const motion = matchMedia("(prefers-reduced-motion: reduce)");
-  let navigation;
-  let nextFrame;
-  let slowNotice;
-  let originLink;
-  const clearNavigation = () => {
-    cancelAnimationFrame(nextFrame);
-    clearTimeout(slowNotice);
-    navigation?.close();
-    navigation?.remove();
-    navigation = null;
-  };
-  const cancelNavigation = () => {
-    // The current document is still active: stop its pending native navigation.
-    window.stop();
-    clearNavigation();
-    originLink?.focus({ preventScroll: true });
-  };
-  window.addEventListener("pagehide", clearNavigation);
-  window.addEventListener("pageshow", clearNavigation);
-  motion.addEventListener("change", clearNavigation);
-  document.addEventListener("click", (event) => {
-    if (
-      event.defaultPrevented ||
-      event.button !== 0 ||
-      event.metaKey ||
-      event.ctrlKey ||
-      event.shiftKey ||
-      event.altKey
-    )
-      return;
-    const link = event.target instanceof Element ? event.target.closest("a[href]") : null;
-    if (!link || link.hasAttribute("download") || (link.target && link.target !== "_self") || motion.matches) return;
-    const url = new URL(link.href, location.href);
-    if (
-      url.origin !== location.origin ||
-      !/^\/productions\/\d+$/.test(url.pathname) ||
-      url.search ||
-      url.hash ||
-      url.href === location.href
-    )
-      return;
-    if (!HTMLDialogElement.prototype.showModal) return;
-    if (!getComputedStyle(document.documentElement).getPropertyValue("--curtain-closed")) return;
-    if (navigation) return;
-    const dialog = document.createElement("dialog");
-    dialog.id = "work-navigation-curtain";
-    dialog.className = "curtain-navigation";
-    dialog.setAttribute("aria-label", "正在打开作品");
-    dialog.append(window.blackboxCreateCurtainPanel());
-    dialog.prepend(window.blackboxCreateCloth().cloth);
-    document.body.append(dialog);
-    try {
-      dialog.showModal();
-    } catch {
-      dialog.remove();
-      return; // Native links remain usable when the enhancement is unavailable.
+  // src/client/curtain/scene.js
+  var createCurtainScene = (texture) => {
+    const scene = document.createElement("div");
+    scene.className = "curtain-scene";
+    scene.setAttribute("aria-hidden", "true");
+    for (const side of ["left", "right"]) {
+      const wing = document.createElement("div");
+      wing.className = `curtain-wing curtain-wing-${side}`;
+      for (let index = 0; index < 8; index++) {
+        const fold = document.createElement("span");
+        fold.className = "curtain-fold";
+        wing.append(fold);
+      }
+      if (texture) {
+        const cloth = document.createElement("img");
+        cloth.className = "curtain-cloth";
+        cloth.alt = "";
+        cloth.draggable = false;
+        cloth.decoding = "async";
+        cloth.fetchPriority = "high";
+        cloth.addEventListener("error", () => cloth.remove(), { once: true });
+        cloth.src = texture;
+        wing.append(cloth);
+      }
+      scene.append(wing);
     }
-    event.preventDefault();
-    navigation = dialog;
-    originLink = link;
-    dialog.addEventListener("cancel", (cancel) => {
-      cancel.preventDefault();
-      cancelNavigation();
-    });
-    dialog.querySelector("button").onclick = cancelNavigation;
-    slowNotice = setTimeout(() => {
-      if (navigation === dialog) dialog.querySelector(".curtain-transfer").textContent = "响应较慢，可取消后重试";
-    }, 8000);
-    // Allow one closed-curtain paint, not a simulated loading delay. The browser
-    // performs one normal document request; destination JS handles actual media.
-    nextFrame = requestAnimationFrame(() => {
-      nextFrame = requestAnimationFrame(() => {
-        if (navigation === dialog) location.assign(url.href);
-      });
-    });
-  });
-  // Destination boot precedes the ordinary styles and dynamic theme request.
-  if (
-    !document.currentScript?.hasAttribute("data-work-curtain") ||
-    motion.matches ||
-    location.search ||
-    location.hash ||
-    performance.getEntriesByType("navigation")[0]?.type === "back_forward"
-  )
-    return;
-  const root = document.documentElement;
-  const fabric = window.blackboxCreateCloth();
-  const earlyCloth = document.createElement("div");
-  earlyCloth.className = "curtain-boot-cloth";
-  earlyCloth.append(fabric.cloth);
-  const panel = window.blackboxCreateCurtainPanel();
-  panel.querySelector("button").textContent = "直接查看";
-  earlyCloth.append(panel);
-  root.append(earlyCloth);
-  const release = () => {
-    root.classList.remove("curtain-pending");
-    earlyCloth.remove();
-    document.removeEventListener("keydown", onKey);
-    document.removeEventListener("click", dismiss);
-    window.removeEventListener("error", onFailure, true);
-    window.removeEventListener("pagehide", dismiss);
-    motion.removeEventListener("change", dismiss);
+    const shade = document.createElement("div");
+    shade.className = "curtain-atmosphere";
+    scene.append(shade);
+    return scene;
   };
-  const dismiss = () => {
-    window.blackboxCurtainBoot.cancelled = true;
-    release();
-    const restoreCover = () => {
-      document.querySelectorAll("img[data-curtain-src]").forEach((cover) => {
-        if (!cover.getAttribute("src")) cover.src = cover.dataset.curtainSrc;
-        cover.hidden = false;
-      });
+
+  // src/client/curtain-boot.js
+  (() => {
+    const script = document.currentScript;
+    const version = script?.dataset.siteOpening;
+    const enabled = script?.hasAttribute("data-curtain-page");
+    const motion = matchMedia("(prefers-reduced-motion: reduce)");
+    const navigationKey = "blackbox-curtain-navigation";
+    const enteredKey = "blackbox-site-entered:v1";
+    const read = (key) => {
+      try {
+        return sessionStorage.getItem(key);
+      } catch {
+        return null;
+      }
     };
-    restoreCover();
-    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", restoreCover, { once: true });
-  };
-  const onKey = (event) => {
-    if (event.key === "Escape") dismiss();
-  };
-  const onFailure = (event) => {
-    if (event.target instanceof HTMLScriptElement || event.error) dismiss();
-  };
-  window.blackboxCurtainBoot = { release, cancelled: false, fabric, panel };
-  root.classList.add("curtain-pending");
-  document.addEventListener("keydown", onKey);
-  document.addEventListener("click", dismiss);
-  window.addEventListener("error", onFailure, true);
-  window.addEventListener("pagehide", dismiss);
-  motion.addEventListener("change", dismiss);
-  // Slow connections stay covered; only explicit skip or script failure restores the page.
+    const write = (key, value) => {
+      try {
+        value === null ? sessionStorage.removeItem(key) : sessionStorage.setItem(key, value);
+      } catch {
+      }
+    };
+    let incoming;
+    try {
+      incoming = JSON.parse(read(navigationKey));
+    } catch {
+    }
+    write(navigationKey, null);
+    const navigationType = performance.getEntriesByType("navigation")[0]?.type;
+    const history = navigationType === "back_forward";
+    let internalReferrer = false;
+    try {
+      internalReferrer = navigationType !== "reload" && new URL(document.referrer).origin === location.origin;
+    } catch {
+    }
+    const arriving = Boolean(
+      internalReferrer || incoming?.to === location.href && Date.now() - incoming.at >= 0 && Date.now() - incoming.at < 3e5 && !history
+    );
+    window.blackboxCurtainArrival = arriving;
+    const entered = read(enteredKey) === "entered";
+    if (enabled) write(enteredKey, "entered");
+    let overlay, mode, cleanupTimer;
+    const state = window.blackboxCurtain = { active: false };
+    const recovery = (message) => {
+      if (!document.body) return;
+      document.querySelector(".curtain-recovery")?.remove();
+      const notice = document.createElement("p");
+      notice.className = "curtain-recovery";
+      notice.setAttribute("role", "status");
+      notice.textContent = message;
+      document.body.append(notice);
+      setTimeout(() => notice.remove(), 6e3);
+    };
+    const clear = () => {
+      clearTimeout(cleanupTimer);
+      overlay?.close?.();
+      overlay?.remove();
+      overlay = null;
+      mode = null;
+      const wasActive = state.active;
+      state.active = false;
+      if (wasActive) document.dispatchEvent(new CustomEvent("blackbox:curtain-finished"));
+    };
+    const reveal = () => {
+      if (!overlay || mode === "revealing") return;
+      clearTimeout(cleanupTimer);
+      if (motion.matches) {
+        clear();
+        return;
+      }
+      mode = "revealing";
+      overlay.close?.();
+      if (overlay.tagName === "DIALOG") overlay.setAttribute("open", "");
+      overlay.className = "blackbox-curtain is-revealing";
+      overlay.setAttribute("aria-hidden", "true");
+      overlay.querySelector(".curtain-panel").inert = true;
+      overlay.addEventListener("animationend", (event) => {
+        if (event.animationName === "curtain-reveal-depth") clear();
+      });
+      const duration = Math.min(
+        2e3,
+        Math.max(0, parseFloat(getComputedStyle(overlay).getPropertyValue("--curtain-reveal-duration")) || 900)
+      );
+      cleanupTimer = setTimeout(clear, duration + 120);
+    };
+    const mount = () => {
+      if (overlay) return overlay;
+      if (!getComputedStyle(document.documentElement).getPropertyValue("--blackbox-curtain-ready")) return null;
+      const node = document.createElement("dialog");
+      node.id = "site-opening-curtain";
+      node.className = "blackbox-curtain is-loading";
+      node.setAttribute("aria-label", "\u6B63\u5728\u52A0\u8F7D\u9ED1\u5323\u5B50");
+      node.innerHTML = '<div class="curtain-panel"><p class="curtain-brand" aria-hidden="true">\u9ED1\u5323\u5B50<span>\u8BDD\u5267\u961F</span></p><p class="curtain-label" role="status" aria-live="polite"></p><p class="curtain-detail"></p></div>';
+      node.prepend(createCurtainScene(script?.dataset.curtainTexture));
+      (document.body || document.documentElement).append(node);
+      overlay = node;
+      mode = "loading";
+      state.active = true;
+      node.addEventListener("cancel", (event) => event.preventDefault());
+      try {
+        node.showModal();
+      } catch {
+        clear();
+        return null;
+      }
+      return node;
+    };
+    const storageKey = version && `blackbox-navigation-ready:${version}`;
+    const dismissalKey = version && `blackbox-navigation-dismissed:${version}`;
+    const connection = navigator.connection;
+    const shouldLoad = version && !entered && !arriving && !history && navigator.onLine !== false && !connection?.saveData && !/(^|-)2g$/.test(connection?.effectiveType || "") && read(storageKey) !== "ready" && read(dismissalKey) !== "dismissed";
+    let openingObserver, openingDeadline;
+    if (shouldLoad) {
+      const opening = window.blackboxSiteOpening = {
+        active: true,
+        version,
+        storageKey,
+        dismissalKey,
+        completed: 0,
+        total: 0,
+        failed: 0,
+        discovering: true,
+        status: "loading",
+        update({ completed = 0, total = 0, failed = 0, discovering = false } = {}) {
+          if (!opening.active) return;
+          opening.total = Math.max(0, Math.floor(Number(total) || 0));
+          opening.completed = Math.min(opening.total, Math.max(0, Math.floor(Number(completed) || 0)));
+          opening.failed = Math.min(opening.total, Math.max(0, Math.floor(Number(failed) || 0)));
+          opening.discovering = Boolean(discovering);
+          render();
+        },
+        finish({ status = "partial" } = {}) {
+          if (!opening.active) return;
+          opening.active = false;
+          opening.status = ["ready", "partial", "timeout", "skipped", "limited"].includes(status) ? status : "partial";
+          if (opening.status !== "ready") write(dismissalKey, "dismissed");
+          clearTimeout(openingDeadline);
+          openingObserver?.disconnect();
+          document.removeEventListener("DOMContentLoaded", show);
+          if (mode === "loading") reveal();
+          document.dispatchEvent(
+            new CustomEvent("blackbox:opening-finished", {
+              detail: {
+                status: opening.status,
+                completed: opening.completed,
+                total: opening.total,
+                failed: opening.failed
+              }
+            })
+          );
+          if (["partial", "timeout"].includes(opening.status)) recovery("\u90E8\u5206\u8D44\u6E90\u5C1A\u672A\u5C31\u7EEA\uFF0C\u5DF2\u663E\u793A\u9875\u9762\uFF0C\u53EF\u7EE7\u7EED\u6D4F\u89C8\u3002");
+        }
+      };
+      const render = () => {
+        if (mode !== "loading") return;
+        const meter = overlay.querySelector("progress");
+        if (opening.total && !opening.discovering) {
+          meter.max = opening.total;
+          meter.value = opening.completed;
+        } else meter.removeAttribute("value");
+        const failures = opening.failed ? ` \xB7 ${opening.failed} \u9879\u6682\u4E0D\u53EF\u7528` : "";
+        overlay.querySelector(".curtain-detail").textContent = opening.discovering ? `\u6B63\u5728\u83B7\u53D6\u9875\u9762\u4E0E\u8D44\u6E90\u6E05\u5355${opening.completed ? ` \xB7 \u5DF2\u5C31\u7EEA ${opening.completed} \u9879` : ""}${failures}` : `${opening.completed} / ${opening.total} \u9879\u8D44\u6E90\u5DF2\u5C31\u7EEA${failures}`;
+      };
+      const show = () => {
+        if (!opening.active || !document.body) return;
+        openingObserver?.disconnect();
+        document.removeEventListener("DOMContentLoaded", show);
+        if (mode === "loading") {
+          render();
+          return;
+        }
+        const node = mount();
+        if (!node) {
+          opening.finish({ status: "partial" });
+          return;
+        }
+        node.querySelector(".curtain-label").textContent = "\u6B63\u5728\u52A0\u8F7D\u9ED1\u5323\u5B50";
+        const meter = document.createElement("progress");
+        meter.className = "curtain-meter";
+        meter.setAttribute("aria-label", "\u5DF2\u5C31\u7EEA\u8D44\u6E90\u6570\u91CF");
+        node.querySelector(".curtain-detail").before(meter);
+        render();
+      };
+      openingDeadline = setTimeout(() => opening.finish({ status: "timeout" }), 1e4);
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", show, { once: true });
+        if (typeof MutationObserver !== "undefined") {
+          openingObserver = new MutationObserver(show);
+          openingObserver.observe(document.documentElement, { childList: true });
+        }
+      } else show();
+    }
+    let navigating = false;
+    const resumePreparation = () => {
+      if (!navigating) return;
+      navigating = false;
+      write(navigationKey, null);
+      document.dispatchEvent(new CustomEvent("blackbox:navigation-cancel"));
+    };
+    const eligible = (url) => url.origin === location.origin && /^\/(?:productions(?:\/\d+)?|resources|members(?:\/\d+)?|thanks|help|announcements(?:\/\d+)?)?$/.test(
+      url.pathname
+    ) && !url.searchParams.has("stage-preview");
+    window.addEventListener("click", (event) => {
+      if (!enabled || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
+        return;
+      const link = event.target instanceof Element ? event.target.closest("a[href]") : null;
+      if (!link || link.hasAttribute("download") || link.target && link.target !== "_self") return;
+      const url = new URL(link.href, location.href);
+      if (!eligible(url) || url.pathname === location.pathname && url.search === location.search) return;
+      navigating = true;
+      write(navigationKey, JSON.stringify({ to: url.href, at: Date.now() }));
+      document.dispatchEvent(new CustomEvent("blackbox:navigation-start"));
+    });
+    document.addEventListener("pointerdown", resumePreparation, { passive: true });
+    window.addEventListener("focus", resumePreparation);
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") resumePreparation();
+    });
+    window.addEventListener(
+      "error",
+      (event) => {
+        if (!(event.target instanceof HTMLScriptElement) && !event.error) return;
+        window.blackboxSiteOpening?.finish({ status: "partial" });
+        clear();
+      },
+      true
+    );
+    window.addEventListener("unhandledrejection", () => {
+      window.blackboxSiteOpening?.finish({ status: "partial" });
+      clear();
+    });
+    window.addEventListener("pagehide", () => {
+      window.blackboxSiteOpening?.finish({ status: "skipped" });
+      clear();
+    });
+    window.addEventListener("pageshow", (event) => {
+      if (event.persisted) {
+        resumePreparation();
+        write(navigationKey, null);
+        clear();
+      }
+    });
+    motion.addEventListener("change", () => {
+      if (motion.matches && mode !== "loading") clear();
+    });
+  })();
 })();

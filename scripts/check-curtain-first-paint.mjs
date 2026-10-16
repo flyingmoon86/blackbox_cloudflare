@@ -1,39 +1,18 @@
+// Direct detail first paint: no navigation curtain, even while media/defer wait.
+// Synthetic view fixture only: no database, account, cookies or production URLs.
 import { build } from "esbuild";
-const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || "playwright");
-import { mkdirSync, readFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import assert from "node:assert/strict";
 import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
 import { createServer } from "node:http";
-
-const publicRoot = resolve("public");
-const server = createServer((req, res) => {
-  const pathname = new URL(req.url, "http://localhost").pathname;
-  if (pathname === "/site/theme.css") {
-    res.writeHead(200, { "Content-Type": "text/css" }).end("");
-    return;
-  }
-  const file = resolve(publicRoot, "." + pathname);
-  if (!file.startsWith(publicRoot + "/") && !file.startsWith(publicRoot + "\\")) {
-    res.writeHead(403).end();
-    return;
-  }
-  try {
-    res.writeHead(200, {
-      "Content-Type": pathname.endsWith(".js")
-        ? "application/javascript"
-        : pathname.endsWith(".css")
-          ? "text/css"
-          : "application/octet-stream",
-    });
-    res.end(readFileSync(file));
-  } catch {
-    res.writeHead(404).end();
-  }
-});
-await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-const base = "http://127.0.0.1:" + server.address().port;
-const dir = process.env.EVIDENCE_DIR || "docs/evidence/2026-09-20-curtain-first-paint";
+const { chromium } = await import(
+  process.env.PLAYWRIGHT_MODULE ||
+    pathToFileURL(
+      "C:/Users/gbg61/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
+    ).href
+);
+const dir = resolve(process.env.EVIDENCE_DIR || ".wrangler/evidence/native-navigation/first-paint");
 mkdirSync(dir, { recursive: true });
 await build({
   entryPoints: ["src/views/productions.ts"],
@@ -53,129 +32,157 @@ const html = productionDetailPage(
   "synthetic",
 );
 const cover = readFileSync("public/images/elephant-mascot-360-v1.webp");
-const target = base + "/productions/991008";
-const setup = async (page) => {
-  await page.route("**/productions/991008", (route) => route.fulfill({ contentType: "text/html", body: html }));
-};
-const browser = await chromium.launch({ channel: "chrome", headless: true });
+const publicRoot = resolve("public");
+const server = createServer((req, res) => {
+  const pathname = new URL(req.url, "http://localhost").pathname;
+  if (pathname === "/productions/991008") return res.writeHead(200, { "Content-Type": "text/html" }).end(html);
+  if (pathname === "/site/theme.css") return res.writeHead(200, { "Content-Type": "text/css" }).end("");
+  const file = resolve(publicRoot, "." + pathname);
+  if (!file.startsWith(publicRoot + "/") && !file.startsWith(publicRoot + "\\")) return res.writeHead(403).end();
+  try {
+    res.writeHead(200, {
+      "Content-Type": pathname.endsWith(".js")
+        ? "application/javascript"
+        : pathname.endsWith(".css")
+          ? "text/css"
+          : "application/octet-stream",
+    });
+    res.end(readFileSync(file));
+  } catch {
+    res.writeHead(404).end();
+  }
+});
+await new Promise((done) => server.listen(0, "127.0.0.1", done));
+const target = "http://127.0.0.1:" + server.address().port + "/productions/991008";
+const browser = await chromium.launch({ channel: process.env.BROWSER_CHANNEL || "msedge", headless: true });
+const results = [];
 try {
   for (const width of [1366, 390]) {
-    const page = await browser.newPage({ viewport: { width, height: 768 } });
-    await setup(page);
+    const page = await browser.newPage({
+      viewport: { width, height: width === 390 ? 844 : 768 },
+      hasTouch: width === 390,
+    });
     const errors = [];
-    page.on("pageerror", (e) => errors.push(e.message));
+    page.on("pageerror", (error) => errors.push(error.message));
     await page.addInitScript(() => {
-      const original = HTMLImageElement.prototype.decode;
-      HTMLImageElement.prototype.decode = async function () {
-        await original.call(this);
-        if (this.hasAttribute("data-curtain-src"))
-          await new Promise((resolve) => {
-            window.releaseDecode = resolve;
-          });
-      };
-    });
-    let releaseScript, releaseCover, releaseBackdrop;
-    await page.route("**/site/theme.css?*", (route) =>
-      route.fulfill({
-        contentType: "text/css",
-        body: '.design-public::before{background-image:url("/first-frame.webp")!important}',
-      }),
-    );
-    await page.route("**/first-frame.webp", async (route) => {
-      await new Promise((resolve) => {
-        releaseBackdrop = resolve;
+      window.curtainEvents = [];
+      window.curtainInsertions = 0;
+      const seen = new WeakSet();
+      new MutationObserver((records) => {
+        for (const record of records)
+          for (const node of record.addedNodes) {
+            if (node.nodeType !== 1) continue;
+            const candidates = [node, ...node.querySelectorAll(".blackbox-curtain,.work-curtain")];
+            for (const candidate of candidates) {
+              if (!candidate.matches(".blackbox-curtain,.work-curtain") || seen.has(candidate)) continue;
+              seen.add(candidate);
+              window.curtainInsertions++;
+            }
+          }
+      }).observe(document, { childList: true, subtree: true });
+      window.pageLoaded = false;
+      window.addEventListener("load", () => {
+        window.pageLoaded = true;
       });
-      await route.fulfill({ contentType: "image/webp", body: cover });
+      document.addEventListener(
+        "animationstart",
+        (event) => {
+          if (event.animationName.startsWith("curtain-"))
+            window.curtainEvents.push({ name: event.animationName, at: performance.now() });
+        },
+        true,
+      );
     });
-    let requests = 0;
+    let releaseScript, releaseCover;
+    let covers = 0;
+    const scriptGate = new Promise((done) => {
+      releaseScript = done;
+    });
+    const coverGate = new Promise((done) => {
+      releaseCover = done;
+    });
     await page.route(/\/assets\/experience\.[^.]+\.js$/, async (route) => {
-      await new Promise((resolve) => {
-        releaseScript = resolve;
-      });
+      await scriptGate;
       await route.continue();
     });
     await page.route("**/productions/991008/cover?*", async (route) => {
-      requests++;
-      await new Promise((resolve) => {
-        releaseCover = resolve;
-      });
+      covers++;
+      await coverGate;
       await route.fulfill({ contentType: "image/webp", body: cover });
     });
-    await page.goto(target, { waitUntil: "commit" });
-    await page.waitForFunction(() => document.documentElement.classList.contains("curtain-pending"));
-    await page.waitForTimeout(400);
-    assert.equal(await page.locator("body").evaluate((el) => getComputedStyle(el).visibility), "hidden");
-    assert.notEqual(
-      await page.evaluate(() => getComputedStyle(document.documentElement, "::before").backgroundImage),
-      "none",
-    );
-    assert.equal(requests, 0);
-    await page.screenshot({ path: dir + "/" + width + "-before-script.png" });
-    releaseScript();
-    await page.locator(".work-curtain").waitFor();
-    await page.waitForTimeout(300);
-    assert.equal(await page.locator("html").evaluate((el) => el.classList.contains("curtain-pending")), false);
-    assert.equal(await page.locator(".is-opening").count(), 0);
-    assert.equal(await page.locator(".curtain-meter").getAttribute("aria-valuenow"), null);
-    await page.screenshot({ path: dir + "/" + width + "-waiting-cover.png" });
-    releaseCover();
-    await page.waitForFunction(() => !!window.releaseDecode);
-    assert.equal(await page.locator(".is-opening").count(), 0, "must also wait for actual image decode");
-    await page.evaluate(() => window.releaseDecode());
-    await page.waitForTimeout(350);
-    assert.equal(await page.locator(".is-opening").count(), 0, "must wait for CSS backdrop too");
-    releaseBackdrop();
-    await page.locator(".work-curtain.is-opening").waitFor();
-    assert.equal(requests, 1);
-    await page.waitForFunction(() => getComputedStyle(document.querySelector(".curtain-progress")).opacity === "0");
-    await page.waitForTimeout(1800);
-    await page.screenshot({ path: dir + "/" + width + "-opening.png" });
-    await page.locator(".work-curtain").waitFor({ state: "detached" });
-    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
-    assert.deepEqual(errors, []);
-    console.log(width + ": script delay, transfer delay, decode gate, opening and one cover request passed");
-    await page.close();
+    try {
+      await page.goto(target, { waitUntil: "commit" });
+      await page.locator("h1").waitFor({ state: "visible" });
+      await page.waitForFunction(() => !document.querySelector(".blackbox-curtain"));
+      const beforeMedia = await page.evaluate(() => ({
+        bodyVisible: getComputedStyle(document.body).visibility !== "hidden",
+        loaded: window.pageLoaded,
+        coverComplete: document.querySelector(".work-cover-full").complete,
+        nativeSource: document.querySelector(".work-cover-full").getAttribute("src"),
+        events: window.curtainEvents,
+        curtainInsertions: window.curtainInsertions,
+        overflow: document.documentElement.scrollWidth > innerWidth,
+      }));
+      assert.equal(beforeMedia.bodyVisible, true);
+      assert.equal(beforeMedia.loaded, false, "Content is available before deferred script/window.load");
+      assert.equal(beforeMedia.coverComplete, false, "Content is usable while native image transfer is pending");
+      assert.match(beforeMedia.nativeSource, /\/productions\/991008\/cover/);
+      assert.deepEqual(beforeMedia.events, [], "Direct detail must not play a curtain animation");
+      assert.equal(beforeMedia.curtainInsertions, 0, "No transient curtain may be inserted");
+      assert.equal(beforeMedia.overflow, false);
+      assert.equal(covers, 1, "Native cover starts without waiting for experience.js");
+      await page.screenshot({ path: dir + "/" + width + "-content-before-media.png" });
+      releaseScript();
+      releaseCover();
+      await page.waitForLoadState("load");
+      assert.equal(
+        await page.locator(".work-cover-full").evaluate((image) => image.naturalWidth > 0 && !image.hidden),
+        true,
+      );
+      assert.equal(await page.locator(".blackbox-curtain").count(), 0, "Late resources must not restart loading");
+      assert.equal(await page.evaluate(() => window.curtainInsertions), 0);
+      assert.deepEqual(errors, []);
+      results.push({ width, scenario: "direct-detail-slow-cover-and-deferred-script", beforeMedia, covers, errors });
+    } finally {
+      releaseScript();
+      releaseCover();
+      await page.close();
+    }
   }
-  for (const mode of ["escape", "script-failed", "boot-failed", "no-js", "reduced"]) {
+  for (const mode of ["script-failed", "boot-failed", "css-failed", "cover-failed", "no-js", "reduced"]) {
     const page = await browser.newPage({
       javaScriptEnabled: mode !== "no-js",
       reducedMotion: mode === "reduced" ? "reduce" : "no-preference",
     });
-    await setup(page);
-    let releaseScript;
     await page.route("**/productions/991008/cover?*", (route) =>
-      route.fulfill({ contentType: "image/webp", body: cover }),
+      route.fulfill(
+        mode === "cover-failed" ? { status: 503, body: "unavailable" } : { contentType: "image/webp", body: cover },
+      ),
     );
-    if (mode === "escape")
-      await page.route(/\/assets\/experience\.[^.]+\.js$/, async (route) => {
-        await new Promise((resolve) => {
-          releaseScript = resolve;
-        });
-        await route.continue();
-      });
     if (mode === "script-failed") await page.route(/\/assets\/experience\.[^.]+\.js$/, (route) => route.abort());
     if (mode === "boot-failed") await page.route(/\/assets\/curtain-boot\.[^.]+\.js$/, (route) => route.abort());
-    await page.goto(target, { waitUntil: mode === "escape" ? "commit" : "domcontentloaded" });
-    if (mode === "escape") {
-      await page.waitForFunction(() => document.documentElement.classList.contains("curtain-pending"));
-      await page.keyboard.press("Escape");
-      releaseScript();
-      await page.waitForLoadState("domcontentloaded");
-    }
-    if (mode === "script-failed")
-      await page.waitForFunction(() => !document.documentElement.classList.contains("curtain-pending"), {
-        timeout: 20000,
-      });
-    await page.locator("h1").waitFor({ state: "visible" });
-    assert.equal(await page.locator(".work-curtain").count(), 0);
-    await page.waitForFunction(() =>
-      [...document.querySelectorAll("img.production-cover")].some((img) => img.naturalWidth > 0 && !img.hidden),
-    );
-    console.log(mode + ": readable page and native cover fallback passed");
+    if (mode === "css-failed") await page.route(/\/assets\/curtain\.[^.]+\.css$/, (route) => route.abort());
+    await page.goto(target, { waitUntil: "load" });
+    await page.waitForFunction(() => !document.querySelector(".blackbox-curtain"));
+    assert.equal(await page.locator("h1").isVisible(), true);
+    assert.equal(await page.locator(".work-cover-full").evaluate((image) => !image.hidden), true);
+    if (mode !== "cover-failed")
+      assert.equal(await page.locator(".work-cover-full").evaluate((image) => image.naturalWidth > 0), true);
+    assert.equal(await page.locator("[data-curtain-src],.work-curtain,html.curtain-pending").count(), 0);
+    results.push({ mode, readable: true, nativeCover: true, curtainRemoved: true });
     await page.close();
   }
+  writeFileSync(
+    dir + "/metrics.json",
+    JSON.stringify(
+      { evidence: "Rendered browser automation; synthetic data", browser: await browser.version(), results },
+      null,
+      2,
+    ) + "\n",
+  );
+  console.log(JSON.stringify(results, null, 2));
 } finally {
   await browser.close();
   server.closeAllConnections();
-  await new Promise((resolve) => server.close(resolve));
+  await new Promise((done) => server.close(done));
 }

@@ -1,4 +1,4 @@
-import { escapeHtml } from "../views";
+import { escapeHtml } from "./html";
 export const YEARS = Array.from({ length: 27 }, (_, index) => 2026 - index);
 export function yearSelect(name: string, value: unknown = ""): string {
   const selected = String(value ?? "");

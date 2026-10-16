@@ -316,12 +316,18 @@ productionRoutes.get("/productions", async (c) => {
 productionRoutes.get("/productions/:id/cover", async (c) => {
   const id = Number(c.req.param("id"));
   if (!Number.isSafeInteger(id) || id <= 0) return c.notFound();
+  // Speculative reads may only retrieve an existing public preview, even for administrators.
+  const previewOnly = c.req.query("previewOnly") === "1";
+  const coverVersion = Number(c.req.query("v"));
+  if (previewOnly && (!Number.isSafeInteger(coverVersion) || coverVersion <= 0)) return c.notFound();
   const photo = await c.env.DB.prepare(
-    `SELECT r.filename,r.original_name,r.preview_filename FROM production p JOIN resource r ON r.id=p.cover_id WHERE p.id=? AND ${productionVisible(c, "p")} AND ${resourceVisible(c, "r")} AND r.status='approved' AND r.res_type='photo'`,
+    `SELECT r.id,r.filename,r.original_name,r.preview_filename FROM production p JOIN resource r ON r.id=p.cover_id WHERE p.id=? AND ${productionVisible(c, "p")} AND ${resourceVisible(c, "r")} AND r.status='approved' AND r.res_type='photo'${previewOnly ? " AND p.is_hidden=0 AND r.production_id=p.id" : ""}`,
   )
     .bind(id)
-    .first<{ filename: string; original_name: string; preview_filename: string }>();
+    .first<{ id: number; filename: string; original_name: string; preview_filename: string }>();
   if (!photo) return c.notFound();
+  if (previewOnly && (photo.id !== coverVersion || c.req.query("size") !== "preview" || !photo.preview_filename))
+    return c.notFound();
   const preview = c.req.query("size") === "preview" && photo.preview_filename;
   if (preview) {
     const response = await serveResourceFile(c.req.raw, c.env.FILES, {
@@ -329,7 +335,7 @@ productionRoutes.get("/productions/:id/cover", async (c) => {
       filename: preview,
       publicImage: true,
     });
-    if (response.status !== 404) return response;
+    if (previewOnly || response.status !== 404) return response;
   }
   return serveResourceFile(c.req.raw, c.env.FILES, {
     key: photo.filename,

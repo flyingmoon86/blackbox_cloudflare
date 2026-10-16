@@ -1,4 +1,4 @@
-import { escapeHtml } from "../views";
+import { escapeHtml } from "./html";
 
 export type PreviewResource = {
   id: number;

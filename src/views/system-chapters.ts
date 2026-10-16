@@ -1,4 +1,4 @@
-import { escapeHtml as e } from "../views";
+import { escapeHtml as e } from "./html";
 
 export const systemSections = {
   architecture: "系统架构",

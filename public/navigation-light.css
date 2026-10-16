@@ -1,7 +1,4 @@
 /* The navigation is the lighting desk; the current page remains the stage. */
-@media (scripting: enabled) {
-  @view-transition { navigation: auto; }
-}
 .nav-followspot {
   position: absolute;
   top: 0;
@@ -153,103 +150,14 @@
     padding: 15px 0 0;
   }
 }
-/* The old scene stays readable until the real destination document can commit. */
-html.scene-navigation-waiting .nav-followspot::before {
-  animation: nav-lamp-wait 1500ms ease-in-out infinite alternate;
-}
-html.scene-navigation-out #main-content {
-  opacity: .85;
-  transition: opacity 180ms ease;
-}
-html.scene-navigation-in:not(.scene-reveal-ready) #main-content :is(.stage-scene:not([hidden]), .navigation-stage-content) > :not(script):not(style):not(link) {
-  opacity: 0;
-}
-.scene-reveal-piece {
-  animation: nav-editorial-piece 560ms cubic-bezier(.16,1,.3,1) both;
-  animation-delay: calc(35ms + var(--scene-order, 0) * 50ms);
-}
-.scene-reveal-title {
-  animation: nav-editorial-title 680ms cubic-bezier(.16,1,.3,1) 80ms both;
-}
-.scene-image-pending { opacity: 0; }
-.scene-reveal-picture { animation: nav-editorial-picture 720ms cubic-bezier(.76,0,.24,1) both; }
-@keyframes nav-editorial-piece {
-  from { opacity: 0; translate: 0 14px; }
-  to { opacity: 1; translate: 0 0; }
-}
-@keyframes nav-editorial-title {
-  from { clip-path: inset(100% 0 0 0); translate: 0 18px; }
-  to { clip-path: inset(0); translate: 0 0; }
-}
-@keyframes nav-editorial-picture {
-  from { clip-path: inset(100% 0 0 0); }
-  to { clip-path: inset(0); }
-}
-@keyframes nav-lamp-wait { from { opacity: .42; } to { opacity: 1; } }
-/* Announce immediately to assistive technology. Only a long wait needs visible help. */
-.scene-navigation-assist {
-  position: fixed;
-  top: calc(var(--scene-top, 56px) + 10px);
-  right: clamp(18px, 8vw, 130px);
-  z-index: 46;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 20px;
-  max-width: calc(100% - 36px);
-  padding: 8px 16px;
-  border-top: 1px solid #aa947366;
-  box-shadow: 0 5px 16px #241b1010;
-  background: #f4edddf5;
-  color: #514431;
-  font: 13px/1.7 var(--sans, "Microsoft YaHei", sans-serif);
-}
-.scene-navigation-assist:not(.is-slow):not(:focus-within) {
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  overflow: hidden;
-  clip-path: inset(50%);
-}
-.scene-navigation-assist[hidden] { display: none; }
-.scene-navigation-assist button[hidden] { display: none; }
-body.design-public .scene-navigation-assist button,
-body.design-public .scene-navigation-assist button:hover {
-  min-height: 40px;
-  padding: 0 4px;
-  border: 0;
-  border-radius: 0;
-  background: transparent !important;
-  box-shadow: none !important;
-  color: #514431 !important;
-  font: inherit;
-  text-decoration: underline;
-  text-underline-offset: 5px;
-  transform: none;
-}
-::view-transition-old(root) { animation: nav-scene-old 240ms ease both; }
-::view-transition-new(root) { animation: nav-scene-new 240ms ease both; }
-::view-transition-old(site-navigation) { animation: none; opacity: 0; }
-::view-transition-new(site-navigation) { animation: none; }
-@keyframes nav-scene-old { to { opacity: 0; } }
-@keyframes nav-scene-new { from { opacity: 0; } }
-@media (min-width: 901px) {
-  .design-public .top { view-transition-name: site-navigation; }
-}
 @media (max-width: 900px) {
   .design-public.nav-light-enabled .top > .desktop-nav { position: absolute; }
   .nav-followspot { width: 96px; height: 56px; }
   .nav-followspot.is-mobile-marker { width: 54px; }
-  .design-public .mobile-nav { view-transition-name: site-navigation; }
   .design-public.nav-light-enabled .mobile-nav > a { position: relative; z-index: 1; }
   .design-public.nav-light-enabled .mobile-nav > a[aria-current] { background: transparent; color: #fff0c8; }
-  .scene-navigation-assist { top: auto; bottom: calc(var(--scene-bottom, 70px) + 14px); left: 18px; right: 18px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .nav-followspot, html.scene-navigation-out #main-content { transition: none; }
-  html.scene-navigation-out #main-content { opacity: 1; }
-  .scene-reveal-piece, .scene-reveal-title, .scene-reveal-picture, html.scene-navigation-waiting .nav-followspot::before { animation: none; }
-  .scene-image-pending { opacity: 1; }
-  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none; }
+  .nav-followspot { transition: none; }
   .design-public .top .nav-menu.is-open .nav-panel { animation: none; }
 }

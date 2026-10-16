@@ -335,11 +335,11 @@ test("work search filters before pagination, matches editions and treats wildcar
     s.db.prepare("INSERT INTO production(title,promo,year) VALUES(?,?,?)").run("搜索戏" + i, "海边故事", 2026);
   s.db.prepare("INSERT INTO production(title,promo,year) VALUES('百分%戏','特别作品',2020)").run();
   const html = await (await s.req(0, "/productions?q=" + encodeURIComponent("海边"))).text();
-  assert.equal((html.match(/<article class="card production-card/g) || []).length, 12);
+  assert.equal((html.match(/<article\b[^>]*class="card production-card/g) || []).length, 12);
   assert.match(html, /q=%E6%B5%B7%E8%BE%B9(?:&amp;|&)page=2/);
   assert.doesNotMatch(html, /href="\/productions\/10"/);
   const second = await (await s.req(0, "/productions?q=" + encodeURIComponent("海边") + "&page=2")).text();
-  assert.equal((second.match(/<article class="card production-card/g) || []).length, 1);
+  assert.equal((second.match(/<article\b[^>]*class="card production-card/g) || []).length, 1);
   const literal = await (await s.req(0, "/productions?q=%25")).text();
   assert.match(literal, /百分%戏/);
   assert.doesNotMatch(literal, /搜索戏0/);

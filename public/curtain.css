@@ -1,55 +1,315 @@
-/* Small, image-free closed curtain shared by the source and destination pages. */
+/* First entry only: local velvet texture with a resource-independent fallback. */
 :root {
-  --curtain-fold-width: 5vw;
-  --curtain-closed: linear-gradient(180deg,#0009,transparent 20%,#22040730 55%,#0008),repeating-linear-gradient(90deg,#210508 0,#4e0b12 calc(var(--curtain-fold-width)*.13),#901d29 calc(var(--curtain-fold-width)*.32),#b93640 calc(var(--curtain-fold-width)*.48),#951d29 calc(var(--curtain-fold-width)*.64),#4b0911 calc(var(--curtain-fold-width)*.85),#210508 var(--curtain-fold-width));
+  --blackbox-curtain-ready: 1;
 }
-html.curtain-pending { background: #210508; }
-html.curtain-pending body { visibility: hidden; }
-html.curtain-pending::before {
-  content: ""; position: fixed; inset: 0; z-index: 1000;
-  background: var(--curtain-closed);
+.blackbox-curtain {
+  --curtain-reveal-duration: 900ms;
+  position: fixed;
+  inset: 0;
+  z-index: 2147480000;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #f3eadb;
+  isolation: isolate;
+  pointer-events: none;
+  animation: curtain-safety 0s 12s forwards;
 }
-#work-navigation-curtain {
-  position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none;
-  box-sizing: border-box; margin: 0; padding: 0; border: 0; border-radius: 0;
-  background: var(--curtain-closed); color: #f3ead8;
+.blackbox-curtain::backdrop {
+  background: transparent;
+  backdrop-filter: none;
+  pointer-events: none;
 }
-#work-navigation-curtain::backdrop { background: #210508; backdrop-filter: none; }
-.curtain-navigation-status {
+.curtain-scene {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  contain: layout paint;
+}
+.curtain-wing {
+  position: absolute;
+  inset-block: -2%;
+  width: calc(50% + 3px);
+  display: flex;
+  overflow: hidden;
+  background: #330b0d;
+  box-shadow: 0 0 28px 8px #070303aa;
+  backface-visibility: hidden;
+  will-change: transform;
+}
+.curtain-wing-left {
+  left: 0;
+  transform-origin: left top;
   z-index: 1;
-  position: absolute; bottom: max(7vh,env(safe-area-inset-bottom)); left: 50%;
-  transform: translateX(-50%); width: min(320px,calc(100% - 48px)); text-align: center;
-  font: 14px/1.6 sans-serif; letter-spacing: .04em;
 }
-.curtain-navigation-status p { margin: 0 0 12px; }
-.curtain-navigation-bell { display: block; font-size: 28px; margin-bottom: 12px; }
-.curtain-navigation-meter { height: 3px; border-radius: 3px; background: #f3ead826; margin-bottom: 12px; }
-#work-navigation-curtain .curtain-navigation-cancel {
-  display: inline-block; min-height: 44px; padding: 8px 12px; border: 0; background: none;
-  color: #f3ead8; font: 400 12px/20px Arial,"Microsoft YaHei",sans-serif; text-decoration: underline; cursor: pointer;
+.curtain-wing-right {
+  right: 0;
+  transform-origin: right top;
+  flex-direction: row-reverse;
 }
-.curtain-navigation-cancel:focus-visible { outline: 2px solid #e6ce4e; outline-offset: 3px; }
-@media(max-width:600px) { :root { --curtain-fold-width: 8.333333vw; } }
-.curtain-boot-cloth { position:fixed; inset:0; z-index:1000; background:#210508; }
-.curtain-boot-cloth > .curtain-cloth,
-#work-navigation-curtain > .curtain-cloth { position:absolute; inset:0; width:100%; height:100%; z-index:0; overflow:hidden; }
-/* Reserve the same rows throughout navigation, boot and media loading. */
-.curtain-status-panel.curtain-status-panel {
-  position:absolute; z-index:1; bottom:max(7vh,env(safe-area-inset-bottom)); left:50%;
-  transform:translateX(-50%); width:min(320px,calc(100% - 48px)); height:186px;
-  text-align:center; color:#f3ead8; font:400 14px/1.6 Arial,"Microsoft YaHei",sans-serif;
-  letter-spacing:.04em; filter:drop-shadow(0 2px 10px #000);
+/* Soft folds remain visible when the optional local image is unavailable. */
+.curtain-fold {
+  flex: 1;
+  min-width: 0;
+  background: linear-gradient(90deg, #210608, #3e1013 23%, #55191b 43%, #481114 63%, #260709 91%, #190506);
 }
-.curtain-status-panel.curtain-status-panel p {
-  font:inherit; letter-spacing:inherit; margin:0 0 12px; height:23px;
+.curtain-fold:nth-child(3n + 1) {
+  flex-grow: 0.7;
 }
-.curtain-status-panel.curtain-status-panel .curtain-bell { display:block; font-size:28px; line-height:40px; height:40px; margin:0 0 12px; }
-.curtain-status-panel.curtain-status-panel .curtain-transfer {
-  height:40px; margin:0; font-size:12px; line-height:20px; letter-spacing:.02em;
-  font-variant-numeric:tabular-nums; overflow-wrap:anywhere; opacity:.85;
+.curtain-fold:nth-child(3n + 2) {
+  flex-grow: 1.25;
 }
-.curtain-status-panel.curtain-status-panel button {
-  display:inline-block; min-height:44px; margin:0; padding:8px 12px; border:0; background:none;
-  color:inherit; font:400 12px/20px Arial,"Microsoft YaHei",sans-serif; text-decoration:underline; cursor:pointer;
+.curtain-cloth {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  width: 200%;
+  max-width: none;
+  height: 100%;
+  object-fit: fill;
+  user-select: none;
+  pointer-events: none;
 }
-.curtain-status-panel button:focus-visible { outline:2px solid #e6ce4e; outline-offset:3px; }
+.curtain-wing-right .curtain-cloth {
+  left: -100%;
+}
+.curtain-wing::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #10030233, transparent 35%, transparent 97%, #0a020480);
+  pointer-events: none;
+}
+.curtain-wing-right::after {
+  background: linear-gradient(270deg, #10030233, transparent 35%, transparent 97%, #0a020480);
+}
+/* Light falls onto cloth; the stage edges are shadow, not a decorative frame. */
+.curtain-atmosphere {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 36%, transparent 12%, #10030426 50%, #08030499 100%),
+    linear-gradient(180deg, #0502039c, transparent 19%, transparent 62%, #08030499);
+  box-shadow: inset 0 16px 34px #05020388;
+}
+.curtain-panel {
+  position: absolute;
+  z-index: 3;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  box-sizing: border-box;
+  width: min(286px, calc(100% - 64px));
+  max-height: calc(100% - 64px);
+  padding: 24px 0;
+  text-align: center;
+  color: #f3eadb;
+  font:
+    400 12px/1.7 Arial,
+    "Microsoft YaHei",
+    sans-serif;
+  letter-spacing: 0.06em;
+  text-shadow: 0 2px 14px #100204;
+}
+.curtain-panel::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -70px -100px;
+  background: radial-gradient(ellipse, #12050785, #12050730 45%, transparent 72%);
+  pointer-events: none;
+}
+.curtain-panel .curtain-brand {
+  margin: 0 0 52px;
+  padding-left: 0.22em;
+  color: #f8efdf;
+  font:
+    400 clamp(46px, 5vw, 68px)/1.25 "Songti SC",
+    "STSong",
+    SimSun,
+    serif;
+  letter-spacing: 0.22em;
+}
+.curtain-brand > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 18px;
+  padding-right: 0.3em;
+  font:
+    400 11px/1.6 Arial,
+    "Microsoft YaHei",
+    sans-serif;
+  letter-spacing: 0.3em;
+  color: #e0c6ac;
+}
+.curtain-brand > span::before,
+.curtain-brand > span::after {
+  content: "";
+  width: 24px;
+  height: 1px;
+  background: #d1ac7766;
+}
+.curtain-panel .curtain-label {
+  margin: 0 0 18px;
+  font: inherit;
+  letter-spacing: 0.16em;
+}
+.curtain-panel .curtain-detail {
+  min-height: 20px;
+  margin: 14px 0 0;
+  color: #decab9;
+  font:
+    400 11px/1.8 Arial,
+    "Microsoft YaHei",
+    sans-serif;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+.curtain-panel .curtain-meter {
+  display: block;
+  width: 192px;
+  max-width: 100%;
+  height: 1px;
+  margin: 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  appearance: none;
+  background: #ebd3aa33;
+  color: #e5c596;
+  accent-color: #e5c596;
+  overflow: hidden;
+}
+.curtain-meter::-webkit-progress-bar {
+  background: #ebd3aa33;
+}
+.curtain-meter::-webkit-progress-value {
+  background: #e5c596;
+}
+.curtain-meter::-moz-progress-bar {
+  background: #e5c596;
+}
+.curtain-meter:indeterminate {
+  opacity: 0.55;
+}
+.curtain-recovery {
+  position: fixed;
+  z-index: 90;
+  bottom: max(90px, env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  box-sizing: border-box;
+  width: max-content;
+  max-width: calc(100% - 40px);
+  padding: 12px 18px;
+  background: #171117;
+  color: #eee4d4;
+  border: 1px solid #cab18940;
+  font:
+    400 13px/1.7 Arial,
+    "Microsoft YaHei",
+    sans-serif;
+  pointer-events: none;
+}
+/* Pull at the rail, compress the folds into the wings, let the lower hem follow.
+   No hold or animation delay. Only two cloth layers are transformed. */
+.blackbox-curtain.is-revealing .curtain-wing-left {
+  animation: curtain-reveal-left var(--curtain-reveal-duration) cubic-bezier(0.32, 0, 0.2, 1) both;
+}
+.blackbox-curtain.is-revealing .curtain-wing-right {
+  animation: curtain-reveal-right var(--curtain-reveal-duration) cubic-bezier(0.32, 0, 0.2, 1) both;
+}
+.blackbox-curtain.is-revealing .curtain-atmosphere {
+  animation: curtain-reveal-depth var(--curtain-reveal-duration) linear both;
+}
+.blackbox-curtain.is-revealing .curtain-panel {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+@keyframes curtain-reveal-left {
+  0% {
+    transform: translateX(0) scaleX(1) skewX(0);
+  }
+  55% {
+    transform: translateX(-4%) scaleX(0.48) skewX(2deg);
+  }
+  82% {
+    transform: translateX(-7%) scaleX(0.2) skewX(1deg);
+  }
+  100% {
+    transform: translateX(-18%) scaleX(0.12) skewX(0);
+  }
+}
+@keyframes curtain-reveal-right {
+  0% {
+    transform: translateX(0) scaleX(1) skewX(0);
+  }
+  55% {
+    transform: translateX(4%) scaleX(0.48) skewX(-2deg);
+  }
+  82% {
+    transform: translateX(7%) scaleX(0.2) skewX(-1deg);
+  }
+  100% {
+    transform: translateX(18%) scaleX(0.12) skewX(0);
+  }
+}
+@keyframes curtain-reveal-depth {
+  0% {
+    opacity: 1;
+  }
+  65% {
+    opacity: 0.25;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes curtain-safety {
+  to {
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+@media (max-width: 600px) {
+  /* Crop around the seam instead of squeezing sixteen folds onto a phone. */
+  .curtain-cloth {
+    width: 400%;
+    left: -100%;
+  }
+  .curtain-wing-right .curtain-cloth {
+    left: -200%;
+  }
+  .curtain-panel .curtain-brand {
+    margin-bottom: 44px;
+    font-size: 48px;
+  }
+  .curtain-panel {
+    width: min(272px, calc(100% - 56px));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .blackbox-curtain .curtain-scene *,
+  .blackbox-curtain .curtain-panel,
+  .blackbox-curtain .curtain-meter {
+    animation: none !important;
+    transition: none !important;
+  }
+  .blackbox-curtain.is-revealing {
+    visibility: hidden;
+  }
+}

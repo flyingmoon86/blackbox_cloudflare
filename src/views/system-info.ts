@@ -1,4 +1,5 @@
-import { escapeHtml as e, layout } from "../views";
+import { escapeHtml as e } from "./html";
+import { layout } from "./layout";
 import { assetUrl } from "./assets";
 import type { SystemInfo } from "../services/system-info";
 

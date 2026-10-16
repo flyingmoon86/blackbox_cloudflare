@@ -1,4 +1,4 @@
-import { escapeHtml } from "../views";
+import { escapeHtml } from "./html";
 import { icon } from "./shared";
 
 export function adminNavigation(path: string, publicSite?: string): string {

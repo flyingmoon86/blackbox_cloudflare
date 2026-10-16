@@ -1,4 +1,5 @@
-import { escapeHtml as e, layout } from "../views";
+import { escapeHtml as e } from "./html";
+import { layout } from "./layout";
 import type { UserSession } from "../types";
 import { stageArt, stageAssets, stageAttributes } from "./stage-art";
 import { assetUrl } from "./assets";

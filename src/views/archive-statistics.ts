@@ -1,4 +1,5 @@
-import { escapeHtml as h, layout } from "../views";
+import { escapeHtml as h } from "./html";
+import { layout } from "./layout";
 import type { ArchiveStatistics } from "../services/archive-statistics";
 import type { AdminPage } from "../http/pagination";
 import { adminPagination } from "./admin-pagination";

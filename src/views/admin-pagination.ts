@@ -1,5 +1,5 @@
 import { adminPageUrl, type AdminPage } from "../http/pagination";
-import { escapeHtml as e } from "../views";
+import { escapeHtml as e } from "./html";
 
 export function adminPagination(info: AdminPage, label = "内容分页", anchor = ""): string {
   const pages = Math.max(1, Math.ceil(info.total / info.size));

@@ -1,4 +1,4 @@
-import { escapeHtml } from "../views";
+import { escapeHtml } from "./html";
 import type { EditionRow } from "../routes/productions";
 
 export function editionChoice(editions: EditionRow[], selected: number | null = null): string {

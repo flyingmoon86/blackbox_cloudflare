@@ -1,4 +1,5 @@
-import { escapeHtml, layout } from "../views";
+import { escapeHtml } from "./html";
+import { layout } from "./layout";
 import { archiveTabs } from "./shared";
 import type { UserSession } from "../types";
 

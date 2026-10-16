@@ -1,6 +1,7 @@
 import { siteEditor } from "./site-editor";
 import type { AnnouncementRow, SiteProfileRow } from "../routes/content";
-import { escapeHtml, layout } from "../views";
+import { escapeHtml } from "./html";
+import { layout } from "./layout";
 
 export function announcementListPage(items: AnnouncementRow[], admin: boolean, csrf: string, signedIn = true): string {
   const rows = items.length

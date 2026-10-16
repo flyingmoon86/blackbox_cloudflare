@@ -1,4 +1,4 @@
-import { escapeHtml } from "../views";
+import { escapeHtml } from "./html";
 import type { ResourceChoice } from "../routes/productions";
 
 const labels: Record<string, string> = { photo: "剧照", video: "视频", script: "剧本", audio: "音频", other: "其他" };

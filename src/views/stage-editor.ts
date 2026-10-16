@@ -1,4 +1,4 @@
-import { escapeHtml as e } from "../views";
+import { escapeHtml as e } from "./html";
 import { assetUrl } from "./assets";
 import { stageSources } from "./stage-art";
 import { stageScenes, stageSettings } from "../services/stage-visuals";

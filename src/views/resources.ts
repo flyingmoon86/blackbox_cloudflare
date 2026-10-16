@@ -7,7 +7,8 @@ import { archiveTabs, pagination, type PageInfo, yearSelect } from "./shared";
 import { assetUrl } from "./assets";
 import type { PhotoNavigation, ResourceRow } from "../routes/resources";
 import type { UserSession } from "../types";
-import { escapeHtml, layout } from "../views";
+import { escapeHtml } from "./html";
+import { layout } from "./layout";
 import { resourceCardArtwork, resourceDetailPreview } from "./resource-preview";
 const labels: Record<string, string> = {
   video: "视频",

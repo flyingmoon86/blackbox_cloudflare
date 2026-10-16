@@ -1,6 +1,22 @@
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { build } from "esbuild";
+import { clientEntries } from "./client-entries.mjs";
+// Maintain these features in modules; serve one synchronous IIFE per existing
+// entry URL. In particular, curtain boot must retain document.currentScript.
+await Promise.all(
+  clientEntries.map((name) =>
+    build({
+      entryPoints: [`src/client/${name}.js`],
+      outfile: `public/${name}.js`,
+      bundle: true,
+      format: "iife",
+      target: "es2022",
+      minify: false,
+      banner: { js: `// Generated from src/client/${name}.js by npm run assets:build. Do not edit this output.` },
+    }),
+  ),
+);
 await build({
   entryPoints: ["public/system-scene.entry.js"],
   outfile: "public/system-scene.js",
@@ -14,12 +30,20 @@ const files = [
   "site-editor.js",
   "site-editor.css",
   "home-recommendations.js",
+  "work-browse.js",
+  "work-browse.css",
   "stage-editor.js",
   "stage-editor.css",
   "images/stage-lamp.png",
   ...["productions", "members", "thanks"].flatMap((section) => [
     `images/${section}-unlit.png`,
     `images/${section}-light.png`,
+  ]),
+  ...["theatre", "productions", "members", "thanks"].flatMap((section) => [
+    `images/${section}-unlit.webp`,
+    `images/${section}-light.webp`,
+    `images/${section}-unlit-mobile.webp`,
+    `images/${section}-light-mobile.webp`,
   ]),
   "home-light.css",
   "thanks.css",
@@ -46,6 +70,7 @@ const files = [
   "navigation-preload.js",
   "curtain-boot.js",
   "curtain.css",
+  "images/curtain-velvet-v1.webp",
   "upload.js",
   "review.js",
   "system-info.js",

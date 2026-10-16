@@ -1,0 +1,49 @@
+.work-detail .production-hero > .work-cover-frame,
+.design-public .work-detail .production-hero > .work-cover-frame {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: min(56.25vw, 85vh);
+  min-height: 0;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 0;
+  background: #090806;
+  aspect-ratio: auto;
+}
+.work-detail.ratio-portrait .production-hero > .work-cover-frame,
+.design-public .work-detail.ratio-portrait .production-hero > .work-cover-frame {
+  height: min(133.333vw, 85vh);
+}
+.work-cover-frame > :is(.work-cover-full, .work-cover-preview) {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  object-fit: contain;
+  object-position: center;
+}
+.work-cover-frame > .work-cover-preview {
+  visibility: hidden;
+  pointer-events: none;
+}
+.work-cover-frame.is-previewing > .work-cover-preview {
+  visibility: visible;
+}
+.work-cover-frame.is-previewing > .work-cover-full {
+  opacity: 0;
+}
+@media (max-width: 900px) {
+  .work-detail .production-hero > .work-cover-frame,
+  .design-public .work-detail .production-hero > .work-cover-frame {
+    height: min(56.25vw, 80svh);
+  }
+  .work-detail.ratio-portrait .production-hero > .work-cover-frame,
+  .design-public .work-detail.ratio-portrait .production-hero > .work-cover-frame {
+    height: min(133.333vw, 80svh);
+  }
+}

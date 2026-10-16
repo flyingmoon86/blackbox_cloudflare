@@ -2,7 +2,8 @@ import type { SuggestionRow } from "../routes/suggestions";
 import { adminPageUrl, type AdminPage } from "../http/pagination";
 import { adminPagination, filterSelect, listReturnInput } from "./admin-pagination";
 import { yearSelect } from "./shared";
-import { escapeHtml, layout } from "../views";
+import { escapeHtml } from "./html";
+import { layout } from "./layout";
 
 export function suggestionFormPage(
   csrf: string,

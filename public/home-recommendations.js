@@ -73,6 +73,8 @@
       image.hidden = true;
     });
     if (image.complete && !image.naturalWidth) image.hidden = true;
+    // Prepare the existing preview while the opening scene is still visible.
+    if (typeof image.decode === "function") image.decode().catch(() => {});
     fine.addEventListener("change", hide);
     inline.addEventListener("change", hide);
     reduced.addEventListener("change", hide);

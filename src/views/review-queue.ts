@@ -1,6 +1,6 @@
 import { tryGetContext } from "hono/context-storage";
 import type { AppEnv } from "../types";
-import { escapeHtml } from "../views";
+import { escapeHtml } from "./html";
 
 export function reviewQueue(kind: string, cards: string, serverPaged = false): string {
   const owner = tryGetContext<AppEnv>()?.get("user")?.id || 0;

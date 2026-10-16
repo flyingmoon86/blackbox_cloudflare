@@ -1,6 +1,7 @@
 import { stageArt, stageAssets, stageAttributes } from "./stage-art";
 import { assetUrl } from "./assets";
-import { escapeHtml as e, layout } from "../views";
+import { escapeHtml as e } from "./html";
+import { layout } from "./layout";
 import type { UserSession } from "../types";
 import type { SiteProfileRow, AnnouncementRow } from "../routes/content";
 import type { ProductionRow } from "../routes/productions";
@@ -109,7 +110,7 @@ export function theatreHome(
           (p.hover_photo_id
             ? '<img class="recommendation-still" src="/resources/' +
               p.hover_photo_id +
-              '/preview" alt="" aria-hidden="true" loading="lazy" decoding="async">'
+              '/preview" alt="" aria-hidden="true" loading="eager" fetchpriority="low" decoding="async">'
             : "") +
           "<small>" +
           e(p.year || "年份待补") +

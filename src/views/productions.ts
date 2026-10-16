@@ -11,8 +11,27 @@ import type {
   ResourceChoice,
 } from "../routes/productions";
 import type { UserSession } from "../types";
-import { escapeHtml, layout } from "../views";
+import { escapeHtml } from "./html";
+import { layout } from "./layout";
 import { resourceCardArtwork } from "./resource-preview";
+
+function previewCover(item: ProductionRow): string {
+  return item.cover_id && !item.is_hidden
+    ? `/productions/${item.id}/cover?size=preview&previewOnly=1&v=${item.cover_id}`
+    : "";
+}
+
+function workCardAttributes(item: ProductionRow): string {
+  const preview = previewCover(item);
+  return `data-work-card="${item.id}"${preview ? ` data-work-preview="${escapeHtml(preview)}"` : ""}`;
+}
+
+function detailCover(item: ProductionRow): string {
+  if (!item.cover_id) return "";
+  const portrait = item.cover_ratio === "portrait";
+  const preview = previewCover(item);
+  return `<div class="production-cover work-cover-frame"${preview ? ` data-work-preview="${escapeHtml(preview)}"` : ""}><img class="work-cover-full" loading="eager" fetchpriority="high" decoding="async" width="${portrait ? 900 : 1600}" height="${portrait ? 1200 : 900}" src="/productions/${item.id}/cover?v=${item.cover_id}" alt="${escapeHtml(item.title)}封面"></div>`;
+}
 
 function visibilityControl(item: ProductionRow, csrf: string): string {
   return `<form class="production-visibility" method="post" action="/admin/productions/${item.id}/visibility"><span class="role-badge">${item.is_hidden ? "已隐藏 · 仅管理员可见" : "公开"}</span><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button class="secondary" name="is_hidden" value="${item.is_hidden ? 0 : 1}">${item.is_hidden ? "取消隐藏" : "设为隐藏"}</button></form>`;
@@ -50,12 +69,12 @@ export function productionListPage(
           if (item.feature_layout === "overlay" && item.cover_id) {
             return (
               heading +
-              `<article class="card production-card production-stage-card ratio-${item.cover_ratio === "portrait" ? "portrait" : "landscape"}${item.featured ? " production-featured-card" : ""}"><img class="production-stage-image" src="/productions/${item.id}/cover?size=preview&amp;v=${item.cover_id}" alt="${escapeHtml(item.title)}封面" loading="lazy" decoding="async"><span class="production-stage-shade" aria-hidden="true"></span><div class="production-stage-copy"><p class="eyebrow">${escapeHtml(item.year || "作品档案")} · ${item.edition_count || 1} 个版本</p><h2><a class="production-stage-title" href="/productions/${item.id}">${escapeHtml(item.title)}</a></h2><div class="production-stage-details"><div><p class="production-stage-intro">${escapeHtml(item.promo || item.synopsis || "暂无介绍")}</p>${contributionActions(item)}</div></div></div></article>`
+              `<article ${workCardAttributes(item)} class="card production-card production-stage-card ratio-${item.cover_ratio === "portrait" ? "portrait" : "landscape"}${item.featured ? " production-featured-card" : ""}"><img class="production-stage-image" src="/productions/${item.id}/cover?size=preview&amp;v=${item.cover_id}" alt="${escapeHtml(item.title)}封面" loading="lazy" decoding="async"><span class="production-stage-shade" aria-hidden="true"></span><div class="production-stage-copy"><p class="eyebrow">${escapeHtml(item.year || "作品档案")} · ${item.edition_count || 1} 个版本</p><h2><a class="production-stage-title" href="/productions/${item.id}">${escapeHtml(item.title)}</a></h2><div class="production-stage-details"><div><p class="production-stage-intro">${escapeHtml(item.promo || item.synopsis || "暂无介绍")}</p>${contributionActions(item)}</div></div></div></article>`
             );
           }
           return (
             heading +
-            `<article class="card production-card ratio-${item.cover_ratio === "portrait" ? "portrait" : "landscape"}${item.featured ? " production-featured-card" : ""}">${item.cover_id ? `<img class="production-cover" src="/productions/${item.id}/cover?size=preview&amp;v=${item.cover_id}" alt="${escapeHtml(item.title)}封面" loading="lazy" decoding="async">` : ""}<p class="eyebrow">${escapeHtml(item.year || "作品档案")} · ${item.edition_count || 1} 个版本</p><h2><a href="/productions/${item.id}">${escapeHtml(item.title)}</a></h2><p>${escapeHtml(item.promo || item.synopsis || "暂无介绍")}</p>${contributionActions(item)}</article>`
+            `<article ${workCardAttributes(item)} class="card production-card ratio-${item.cover_ratio === "portrait" ? "portrait" : "landscape"}${item.featured ? " production-featured-card" : ""}">${item.cover_id ? `<img class="production-cover" src="/productions/${item.id}/cover?size=preview&amp;v=${item.cover_id}" alt="${escapeHtml(item.title)}封面" loading="lazy" decoding="async">` : ""}<p class="eyebrow">${escapeHtml(item.year || "作品档案")} · ${item.edition_count || 1} 个版本</p><h2><a href="/productions/${item.id}">${escapeHtml(item.title)}</a></h2><p>${escapeHtml(item.promo || item.synopsis || "暂无介绍")}</p>${contributionActions(item)}</article>`
           );
         })
         .join("")
@@ -190,7 +209,7 @@ export function productionDetailPage(
   }
   return layout(
     item.title,
-    `${admin ? visibilityControl(item, csrf) : ""}<p class="back-links"><a href="/productions">← 返回作品档案</a>${admin ? '<a class="production-manage-link" href="#manage-credits">管理作品 ↓</a>' : ""}</p><article class="card production-detail work-detail ratio-${item.cover_ratio === "portrait" ? "portrait" : "landscape"}"><header class="production-hero">${item.cover_id ? `<img class="production-cover" hidden decoding="async" data-curtain-src="/productions/${item.id}/cover?v=${item.cover_id}" alt="${escapeHtml(item.title)}封面"><noscript><img class="production-cover" src="/productions/${item.id}/cover?v=${item.cover_id}" alt="${escapeHtml(item.title)}封面"></noscript>` : ""}<div class="production-hero-copy"><p class="eyebrow">${escapeHtml(item.year || "PRODUCTION")} · ${editions.length} 个版本</p><h1>${escapeHtml(item.title)}</h1><p class="lead">${escapeHtml(item.promo)}</p><a class="production-hero-next" href="#versions">查看演出版本 <span aria-hidden="true">↓</span></a></div></header><p class="production-synopsis">${escapeHtml(item.synopsis || "暂无剧情介绍")}</p>
+    `${admin ? visibilityControl(item, csrf) : ""}<p class="back-links"><a data-work-return href="/productions">← 返回作品档案</a>${admin ? '<a class="production-manage-link" href="#manage-credits">管理作品 ↓</a>' : ""}</p><article class="card production-detail work-detail ratio-${item.cover_ratio === "portrait" ? "portrait" : "landscape"}"><header class="production-hero">${detailCover(item)}<div class="production-hero-copy"><p class="eyebrow">${escapeHtml(item.year || "PRODUCTION")} · ${editions.length} 个版本</p><h1>${escapeHtml(item.title)}</h1><p class="lead">${escapeHtml(item.promo)}</p><a class="production-hero-next" href="#versions">查看演出版本 <span aria-hidden="true">↓</span></a></div></header><p class="production-synopsis">${escapeHtml(item.synopsis || "暂无剧情介绍")}</p>
     <nav class="edition-nav" id="versions" aria-label="演出版本"><span class="edition-nav-label">选择演出版本</span><div class="edition-tabs">${editions.map((v) => `<a href="/productions/${item.id}?edition=${v.id}#edition-${v.id}"${v.id === (resourcePage?.edition || editions[0]?.id) ? ' aria-current="page"' : ""}>${escapeHtml(editionLabel(v.id))}</a>`).join("")}</div></nav>
     ${editions
       .filter((v) => v.id === (resourcePage?.edition || editions[0]?.id))

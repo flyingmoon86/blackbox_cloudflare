@@ -35,7 +35,11 @@ test("cover list preview preserves full detail image, fallback and access checks
     assert.match(list, /cover\?size=preview&amp;v=1/);
     assert.match(list, /loading="lazy" decoding="async"/);
     const detail = await (await req("/productions/1")).text();
-    assert.match(detail, /data-curtain-src="\/productions\/1\/cover\?v=1"/);
+    assert.match(
+      detail,
+      /<img class="work-cover-full" loading="eager" fetchpriority="high" decoding="async" width="1600" height="900" src="\/productions\/1\/cover\?v=1"/,
+    );
+    assert.doesNotMatch(detail, /data-curtain-src|<img class="work-cover-full" hidden/);
     db.exec("UPDATE production SET is_hidden=1 WHERE id=1");
     assert.equal((await req("/productions/1/cover?size=preview")).status, 404);
     db.exec("UPDATE production SET is_hidden=0 WHERE id=1; UPDATE resource SET status='pending' WHERE id=1");
