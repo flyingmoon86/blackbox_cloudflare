@@ -89,6 +89,8 @@ npm run dev        # 启动本地网站
 | `npm run deploy:check` | 发布前全套检查（不会发布） |
 | `npm run format` | 格式化代码 |
 
+页面与档案功能的代码入口、模块依赖和静态资源构建方式，见 [代码结构与维护](docs/代码结构与维护.md)。幕布、导航预加载和作品浏览脚本维护在 `src/client/`；修改后运行 `npm run assets:build`，不要直接修改对应的 `public/` 构建输出。
+
 ---
 
 ## 发布
@@ -130,6 +132,7 @@ npm run smoke:production          # 5. 冒烟检查
 | [docs/faq.md](docs/faq.md) | 常见问题与故障排查 | 遇到问题的人 |
 | [docs/glossary.md](docs/glossary.md) | 术语表（D1、R2、Worker、迁移……） | 不熟悉 Cloudflare 名词的人 |
 | [docs/project-structure.md](docs/project-structure.md) | 目录结构树（每个文件夹干什么） | 找代码在哪的人 |
+| [docs/代码结构与维护.md](docs/代码结构与维护.md) | 视图模块、浏览器源码与构建产物、功能扩展入口 | 修改和扩展功能的人 |
 | [docs/design-language.md](docs/design-language.md) | 设计语言 | 改界面的人 |
 | [docs/layout-book.md](docs/layout-book.md) | v3.6 首页、队员与放映画廊排版及滚动切换 | 改界面的人 |
 | [docs/admin-page-organization.md](docs/admin-page-organization.md) | 后台页面组织 | 改后台的人 |
