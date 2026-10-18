@@ -10,6 +10,8 @@ import type { AppEnv } from "../types";
 import { cacheOrigin, readCachedResponse, writeCachedResponse } from "../services/edge-cache";
 import { getSiteProfile, invalidateSiteProfile } from "../services/site-profile";
 import { announcementDetailPage, announcementFormPage, announcementListPage, siteSettingsPage } from "../views/content";
+import { ANNOUNCEMENT_MAX_LENGTH } from "../shared/announcement-markdown";
+import { adminPortal } from "../services/admin-portal";
 
 export type AnnouncementRow = { id: number; title: string; content: string; created_at: string };
 export type SiteProfileRow = {
@@ -106,14 +108,22 @@ contentRoutes.get("/announcements/:id", async (c) => {
     .bind(Number(c.req.param("id")))
     .first<AnnouncementRow>();
   return item
-    ? c.html(announcementDetailPage(item, c.get("user")?.role === "admin", await csrfFor(c), Boolean(c.get("user"))))
+    ? c.html(
+        announcementDetailPage(
+          item,
+          c.get("user")?.role === "admin",
+          await csrfFor(c),
+          Boolean(c.get("user")),
+          adminPortal(c)?.publicSite,
+        ),
+      )
     : c.text("公告不存在。", 404);
 });
 
 contentRoutes.get("/admin/announcements/new", async (c) => {
   const denied = adminDenied(c);
   if (denied) return denied;
-  return c.html(announcementFormPage(await csrfFor(c)));
+  return c.html(announcementFormPage(await csrfFor(c), adminPortal(c)?.publicSite));
 });
 
 contentRoutes.post("/admin/announcements/new", async (c) => {
@@ -124,6 +134,7 @@ contentRoutes.post("/admin/announcements/new", async (c) => {
   const title = String(form.get("title") ?? "").trim();
   const content = String(form.get("content") ?? "").trim();
   if (!title || title.length > 100) return c.text("公告标题需为 1–100 个字符。", 400);
+  if (content.length > ANNOUNCEMENT_MAX_LENGTH) return c.text("公告正文不能超过 20,000 个字符。", 400);
   const result = await c.env.DB.prepare("INSERT INTO announcement(title,content) VALUES(?,?)")
     .bind(title, content)
     .run();

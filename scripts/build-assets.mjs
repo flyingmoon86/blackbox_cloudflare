@@ -27,6 +27,8 @@ await build({
   legalComments: "eof",
 });
 const files = [
+  "announcement-editor.js",
+  "announcement.css",
   "site-editor.js",
   "site-editor.css",
   "home-recommendations.js",
