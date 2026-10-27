@@ -1,0 +1,58 @@
+.member-records { max-width: 1100px; width: 100%; margin: 0 auto; overflow-wrap: anywhere; }
+.member-records h1 { font-size: clamp(2rem, 4vw, 3rem); line-height: 1.25; margin-bottom: .6rem; }
+.graduation-personal { max-width: 720px; }
+.member-records .card { margin-block: 1rem; min-width: 0; }
+.member-records details { margin-block: 1rem; }
+.member-records summary { cursor: pointer; padding-block: .8rem; min-height: 44px; }
+.member-records input,.member-records select,.member-records textarea { max-width: 100%; min-width: 0; }
+.record-form { max-width: 680px; }
+.record-filter { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .75rem; margin-block: 1rem; }
+.record-filter label { flex: 1 1 160px; max-width: 320px; margin: 0; }
+.record-filter button { margin: 0; }
+.record-actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-block: 1rem; }
+.record-actions form { margin: 0; }
+.record-table { overflow-x: auto; max-width: 100%; }
+.record-table th,.record-table td { min-width: 4.5rem; white-space: nowrap; }
+.record-photos { display: grid; grid-template-columns: repeat(auto-fill,minmax(min(100%,300px),1fr)); gap: 2rem; margin-top: 2rem; }
+.record-photos figure { margin: 0; min-width: 0; }
+.record-photos img { width: 100%; height: 200px; object-fit: contain; }
+.member-records pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.member-records a,.member-records button { min-height: 44px; }
+.member-records li a,.member-records nav a { display: inline-flex; align-items: center; padding: .5rem; }
+.member-records :focus-visible { outline: 3px solid currentColor; outline-offset: 3px; }
+.photo-upload { max-width: 620px; padding-block: 1rem 2rem; border-bottom: 1px solid var(--line); }
+.photo-consent { display: flex; align-items: flex-start; gap: .7rem; font-weight: 400; min-height: 44px; }
+.member-records .photo-consent input[type="checkbox"] { width: 20px; height: 20px; min-height: 20px; flex: 0 0 20px; margin: .2rem 0 0; }
+.photo-consent span { min-width: 0; }
+.photo-item { min-width: 0; padding-bottom: 1.5rem; border-bottom: 1px solid var(--line); }
+.photo-item .record-actions { gap: .5rem; }
+.photo-item .record-actions button { font-size: .9rem; padding: .6rem .8rem; }
+.photo-caption { margin-bottom: .3rem; }
+.photo-review-list { list-style: none; padding: 0; max-width: 720px; }
+.photo-review-list li { border-bottom: 1px solid var(--line); }
+.photo-review-list li a { display: flex; justify-content: space-between; gap: 1rem; padding: 1rem 0; }
+@media (max-width: 600px) { .member-records h1 { font-size: 1.6rem; } .record-actions { flex-direction: column; } }
+
+/* A short personal form; type-specific fields work without JavaScript. */
+.graduation-form{margin-top:1.5rem;max-width:620px}
+.graduation-year{max-width:150px}
+.graduation-choices{border:0;padding:0;margin:1.5rem 0;display:flex;flex-wrap:wrap;gap:10px}
+.graduation-choices legend{margin-bottom:.65rem}
+.graduation-choices label{position:relative;display:block;margin:0;cursor:pointer}
+.graduation-choices input{position:absolute;opacity:0;width:1px;height:1px;min-height:1px}
+.graduation-choices span{display:block;padding:10px 16px;border:1px solid var(--line);border-radius:20px;min-height:44px}
+.graduation-choices input:checked+span{border-color:var(--brand-light);color:var(--brand-light);background:var(--panel)}
+.graduation-choices input:focus-visible+span{outline:2px solid var(--brand-light);outline-offset:3px}
+.graduation-secondary{display:flex;align-items:center;flex-wrap:wrap;gap:1.25rem;margin-top:1.5rem}
+.graduation-secondary form{margin:0}
+.graduation-secondary button.secondary{border:0;padding-inline:0;font-weight:400;color:var(--muted)}
+@supports selector(:has(*)) {
+ .graduation-details [data-for],.graduation-details [data-label-for]{display:none}
+ .graduation-form:has(input[value="recommendation"]:checked) [data-for~="recommendation"],.graduation-form:has(input[value="recommendation"]:checked) [data-label-for~="recommendation"]{display:block}
+ .graduation-form:has(input[value="exam"]:checked) [data-for~="exam"],.graduation-form:has(input[value="exam"]:checked) [data-label-for~="exam"]{display:block}
+ .graduation-form:has(input[value="overseas"]:checked) [data-for~="overseas"],.graduation-form:has(input[value="overseas"]:checked) [data-label-for~="overseas"]{display:block}
+ .graduation-form:has(input[value="employment"]:checked) [data-for~="employment"],.graduation-form:has(input[value="employment"]:checked) [data-label-for~="employment"]{display:block}
+ .graduation-form:has(input[value="entrepreneurship"]:checked) [data-for~="entrepreneurship"],.graduation-form:has(input[value="entrepreneurship"]:checked) [data-label-for~="entrepreneurship"]{display:block}
+ .graduation-form:has(input[value="other"]:checked) [data-for~="other"],.graduation-form:has(input[value="other"]:checked) [data-label-for~="other"]{display:block}
+ .graduation-form:has(input[value="undecided"]:checked) [data-for~="undecided"],.graduation-form:has(input[value="undecided"]:checked) [data-label-for~="undecided"]{display:block}
+}

@@ -55,9 +55,11 @@ export async function drainFileCleanup(
     processed++;
     try {
       const referenced = await env.DB.prepare(
-        "SELECT 1 FROM resource WHERE filename=? OR preview_filename=? UNION ALL SELECT 1 FROM member WHERE photo=? OR avatar_preview=? UNION ALL SELECT 1 FROM upload_task WHERE (object_key=? OR preview_filename=? OR object_key||'.preview.jpg'=?) AND status IN ('uploading','completing') LIMIT 1",
+        "SELECT 1 FROM resource WHERE filename=? OR preview_filename=? UNION ALL SELECT 1 FROM member WHERE photo=? OR avatar_preview=? UNION ALL SELECT 1 FROM upload_task WHERE (object_key=? OR preview_filename=? OR object_key||'.preview.jpg'=?) AND status IN ('uploading','completing') UNION ALL SELECT 1 FROM member_record_photo WHERE object_key=? UNION ALL SELECT 1 FROM member_featured_photo WHERE object_key=? LIMIT 1",
       )
         .bind(
+          task.object_key,
+          task.object_key,
           task.object_key,
           task.object_key,
           task.object_key,

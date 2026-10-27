@@ -61,6 +61,7 @@ const files = [
   "redesign.css",
   "archive-design.css",
   "member-dossier.js",
+  "member-records.css",
   "image-picker.js",
   "image-picker.css",
   "resource-picker.js",

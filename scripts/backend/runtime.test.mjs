@@ -232,6 +232,59 @@ test(
       const download = await request(1, "/resources/" + resource.resourceId + "/download", { method: "HEAD" });
       assert.equal(download.status, 200);
       assert.equal(download.headers.get("content-length"), String(bytes.length));
+      // The new private workflow also runs against actual Workers D1/R2 primitives.
+      await db.batch([
+        db.prepare("INSERT INTO member(id,name) VALUES(999,'合成受限档案')"),
+        db.prepare(
+          "INSERT INTO user(id,username,password_hash,role,member_id) VALUES(999,'private-runtime-owner','fixture','member',999)",
+        ),
+      ]);
+      const privateId = crypto.randomUUID();
+      response = await request(999, "/member-records/999/save", {
+        method: "POST",
+        redirect: "manual",
+        body: new URLSearchParams({
+          csrf: "runtime-csrf",
+          id: privateId,
+          version: "0",
+          kind: "destination",
+          destination_type: "undecided",
+        }),
+      });
+      assert.equal(response.status, 303, await response.text());
+      const uploadId = crypto.randomUUID(),
+        photoForm = new FormData();
+      photoForm.set("csrf", "runtime-csrf");
+      photoForm.set("upload_id", uploadId);
+      photoForm.set("members_consent", "1");
+      photoForm.set("photo", new File([bytes], "synthetic.jpg", { type: "image/jpeg" }));
+      const privateMultipart = new Request("https://blackbox.test", { method: "POST", body: photoForm });
+      response = await request(999, "/profile/members/999/photos", {
+        method: "POST",
+        redirect: "manual",
+        headers: { "content-type": privateMultipart.headers.get("content-type") },
+        body: await privateMultipart.arrayBuffer(),
+      });
+      assert.equal(response.status, 303, await response.text());
+      const privatePath = `/members/999/photos/${uploadId}/file`;
+      assert.equal((await request(999, privatePath, { headers: { Range: "bytes=0-3" } })).status, 206);
+      assert.equal(
+        (await request(999, privatePath, { method: "HEAD" })).headers.get("cache-control"),
+        "private, no-store",
+      );
+      assert.equal(
+        (
+          await mf.dispatchFetch("https://blackbox.test" + privatePath, {
+            method: "HEAD",
+            headers: { "If-None-Match": "*" },
+          })
+        ).status,
+        404,
+      );
+      assert.equal(
+        await db.prepare("SELECT COUNT(*) n FROM member_record_history WHERE record_id=?").bind(privateId).first("n"),
+        1,
+      );
     } finally {
       await mf.dispose();
     }

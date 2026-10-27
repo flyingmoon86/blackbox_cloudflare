@@ -15,6 +15,52 @@ import { DatabaseSync } from "node:sqlite";
 import { createHash } from "node:crypto";
 import { archiveFixture } from "../archive-backup-fixture.mjs";
 
+test("photo references include both member stores and archived photos, while pre-feature exports still load", async () => {
+  const legacySql = await Promise.all(
+    (await readdir("migrations"))
+      .filter((name) => name.endsWith(".sql") && Number(name.split("_")[0]) <= 24)
+      .sort()
+      .map((name) => readFile(join("migrations", name), "utf8")),
+  );
+  assert.deepEqual(inspectDatabase(legacySql.join("\n")).references, []);
+
+  const fixture = archiveFixture();
+  const keys = ["private-active.jpg", "private-archived.jpg", "featured-active.jpg", "featured-archived.jpg"];
+  fixture.sql += `
+    INSERT INTO member_record(id,member_id,kind,updated_by) VALUES('backup-moment',1,'moment',1);
+    INSERT INTO member_record_photo(id,record_id,object_key,status,archived,updated_by) VALUES
+      ('private-active','backup-moment','private-active.jpg','approved',0,1),
+      ('private-archived','backup-moment','private-archived.jpg','approved',1,1);
+    INSERT INTO member_featured_photo(id,member_id,object_key,status,archived,updated_by) VALUES
+      ('featured-active',1,'featured-active.jpg','approved',0,1),
+      ('featured-archived',1,'featured-archived.jpg','approved',1,1);`;
+  // Materialize timestamp defaults and audit triggers once, just like a D1
+  // export. Replaying raw INSERTs during verification could cross a second.
+  fixture.sql = restoreSql(fixture.sql);
+  for (const key of keys) fixture.files.set(key, Buffer.from("synthetic member photo: " + key));
+  const references = inspectDatabase(fixture.sql).references;
+  for (const key of keys) assert.ok(references.includes(key));
+  const directory = await mkdtemp(join(tmpdir(), "blackbox-member-photo-backup-"));
+  const options = {
+    directory,
+    source: fixture.source,
+    client: fixture.client,
+    exportDatabase: (path) => writeFile(path, fixture.sql),
+  };
+  const completed = await createSnapshot(options);
+  assert.equal((await verifySnapshot(completed.snapshot)).manifest.database.references.length, 9);
+
+  for (const key of keys) {
+    const bytes = fixture.files.get(key);
+    fixture.files.delete(key);
+    const before = new Set(await readdir(join(directory, "snapshots")));
+    await assert.rejects(createSnapshot(options), /数据库引用的 1 个文件不在 R2/);
+    const failed = (await readdir(join(directory, "snapshots"))).find((name) => !before.has(name));
+    await assert.rejects(readFile(join(directory, "snapshots", failed, "complete.json")));
+    fixture.files.set(key, bytes);
+  }
+});
+
 test("weak response ETags accept matching multipart bytes and reject corrupt bytes", async () => {
   for (const corrupt of [false, true]) {
     const directory = await mkdtemp(join(tmpdir(), "blackbox-weak-etag-"));

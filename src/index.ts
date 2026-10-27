@@ -17,6 +17,8 @@ import {
   pageBackgroundImage,
 } from "./routes/home";
 import { memberRoutes } from "./routes/members";
+import { memberPhotoRoutes } from "./routes/member-photos";
+import { memberRecordRoutes } from "./routes/member-records";
 import { adminRoutes } from "./routes/admin";
 import { productionRoutes } from "./routes/productions";
 import { creditImportRoutes } from "./routes/credit-import";
@@ -56,7 +58,9 @@ app.get("/site/background", pageBackgroundImage);
 app.get("/site/featured-cover", featuredCoverImage);
 app.get("/health", health);
 app.route("/", authRoutes);
+app.route("/", memberPhotoRoutes);
 app.route("/", memberRoutes);
+app.route("/", memberRecordRoutes);
 app.route("/", adminRoutes);
 app.route("/", creditImportRoutes);
 app.route("/", productionRoutes);

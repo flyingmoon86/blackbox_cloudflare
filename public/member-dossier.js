@@ -1,4 +1,4 @@
-/* Progressive enhancement: without JS all three sections and ordinary links remain usable. */
+/* Progressive enhancement: without JS all sections and ordinary links remain usable. */
 (() => {
   const attach = () => {
     const profile = document.querySelector(".member-dossier");
@@ -60,30 +60,30 @@
       },
       { once: true },
     );
-    const photo = profile.querySelector("[data-dossier-photo]");
-    photo?.addEventListener("click", (event) => {
-      event.preventDefault();
-      const dialog = document.createElement("dialog");
-      dialog.className = "dossier-photo-dialog";
-      dialog.setAttribute("aria-label", "队员照片");
-      const close = document.createElement("button");
-      close.textContent = "关闭照片";
-      const img = document.createElement("img");
-      img.src = photo.href;
-      img.alt = photo.querySelector("img").alt;
-      dialog.append(close, img);
-      document.body.append(dialog);
-      close.onclick = () => dialog.close();
-      dialog.addEventListener(
-        "close",
-        () => {
-          dialog.remove();
-          photo.focus();
-        },
-        { once: true },
-      );
-      dialog.showModal();
-    });
+    for (const photo of profile.querySelectorAll("[data-dossier-photo]"))
+      photo.addEventListener("click", (event) => {
+        event.preventDefault();
+        const dialog = document.createElement("dialog");
+        dialog.className = "dossier-photo-dialog";
+        dialog.setAttribute("aria-label", "队员照片");
+        const close = document.createElement("button");
+        close.textContent = "关闭照片";
+        const img = document.createElement("img");
+        img.src = photo.href;
+        img.alt = photo.querySelector("img").alt;
+        dialog.append(close, img);
+        document.body.append(dialog);
+        close.onclick = () => dialog.close();
+        dialog.addEventListener(
+          "close",
+          () => {
+            dialog.remove();
+            photo.focus();
+          },
+          { once: true },
+        );
+        dialog.showModal();
+      });
   };
   attach();
   document.addEventListener("profile:updated", attach);

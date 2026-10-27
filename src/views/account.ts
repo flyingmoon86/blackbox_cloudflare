@@ -75,8 +75,8 @@ export function profilePage(
       : "";
   return layout(
     "个人中心",
-    `${user.must_change_password ? '<aside class="notice" role="alert"><strong>首次登录，请先修改临时密码</strong><p>完成修改并重新登录后，才能使用管理功能。</p></aside>' : ""}${result}<section class="two-column"><article class="card"><p class="eyebrow">ACCOUNT</p><h1>个人中心</h1><p>用户名：${escapeHtml(user.username)}</p><p>身份：${escapeHtml(user.role)}</p><p>${email}</p>${application}</article>
-  <article class="card"><h2>账号管理</h2>${user.role === "member" && user.member_id ? '<p><a href="/profile/member">修改我的信息</a></p>' : ""}<h2>修改密码</h2>${message(error)}<form method="post" action="/profile/password"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}">
+    `${user.must_change_password ? '<aside class="notice" role="alert"><strong>首次登录，请先修改临时密码</strong><p>完成修改并重新登录后，才能使用管理功能。</p></aside>' : ""}${result}<section class="two-column"><article class="card"><h1>个人中心</h1><p>用户名：${escapeHtml(user.username)}</p><p>身份：${escapeHtml({ admin: "管理员", member: "认证队员", user: "普通账号" }[user.role])}</p><p>${email}</p>${application}</article>
+  <article class="card"><h2>我的资料</h2>${user.role === "member" && user.member_id ? `<p><a href="/profile/member">修改我的信息</a></p><p><a href="/profile/members/${user.member_id}/photos">我的精选照片</a></p><p><a href="/graduation/${user.member_id}">我的毕业去向（私密）</a></p>` : ""}<h2>修改密码</h2>${message(error)}<form method="post" action="/profile/password"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}">
   <label>当前密码<input type="password" name="current_password" autocomplete="current-password" required></label>
   <label>新密码<input type="password" name="new_password" minlength="8" maxlength="128" autocomplete="new-password" required></label>
   <label>再次输入新密码<input type="password" name="confirm_password" minlength="8" maxlength="128" autocomplete="new-password" required></label>

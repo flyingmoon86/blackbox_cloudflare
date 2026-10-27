@@ -5,6 +5,12 @@ import { uploadPolicy } from "./upload-policy";
 // Descriptions only; fields and foreign keys always come from the connected database.
 export const tablePurposes: Record<string, string> = {
   member: "队员档案",
+  member_featured_photo: "个人档案精选照片",
+  member_featured_photo_history: "精选照片审核与队内展示同意历史",
+  member_record: "私密毕业去向与旧时刻兼容记录",
+  member_record_history: "受限资料版本审计",
+  member_record_photo: "内部时刻照片与审核状态",
+  member_record_photo_history: "内部照片审核及归档审计",
   user: "账号、身份与档案绑定",
   join_request: "队员认证申请",
   announcement: "公告",

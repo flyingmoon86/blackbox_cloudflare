@@ -79,6 +79,12 @@ export function inspectDatabase(sql) {
     }
     for (const required of ["production", "production_edition", "production_credit", "member", "resource"])
       if (!(required in counts)) throw new Error(`导出缺少核心数据表 ${required}。`);
+    // Old snapshots predate private member photos; only query tables present in
+    // that export. Archived photos still own their objects and must be backed up.
+    const memberPhotoReferences = ["member_record_photo", "member_featured_photo"]
+      .filter((table) => Object.hasOwn(counts, table))
+      .map((table) => `UNION SELECT object_key FROM ${quote(table)} WHERE object_key<>''`)
+      .join("\n");
     const references = database
       .prepare(
         `
@@ -87,6 +93,7 @@ export function inspectDatabase(sql) {
       UNION SELECT photo FROM member WHERE photo<>'' AND photo NOT LIKE 'https://%' AND photo NOT LIKE 'http://%'
       UNION SELECT avatar_preview FROM member WHERE avatar_preview IS NOT NULL AND avatar_preview<>''
         AND avatar_preview NOT LIKE 'https://%' AND avatar_preview NOT LIKE 'http://%'
+      ${memberPhotoReferences}
     `,
       )
       .all()

@@ -1,3 +1,4 @@
+import { certified } from "../services/member-records";
 import { visitorIdentity, publicLimit } from "../services/visitors";
 import { pageNumber, YEARS } from "../views/shared";
 import { replaceAvatar, queueCurrentAvatar } from "../services/avatars";
@@ -12,6 +13,7 @@ import type { AppEnv } from "../types";
 import { memberApplicationPage, memberCreatePage, memberDetailPage, memberEditPage, memberListPage } from "../views";
 
 export type MemberRow = {
+  featured_photos?: Array<{ id: string; caption: string }>;
   flower_senders?: Array<{ name: string; member_id: number | null; amount: number }>;
   anonymous_flowers?: number;
   productions?: Array<{
@@ -180,7 +182,15 @@ memberRoutes.get("/members/:id", async (c) => {
     next: nearby.results.find((row) => current && row.position === current.position + 1),
     query: context.toString(),
   };
-  const user = c.get("user")!;
+  const user = c.get("user");
+  if (certified(user))
+    member.featured_photos = (
+      await c.env.DB.prepare(
+        "SELECT id,caption FROM member_featured_photo WHERE member_id=? AND archived=0 AND status='approved' AND members_consent=1 ORDER BY updated_at DESC,id DESC",
+      )
+        .bind(id)
+        .all<{ id: string; caption: string }>()
+    ).results;
   return c.html(
     memberDetailPage(
       member,
@@ -371,6 +381,10 @@ memberRoutes.post("/admin/members/:id/delete", async (c) => {
     .first<{ id: number; name: string }>();
   if (!member) return c.text("未找到队员档案。", 404);
   if (confirmName !== member.name.trim()) return c.text("请输入完全一致的档案姓名以确认删除。", 400);
+  if (await c.env.DB.prepare("SELECT id FROM member_record WHERE member_id=? LIMIT 1").bind(id).first())
+    return c.text("该档案有受限资料或审计历史，暂不支持永久删除；请先归档相关记录，历史资料继续保留。", 409);
+  if (await c.env.DB.prepare("SELECT id FROM member_featured_photo WHERE member_id=? LIMIT 1").bind(id).first())
+    return c.text("该档案有精选照片和审计历史，请先归档，暂不支持永久删除。", 409);
   await c.env.DB.batch([queueCurrentAvatar(c.env, id), c.env.DB.prepare("DELETE FROM member WHERE id=?").bind(id)]);
   await drainFileCleanup(c.env);
   return c.redirect("/members?deleted=1", 303);

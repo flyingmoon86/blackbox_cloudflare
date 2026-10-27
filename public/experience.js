@@ -435,7 +435,10 @@
 (() => {
   document.addEventListener("submit", async (event) => {
     const form = event.target;
-    if (!(form instanceof HTMLFormElement) || !/^\/members\/\d+\/flowers$/.test(new URL(form.action).pathname)) return;
+    // A control named "action" shadows form.action on native forms.
+    if (!(form instanceof HTMLFormElement)) return;
+    const action = new URL(form.getAttribute("action") || location.href, location.href);
+    if (!/^\/members\/\d+\/flowers$/.test(action.pathname)) return;
     if (!form.closest(".profile-detail")) return;
     event.preventDefault();
     if (form.dataset.sending) return;
@@ -453,14 +456,14 @@
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 20000);
     try {
-      const response = await fetch(form.action, {
+      const response = await fetch(action.href, {
         method: "POST",
         body: new FormData(form),
         credentials: "same-origin",
         signal: controller.signal,
       });
       const url = new URL(response.url);
-      const memberPath = new URL(form.action).pathname.replace(/\/flowers$/, "");
+      const memberPath = action.pathname.replace(/\/flowers$/, "");
       const result = url.searchParams.get("flower");
       if (
         !response.ok ||
