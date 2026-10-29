@@ -3,7 +3,7 @@ import { mkdirSync } from "node:fs";
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_PATH || "playwright");
 const browser = await chromium.launch({ channel: "chrome", headless: true });
-const directory = "docs/evidence/2026-09-18-timeline";
+const directory = "artifacts/2026-09-18-timeline";
 mkdirSync(directory, { recursive: true });
 try {
   for (const width of [1366, 390]) {

@@ -3,7 +3,7 @@
 // Both replacements create temporary synthetic HTTP fixtures; BASE_URL is unused.
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
-const directory = resolve(process.env.EVIDENCE_DIR || ".wrangler/evidence/native-navigation");
+const directory = resolve(process.env.EVIDENCE_DIR || "artifacts/native-navigation");
 for (const [script, folder] of [
   ["check-curtain-first-paint.mjs", "first-paint"],
   ["check-curtain-navigation.mjs", "navigation"],

@@ -21,7 +21,6 @@ image/
 .venv-workers/
 .tools/
 python_modules/
-outputs/
 artifacts/
 migration-work/
 

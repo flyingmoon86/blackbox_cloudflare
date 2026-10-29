@@ -3,7 +3,7 @@ import { mkdirSync } from "node:fs";
 import assert from "node:assert/strict";
 const { chromium } = createRequire(import.meta.url)(process.env.PLAYWRIGHT_PATH || "playwright");
 const base = process.env.BASE_URL || "http://127.0.0.1:8788";
-const dir = "docs/evidence/2026-09-19-edition-light";
+const dir = "artifacts/2026-09-19-edition-light";
 mkdirSync(dir, { recursive: true });
 const browser = await chromium.launch({ channel: "chrome", headless: true });
 try {

@@ -29,7 +29,8 @@
     "smoke:production": "node scripts/predeploy.mjs smoke",
     "deploy": "node scripts/predeploy.mjs deploy",
     "test:backend": "node --test scripts/backend/*.test.mjs",
-    "performance:query": "node scripts/query-performance.mjs"
+    "performance:query": "node scripts/query-performance.mjs",
+    "docs:check": "node scripts/check-docs.mjs"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260908.1",

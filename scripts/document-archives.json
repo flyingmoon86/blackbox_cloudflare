@@ -1,0 +1,846 @@
+{
+  "archives": [
+    {
+      "date": "2026-10-29",
+      "task": "2026-10-29-文档收敛",
+      "local_directory": "artifacts/2026-10-29-文档收敛",
+      "backup_directory": "Documents/BlackboxArchives under the operator home",
+      "zip": "2026-10-29-cloudflare-documents.zip",
+      "zip_sha256": "d40809374bd5e6314e56bc3846e8df8e2e23185f148513c035182abb7e60deff",
+      "files": [
+        {
+          "path": "README.md",
+          "bytes": 1671,
+          "sha256": "232e2f27b5029d1b53d86ba8895d7fe880809e74e8fbad2d10ed55f8d6cac826"
+        },
+        {
+          "path": "docs/backend-scope.md",
+          "bytes": 5308,
+          "sha256": "46dfd16ce38cfb0ba8112f5b0e56d584af57e4925fa546b17c574645a3aaf00f"
+        },
+        {
+          "path": "docs/design-language.md",
+          "bytes": 3700,
+          "sha256": "a0a53659333770899ebe8dc0f64405f758012317353dfecb156326f5fdec808f"
+        },
+        {
+          "path": "docs/faq.md",
+          "bytes": 4631,
+          "sha256": "1f2a3ed70f8241e04c661d5b786127e28de45ef7e294848d61f61c62477810f8"
+        },
+        {
+          "path": "docs/glossary.md",
+          "bytes": 5609,
+          "sha256": "04896796689b314968f2e13d4a3d9c880d1902ef12f5af4044d7076659f18d57"
+        },
+        {
+          "path": "docs/README.md",
+          "bytes": 1181,
+          "sha256": "ae1ed234dc52adc064e2f6f94209cbe0e3051e07f06968b75343a62a88e08fdf"
+        },
+        {
+          "path": "docs/个人精选照片与私密毕业去向.md",
+          "bytes": 8585,
+          "sha256": "8f20bd20944f601c7cd75aec8dd37d1621044d51f756730f96b2710b808daf58"
+        },
+        {
+          "path": "docs/代码结构与维护.md",
+          "bytes": 9440,
+          "sha256": "b7a3a2e8f475cc933d1deb7a8c5e6ed54a7bf1120b478e7e46727792894412d0"
+        },
+        {
+          "path": "docs/备份恢复.md",
+          "bytes": 4559,
+          "sha256": "62033064c21bf9bf7bde8ad2e7052a2f0d9ad3ee7c58e92f3c7aeb75dab1c137"
+        },
+        {
+          "path": "docs/本地验收指南.md",
+          "bytes": 12815,
+          "sha256": "ba87ac8ed4e33987276da267852abcbc1b76b1b1be4c8338b2f0b8dfbebc526d"
+        },
+        {
+          "path": "docs/队员手册维护.md",
+          "bytes": 2132,
+          "sha256": "f9e7550accda8bdbd00922f6e1e8ebefe2a005e7e03a81439e6c15d3e45cf458"
+        },
+        {
+          "path": "docs/验证记录.md",
+          "bytes": 1246,
+          "sha256": "05f5567e55b6c43d441d3902fdab4fded297f1e5635fb7f079107a34fead109e"
+        },
+        {
+          "path": "docs/archive/README.md",
+          "bytes": 1209,
+          "sha256": "95a0a245ef7c5056ed5f5c2f8f8fafa6d1b0a2f29bb6aad745418221ee6d85c6"
+        },
+        {
+          "path": "docs/handbooks/黑匣子话剧队网站使用手册.pdf",
+          "bytes": 784636,
+          "sha256": "2dd9dbcff0d56f51ce7bed92694b0a83b36556e7f5d134a0e5b55d5f29b48069"
+        },
+        {
+          "path": "docs/releases/2026-10-04-后端优化发布.md",
+          "bytes": 1625,
+          "sha256": "7a16eb62ae4261c05e610af04d474eb66ad3fc180d44afae414d93b0b5d65896"
+        },
+        {
+          "path": "docs/releases/2026-10-05-性能优化发布.md",
+          "bytes": 1468,
+          "sha256": "1084cce7327413434dc583303a708df52f75253fd2ac193465e763b36d662e4d"
+        },
+        {
+          "path": "docs/releases/2026-10-05-新版公告.md",
+          "bytes": 1206,
+          "sha256": "839c8353d6c14ec6ab2a48d08316b1efc7bb43865bfa17f5d12cd55f322e314f"
+        },
+        {
+          "path": "docs/releases/2026-10-05-浏览体验发布.md",
+          "bytes": 2836,
+          "sha256": "9aa33cd1affbb5f6d3262952fed8005b89a24aa3689f303d8232be09c948ee80"
+        },
+        {
+          "path": "docs/releases/2026-10-05-鸣谢双幕发布.md",
+          "bytes": 1593,
+          "sha256": "e2bee35785ed707e2a28f696bf629b3fabcc20903892e78eb87379e5f44fe01b"
+        },
+        {
+          "path": "docs/releases/2026-10-06-导航追光与菜单发布.md",
+          "bytes": 2196,
+          "sha256": "d685f3613d166486efba9b5d00e5267d03009341f7501420f30ec748caba50cb"
+        },
+        {
+          "path": "docs/releases/2026-10-06-首页书页竖栏发布.md",
+          "bytes": 1528,
+          "sha256": "44ffd1981ca01ced0276698e70375b4474a0999da33ef60526544a9c3babeb62"
+        },
+        {
+          "path": "docs/releases/2026-10-08-交叉换光本地验收.md",
+          "bytes": 2623,
+          "sha256": "acb5083449c09621130e9e1496defa0613e657d4e5f7c200fb62d22c29e34fde"
+        },
+        {
+          "path": "docs/releases/2026-10-09-交叉换光发布.md",
+          "bytes": 3023,
+          "sha256": "118e52a8ea3979140a3a48b64fb888e3efe1f5132546c3689ee9115cb34e89cb"
+        },
+        {
+          "path": "docs/releases/2026-10-09-版式揭幕与加载本地验收.md",
+          "bytes": 3585,
+          "sha256": "41c9d9aeef76cbf595e3d1df1c83f8d227575a5d2664c50e200848f51d7830e8"
+        },
+        {
+          "path": "docs/releases/2026-10-10-版式揭幕与加载优化发布.md",
+          "bytes": 3967,
+          "sha256": "fe5ec7854b7bec2b8ca9571ad2a494e5fff65e8c130ab7fe620c838deb883863"
+        },
+        {
+          "path": "docs/releases/2026-10-16-首次揭幕与结构整理发布.md",
+          "bytes": 4501,
+          "sha256": "e42af87303c400d0391b11decb87d413d391f9d2175b942ee55a8efaad6d695b"
+        },
+        {
+          "path": "docs/releases/2026-10-18-公告Markdown发布.md",
+          "bytes": 2966,
+          "sha256": "3eb79c22552a78483f4ad8e9cd8c3716f2b2f1d3962da465e134b25024ab6432"
+        },
+        {
+          "path": "docs/releases/2026-10-27-个人档案功能发布.md",
+          "bytes": 3355,
+          "sha256": "4c08faf2924a1e2cc45ed6c7c9c7486eb71124e8eed8b0fe4443e9506e279769"
+        },
+        {
+          "path": "docs/releases/2026-10-27-个人档案更新公告.md",
+          "bytes": 1552,
+          "sha256": "ed8857b732621abf9bb82044ee8f570317d1517c183ba089ae42d4d868ea4c1b"
+        },
+        {
+          "path": "docs/releases/v3.6-公告.md",
+          "bytes": 1624,
+          "sha256": "ec2e56cea289909ebb1465bad74176a4ffa0cd36b30d45d29ab3aef8a66441d6"
+        },
+        {
+          "path": "docs/releases/v3.6-发布记录.md",
+          "bytes": 8098,
+          "sha256": "792c2a0cdb98a9fa06958f66bcf5f9e989274fa4265997f9cf912348a6d01270"
+        },
+        {
+          "path": "docs/releases/v4.0-公告.md",
+          "bytes": 2915,
+          "sha256": "ed96a85d6d69f67168509a0c4328b3c7f6d246e6da88a0450877e50da4b1e491"
+        },
+        {
+          "path": "docs/reviews/2026-10-15-加载与作品浏览验收.md",
+          "bytes": 11580,
+          "sha256": "c9db825523d2e2a19b3c4fde29b89b8ccdcf035452b103b22f14039f26221cd8"
+        },
+        {
+          "path": "docs/reviews/2026-10-15-站内直接切换修正.md",
+          "bytes": 4660,
+          "sha256": "f9ad24dffbb430ad49c2d6710597ab79ae64bf000615e34cf0b02a7d9154c6ae"
+        },
+        {
+          "path": "docs/reviews/2026-10-15-首次揭幕视觉重做.md",
+          "bytes": 4535,
+          "sha256": "4b58ed4a6e5caf6b649d5730079f80ce9b32f59f2e520c8b707ffb0ddf228916"
+        },
+        {
+          "path": "docs/reviews/2026-10-16-结构整理与发布准备.md",
+          "bytes": 7903,
+          "sha256": "7539358574af08d36bc65dea79246af3401cd3c51f74dea55c782ee97fe49479"
+        },
+        {
+          "path": "docs/reviews/2026-10-17-公告Markdown与预览.md",
+          "bytes": 5540,
+          "sha256": "50f59f31b7713a1bd54a39c97022be16ef4ce710f60180711309e57eb61a3d8c"
+        },
+        {
+          "path": "docs/reviews/2026-10-26-队员重要时刻与毕业去向.md",
+          "bytes": 7554,
+          "sha256": "a03346f92e5d2458b4fe32f74d8dd1de9b1c5a068fcb210976e32dbdd3561d89"
+        },
+        {
+          "path": "docs/reviews/2026-10-27-个人档案发布验收.md",
+          "bytes": 4735,
+          "sha256": "88eb92f33d4c4685aefa94551f78f32ab013a6c7f6bd73a03c2d67d6e030dcea"
+        },
+        {
+          "path": "docs/reviews/2026-10-27-毕业去向轻量填写.md",
+          "bytes": 2135,
+          "sha256": "ab255c5140bbb7bcebc2c7db4945ae6b1cd815bffff25cf02483208557668ce0"
+        },
+        {
+          "path": "docs/reviews/2026-10-27-精选照片与私密毕业去向拆分.md",
+          "bytes": 4692,
+          "sha256": "f1d27a5ec01f8a6ef42ade2d497950f7e0b5858fbdf8082349c0bf405d3e3921"
+        },
+        {
+          "path": "docs/reviews/2026-10-28-整理前完整验证记录.md",
+          "bytes": 22571,
+          "sha256": "f7710f7e8015a04e4f0caa23c1adef0f611b9a98e6a0514b945e3e95d32130c2"
+        },
+        {
+          "path": "docs/reviews/2026-10-28-文档整理.md",
+          "bytes": 3502,
+          "sha256": "f5ea94e3cfba1041b2bc07dc0db87f4a32d0faf4870b739d2388e1c583b4ceee"
+        },
+        {
+          "path": "docs/screenshots/database-refined.png",
+          "bytes": 86674,
+          "sha256": "e45262f8cb5c99658f4adf087a5c5bd3b213130fdd1eb6c9cb1513c7a0085d6a"
+        },
+        {
+          "path": "docs/screenshots/system-chapter-desktop.png",
+          "bytes": 88125,
+          "sha256": "3d2eaed7ba92b8b399b182e03ee288d6be256b995b7a9225154d848dc753706f"
+        },
+        {
+          "path": "docs/screenshots/system-chapter-mobile.png",
+          "bytes": 34584,
+          "sha256": "89b0ab2ebf564dfc179a91c561c1a142c70dcb3861a587f17d8bf116a5ffa1d8"
+        },
+        {
+          "path": "docs/archive/design-proposal/auth.html",
+          "bytes": 3265,
+          "sha256": "409996cbfaafc1e021656a94f70a125aeefa598857120170ce947c7905a71813"
+        },
+        {
+          "path": "docs/archive/design-proposal/help.html",
+          "bytes": 8171,
+          "sha256": "88377c05ead124f3991cfde7ae681f1665bea87b200c74d7290b282375cc0d52"
+        },
+        {
+          "path": "docs/archive/design-proposal/index.html",
+          "bytes": 10786,
+          "sha256": "bf202173cce1080d008b1ae1fda77ce31cbb8fea3523514bb27855b5b95ef7a1"
+        },
+        {
+          "path": "docs/archive/design-proposal/member.html",
+          "bytes": 4306,
+          "sha256": "47209c44bfd7e1b399e68c9591766fcb735d87b21e51f2922c2cde98ff08735b"
+        },
+        {
+          "path": "docs/archive/design-proposal/members.html",
+          "bytes": 3973,
+          "sha256": "d0b602523ef0542a1d7552213b7659d123313c4fe61108bd0438afafc9b956d5"
+        },
+        {
+          "path": "docs/archive/design-proposal/production.html",
+          "bytes": 7099,
+          "sha256": "369015d3fa6a404b8b23800ce8ced694eca097685a17c17ed97b21e771887201"
+        },
+        {
+          "path": "docs/archive/design-proposal/productions.html",
+          "bytes": 8731,
+          "sha256": "0e068a39358f3d7d0e65ce486c707cf917b688633f81d27ceaa04db3b7f9e2d6"
+        },
+        {
+          "path": "docs/archive/plans/admin-page-organization.md",
+          "bytes": 4685,
+          "sha256": "5a0108987251917673a235e5b0922f82eaf37f0f6fd50fece335f5ad05b950bb"
+        },
+        {
+          "path": "docs/archive/plans/file-cleanup.md",
+          "bytes": 4262,
+          "sha256": "c0a533ad1e925c026eae5302daa304ba64237b2b5cdf7115cc2c0ea0f91f5869"
+        },
+        {
+          "path": "docs/archive/plans/layout-book.md",
+          "bytes": 6565,
+          "sha256": "cea842d250f231ab56bc195a5bbef0cfc6cb20870247adc4aab2461445d9adb0"
+        },
+        {
+          "path": "docs/archive/plans/system-info-visualization.md",
+          "bytes": 4001,
+          "sha256": "80944b33063e388e06cd86bfa05f276e023ce825ae3529eeb8a059bc98f25995"
+        },
+        {
+          "path": "docs/archive/plans/workbench-refactor.md",
+          "bytes": 7828,
+          "sha256": "78a2f3df2d5c9b8b6d136d1bde6da16a329ffbcce064eab2f0a33fab578bdb12"
+        },
+        {
+          "path": "docs/archive/plans/性能优化实验.md",
+          "bytes": 6624,
+          "sha256": "3b6b20169f9dfa8876d1c151ee3484523cfdde99abdc1d867bd1a12d0f0bd8d6"
+        },
+        {
+          "path": "docs/archive/plans/暗场换景设计稿.md",
+          "bytes": 7932,
+          "sha256": "fb9507ca523bcd25590cf1ef6d4f431cc23c6a345e376a701e667308dd709d9d"
+        },
+        {
+          "path": "docs/archive/plans/队员重要时刻与毕业去向.md",
+          "bytes": 699,
+          "sha256": "3bcff7d3604173f8f570955b2170de1af1a89857b4bb66b9f0da7349aad20811"
+        },
+        {
+          "path": "docs/archive/reference/architecture.md",
+          "bytes": 9472,
+          "sha256": "7a3ad17a71c08d857d186cfdbc30493d537d2131bde12ae754a993307862d716"
+        },
+        {
+          "path": "docs/archive/reference/project-structure.md",
+          "bytes": 11973,
+          "sha256": "a22c33c2b22ae04798e230368b9c2a38b9bebb7fe5e64c9b1d5515e4ea3897a5"
+        },
+        {
+          "path": "docs/archive/technical/黑匣子 Cloudflare 网站技术归档.docx",
+          "bytes": 2922234,
+          "sha256": "46a4baf5ca304fd75f267048352ec4b2f91fda4a73d9757322f289f779a1405e"
+        },
+        {
+          "path": "docs/archive/technical/黑匣子 Cloudflare 网站技术归档.pdf",
+          "bytes": 257844,
+          "sha256": "659cf7914da33341727bd48ca8c6c31b44983dacf454bc375470f9b4f821a50c"
+        },
+        {
+          "path": "docs/archive/design-proposal/assets/app.js",
+          "bytes": 6913,
+          "sha256": "fd75a6aedcf697f646370fbe49d5e9937aac9b8929710de4a6a3ccfe3827c8bd"
+        },
+        {
+          "path": "docs/archive/design-proposal/assets/cover-daguo.jpg",
+          "bytes": 35974,
+          "sha256": "ffef265c743f24f0eda6a05d53edc4ba2cee1aa760cdc99fb667ab2d22d6388f"
+        },
+        {
+          "path": "docs/archive/design-proposal/assets/cover-jiujiu.jpg",
+          "bytes": 25186,
+          "sha256": "26fc2a203e0c509b3251326b7c4b96f72546d5cb4bc10c46ca044e23a27a3552"
+        },
+        {
+          "path": "docs/archive/design-proposal/assets/cover-xinhao.jpg",
+          "bytes": 41260,
+          "sha256": "1e75a43f42feed8f5d239e763a1051f1e3bc5a3dfad8d9e19f503f377df17d70"
+        },
+        {
+          "path": "docs/archive/design-proposal/assets/data.js",
+          "bytes": 6639,
+          "sha256": "102bd0726f351db656e4d9c166ea0b2f2882dbac56d8ba632996ec514da0b077"
+        },
+        {
+          "path": "docs/archive/design-proposal/assets/mascot.webp",
+          "bytes": 31378,
+          "sha256": "f1e9b6a49a1678cd79dc53dc5cc9693daddf04a85425cced11c99075251e4bd8"
+        },
+        {
+          "path": "docs/archive/design-proposal/assets/stage-bg.jpg",
+          "bytes": 94747,
+          "sha256": "f5965773fef4a29af387f344cf5b7541b85845fe869a92ea867852fc35128a65"
+        },
+        {
+          "path": "docs/archive/design-proposal/assets/styles.css",
+          "bytes": 30938,
+          "sha256": "f12b36903f64ef5820545ba4c17adaca942ecb965d2b1aa83e5630c89beeb6ce"
+        },
+        {
+          "path": "docs/archive/design-proposal/assets/av/1222340241.jpg",
+          "bytes": 247989,
+          "sha256": "5609b4af9979a0ee8fd81b9966e1b95e10810d27576526a94cc6af73e3b61311"
+        },
+        {
+          "path": "docs/archive/design-proposal/assets/av/4274313892.jpg",
+          "bytes": 2062985,
+          "sha256": "70ecb2d9a57cb37b7dab6a8b53535233acfeb53ffa5e907b45912c9b33cceea5"
+        },
+        {
+          "path": "docs/archive/design-proposal/assets/av/4274313897.jpg",
+          "bytes": 38031,
+          "sha256": "764d95e754068e81748091a858e8bb6ec2607e7a76f9647631f7143a3b08076b"
+        },
+        {
+          "path": "docs/archive/design-proposal/assets/av/4274313910.jpg",
+          "bytes": 19916,
+          "sha256": "3b4d6b1d710c1b845814ffadd8fbbad4f5143e96b069cac08ef1354ab63bdb3e"
+        },
+        {
+          "path": "docs/archive/design-proposal/assets/av/4274313950.jpg",
+          "bytes": 534885,
+          "sha256": "6d12c64b5a97787b5a8f3f4040fda61dbba371a718a2857fcbe837f0aa403458"
+        },
+        {
+          "path": "outputs/check-curtain-live.mjs",
+          "bytes": 3087,
+          "sha256": "52b708b512f253c10e05fed4cda0514bd82eaed7ebeff98c43a9fd4745d45dfe"
+        },
+        {
+          "path": "outputs/diagnose-curtain.mjs",
+          "bytes": 2545,
+          "sha256": "4681aeab37b843991a438ea02b13886ebfe140f4d81b8de71c6a91cce49dd5f5"
+        }
+      ],
+      "off_device_copy_verified": false
+    },
+    {
+      "date": "20261029T014145044297Z",
+      "task": "2026-10-29-文档收敛",
+      "local_directory": "artifacts/2026-10-29-文档收敛",
+      "backup_directory": "C:\\Users\\gbg61\\Documents\\BlackboxArchives",
+      "zip": "2026-10-29-文档收敛-20261029T014145044297Z.zip",
+      "zip_sha256": "5566112b36f1bbdadf3c0fa39c59b41a38a317cdb655491651dce08bad6d87f9",
+      "files": [
+        {
+          "path": "docs/archive/design-proposal/assets/app.js",
+          "bytes": 6913,
+          "sha256": "fd75a6aedcf697f646370fbe49d5e9937aac9b8929710de4a6a3ccfe3827c8bd"
+        },
+        {
+          "path": "docs/archive/design-proposal/assets/av/1222340241.jpg",
+          "bytes": 247989,
+          "sha256": "5609b4af9979a0ee8fd81b9966e1b95e10810d27576526a94cc6af73e3b61311"
+        },
+        {
+          "path": "docs/archive/design-proposal/assets/av/4274313892.jpg",
+          "bytes": 2062985,
+          "sha256": "70ecb2d9a57cb37b7dab6a8b53535233acfeb53ffa5e907b45912c9b33cceea5"
+        },
+        {
+          "path": "docs/archive/design-proposal/assets/av/4274313897.jpg",
+          "bytes": 38031,
+          "sha256": "764d95e754068e81748091a858e8bb6ec2607e7a76f9647631f7143a3b08076b"
+        },
+        {
+          "path": "docs/archive/design-proposal/assets/av/4274313910.jpg",
+          "bytes": 19916,
+          "sha256": "3b4d6b1d710c1b845814ffadd8fbbad4f5143e96b069cac08ef1354ab63bdb3e"
+        },
+        {
+          "path": "docs/archive/design-proposal/assets/av/4274313950.jpg",
+          "bytes": 534885,
+          "sha256": "6d12c64b5a97787b5a8f3f4040fda61dbba371a718a2857fcbe837f0aa403458"
+        },
+        {
+          "path": "docs/archive/design-proposal/assets/cover-daguo.jpg",
+          "bytes": 35974,
+          "sha256": "ffef265c743f24f0eda6a05d53edc4ba2cee1aa760cdc99fb667ab2d22d6388f"
+        },
+        {
+          "path": "docs/archive/design-proposal/assets/cover-jiujiu.jpg",
+          "bytes": 25186,
+          "sha256": "26fc2a203e0c509b3251326b7c4b96f72546d5cb4bc10c46ca044e23a27a3552"
+        },
+        {
+          "path": "docs/archive/design-proposal/assets/cover-xinhao.jpg",
+          "bytes": 41260,
+          "sha256": "1e75a43f42feed8f5d239e763a1051f1e3bc5a3dfad8d9e19f503f377df17d70"
+        },
+        {
+          "path": "docs/archive/design-proposal/assets/data.js",
+          "bytes": 6639,
+          "sha256": "102bd0726f351db656e4d9c166ea0b2f2882dbac56d8ba632996ec514da0b077"
+        },
+        {
+          "path": "docs/archive/design-proposal/assets/mascot.webp",
+          "bytes": 31378,
+          "sha256": "f1e9b6a49a1678cd79dc53dc5cc9693daddf04a85425cced11c99075251e4bd8"
+        },
+        {
+          "path": "docs/archive/design-proposal/assets/stage-bg.jpg",
+          "bytes": 94747,
+          "sha256": "f5965773fef4a29af387f344cf5b7541b85845fe869a92ea867852fc35128a65"
+        },
+        {
+          "path": "docs/archive/design-proposal/assets/styles.css",
+          "bytes": 30938,
+          "sha256": "f12b36903f64ef5820545ba4c17adaca942ecb965d2b1aa83e5630c89beeb6ce"
+        },
+        {
+          "path": "docs/archive/design-proposal/auth.html",
+          "bytes": 3265,
+          "sha256": "409996cbfaafc1e021656a94f70a125aeefa598857120170ce947c7905a71813"
+        },
+        {
+          "path": "docs/archive/design-proposal/help.html",
+          "bytes": 8171,
+          "sha256": "88377c05ead124f3991cfde7ae681f1665bea87b200c74d7290b282375cc0d52"
+        },
+        {
+          "path": "docs/archive/design-proposal/index.html",
+          "bytes": 10786,
+          "sha256": "bf202173cce1080d008b1ae1fda77ce31cbb8fea3523514bb27855b5b95ef7a1"
+        },
+        {
+          "path": "docs/archive/design-proposal/member.html",
+          "bytes": 4306,
+          "sha256": "47209c44bfd7e1b399e68c9591766fcb735d87b21e51f2922c2cde98ff08735b"
+        },
+        {
+          "path": "docs/archive/design-proposal/members.html",
+          "bytes": 3973,
+          "sha256": "d0b602523ef0542a1d7552213b7659d123313c4fe61108bd0438afafc9b956d5"
+        },
+        {
+          "path": "docs/archive/design-proposal/production.html",
+          "bytes": 7099,
+          "sha256": "369015d3fa6a404b8b23800ce8ced694eca097685a17c17ed97b21e771887201"
+        },
+        {
+          "path": "docs/archive/design-proposal/productions.html",
+          "bytes": 8731,
+          "sha256": "0e068a39358f3d7d0e65ce486c707cf917b688633f81d27ceaa04db3b7f9e2d6"
+        },
+        {
+          "path": "docs/archive/plans/admin-page-organization.md",
+          "bytes": 4685,
+          "sha256": "5a0108987251917673a235e5b0922f82eaf37f0f6fd50fece335f5ad05b950bb"
+        },
+        {
+          "path": "docs/archive/plans/file-cleanup.md",
+          "bytes": 4262,
+          "sha256": "c0a533ad1e925c026eae5302daa304ba64237b2b5cdf7115cc2c0ea0f91f5869"
+        },
+        {
+          "path": "docs/archive/plans/layout-book.md",
+          "bytes": 6565,
+          "sha256": "cea842d250f231ab56bc195a5bbef0cfc6cb20870247adc4aab2461445d9adb0"
+        },
+        {
+          "path": "docs/archive/plans/system-info-visualization.md",
+          "bytes": 4001,
+          "sha256": "80944b33063e388e06cd86bfa05f276e023ce825ae3529eeb8a059bc98f25995"
+        },
+        {
+          "path": "docs/archive/plans/workbench-refactor.md",
+          "bytes": 7828,
+          "sha256": "78a2f3df2d5c9b8b6d136d1bde6da16a329ffbcce064eab2f0a33fab578bdb12"
+        },
+        {
+          "path": "docs/archive/plans/性能优化实验.md",
+          "bytes": 6624,
+          "sha256": "3b6b20169f9dfa8876d1c151ee3484523cfdde99abdc1d867bd1a12d0f0bd8d6"
+        },
+        {
+          "path": "docs/archive/plans/暗场换景设计稿.md",
+          "bytes": 7932,
+          "sha256": "fb9507ca523bcd25590cf1ef6d4f431cc23c6a345e376a701e667308dd709d9d"
+        },
+        {
+          "path": "docs/archive/plans/队员重要时刻与毕业去向.md",
+          "bytes": 699,
+          "sha256": "3bcff7d3604173f8f570955b2170de1af1a89857b4bb66b9f0da7349aad20811"
+        },
+        {
+          "path": "docs/archive/README.md",
+          "bytes": 1209,
+          "sha256": "95a0a245ef7c5056ed5f5c2f8f8fafa6d1b0a2f29bb6aad745418221ee6d85c6"
+        },
+        {
+          "path": "docs/archive/reference/architecture.md",
+          "bytes": 9472,
+          "sha256": "7a3ad17a71c08d857d186cfdbc30493d537d2131bde12ae754a993307862d716"
+        },
+        {
+          "path": "docs/archive/reference/project-structure.md",
+          "bytes": 11973,
+          "sha256": "a22c33c2b22ae04798e230368b9c2a38b9bebb7fe5e64c9b1d5515e4ea3897a5"
+        },
+        {
+          "path": "docs/archive/technical/黑匣子 Cloudflare 网站技术归档.docx",
+          "bytes": 2922234,
+          "sha256": "46a4baf5ca304fd75f267048352ec4b2f91fda4a73d9757322f289f779a1405e"
+        },
+        {
+          "path": "docs/archive/technical/黑匣子 Cloudflare 网站技术归档.pdf",
+          "bytes": 257844,
+          "sha256": "659cf7914da33341727bd48ca8c6c31b44983dacf454bc375470f9b4f821a50c"
+        },
+        {
+          "path": "docs/backend-scope.md",
+          "bytes": 5308,
+          "sha256": "46dfd16ce38cfb0ba8112f5b0e56d584af57e4925fa546b17c574645a3aaf00f"
+        },
+        {
+          "path": "docs/design-language.md",
+          "bytes": 3700,
+          "sha256": "a0a53659333770899ebe8dc0f64405f758012317353dfecb156326f5fdec808f"
+        },
+        {
+          "path": "docs/faq.md",
+          "bytes": 4631,
+          "sha256": "1f2a3ed70f8241e04c661d5b786127e28de45ef7e294848d61f61c62477810f8"
+        },
+        {
+          "path": "docs/glossary.md",
+          "bytes": 5609,
+          "sha256": "04896796689b314968f2e13d4a3d9c880d1902ef12f5af4044d7076659f18d57"
+        },
+        {
+          "path": "docs/handbooks/黑匣子话剧队网站使用手册.pdf",
+          "bytes": 784636,
+          "sha256": "2dd9dbcff0d56f51ce7bed92694b0a83b36556e7f5d134a0e5b55d5f29b48069"
+        },
+        {
+          "path": "docs/README.md",
+          "bytes": 1181,
+          "sha256": "ae1ed234dc52adc064e2f6f94209cbe0e3051e07f06968b75343a62a88e08fdf"
+        },
+        {
+          "path": "docs/releases/2026-10-04-后端优化发布.md",
+          "bytes": 1625,
+          "sha256": "7a16eb62ae4261c05e610af04d474eb66ad3fc180d44afae414d93b0b5d65896"
+        },
+        {
+          "path": "docs/releases/2026-10-05-性能优化发布.md",
+          "bytes": 1468,
+          "sha256": "1084cce7327413434dc583303a708df52f75253fd2ac193465e763b36d662e4d"
+        },
+        {
+          "path": "docs/releases/2026-10-05-新版公告.md",
+          "bytes": 1206,
+          "sha256": "839c8353d6c14ec6ab2a48d08316b1efc7bb43865bfa17f5d12cd55f322e314f"
+        },
+        {
+          "path": "docs/releases/2026-10-05-浏览体验发布.md",
+          "bytes": 2836,
+          "sha256": "9aa33cd1affbb5f6d3262952fed8005b89a24aa3689f303d8232be09c948ee80"
+        },
+        {
+          "path": "docs/releases/2026-10-05-鸣谢双幕发布.md",
+          "bytes": 1593,
+          "sha256": "e2bee35785ed707e2a28f696bf629b3fabcc20903892e78eb87379e5f44fe01b"
+        },
+        {
+          "path": "docs/releases/2026-10-06-导航追光与菜单发布.md",
+          "bytes": 2196,
+          "sha256": "d685f3613d166486efba9b5d00e5267d03009341f7501420f30ec748caba50cb"
+        },
+        {
+          "path": "docs/releases/2026-10-06-首页书页竖栏发布.md",
+          "bytes": 1528,
+          "sha256": "44ffd1981ca01ced0276698e70375b4474a0999da33ef60526544a9c3babeb62"
+        },
+        {
+          "path": "docs/releases/2026-10-08-交叉换光本地验收.md",
+          "bytes": 2623,
+          "sha256": "acb5083449c09621130e9e1496defa0613e657d4e5f7c200fb62d22c29e34fde"
+        },
+        {
+          "path": "docs/releases/2026-10-09-交叉换光发布.md",
+          "bytes": 3023,
+          "sha256": "118e52a8ea3979140a3a48b64fb888e3efe1f5132546c3689ee9115cb34e89cb"
+        },
+        {
+          "path": "docs/releases/2026-10-09-版式揭幕与加载本地验收.md",
+          "bytes": 3585,
+          "sha256": "41c9d9aeef76cbf595e3d1df1c83f8d227575a5d2664c50e200848f51d7830e8"
+        },
+        {
+          "path": "docs/releases/2026-10-10-版式揭幕与加载优化发布.md",
+          "bytes": 3967,
+          "sha256": "fe5ec7854b7bec2b8ca9571ad2a494e5fff65e8c130ab7fe620c838deb883863"
+        },
+        {
+          "path": "docs/releases/2026-10-16-首次揭幕与结构整理发布.md",
+          "bytes": 4501,
+          "sha256": "e42af87303c400d0391b11decb87d413d391f9d2175b942ee55a8efaad6d695b"
+        },
+        {
+          "path": "docs/releases/2026-10-18-公告Markdown发布.md",
+          "bytes": 2966,
+          "sha256": "3eb79c22552a78483f4ad8e9cd8c3716f2b2f1d3962da465e134b25024ab6432"
+        },
+        {
+          "path": "docs/releases/2026-10-27-个人档案功能发布.md",
+          "bytes": 3355,
+          "sha256": "4c08faf2924a1e2cc45ed6c7c9c7486eb71124e8eed8b0fe4443e9506e279769"
+        },
+        {
+          "path": "docs/releases/2026-10-27-个人档案更新公告.md",
+          "bytes": 1552,
+          "sha256": "ed8857b732621abf9bb82044ee8f570317d1517c183ba089ae42d4d868ea4c1b"
+        },
+        {
+          "path": "docs/releases/v3.6-公告.md",
+          "bytes": 1624,
+          "sha256": "ec2e56cea289909ebb1465bad74176a4ffa0cd36b30d45d29ab3aef8a66441d6"
+        },
+        {
+          "path": "docs/releases/v3.6-发布记录.md",
+          "bytes": 8098,
+          "sha256": "792c2a0cdb98a9fa06958f66bcf5f9e989274fa4265997f9cf912348a6d01270"
+        },
+        {
+          "path": "docs/releases/v4.0-公告.md",
+          "bytes": 2915,
+          "sha256": "ed96a85d6d69f67168509a0c4328b3c7f6d246e6da88a0450877e50da4b1e491"
+        },
+        {
+          "path": "docs/reviews/2026-10-15-加载与作品浏览验收.md",
+          "bytes": 11580,
+          "sha256": "c9db825523d2e2a19b3c4fde29b89b8ccdcf035452b103b22f14039f26221cd8"
+        },
+        {
+          "path": "docs/reviews/2026-10-15-站内直接切换修正.md",
+          "bytes": 4660,
+          "sha256": "f9ad24dffbb430ad49c2d6710597ab79ae64bf000615e34cf0b02a7d9154c6ae"
+        },
+        {
+          "path": "docs/reviews/2026-10-15-首次揭幕视觉重做.md",
+          "bytes": 4535,
+          "sha256": "4b58ed4a6e5caf6b649d5730079f80ce9b32f59f2e520c8b707ffb0ddf228916"
+        },
+        {
+          "path": "docs/reviews/2026-10-16-结构整理与发布准备.md",
+          "bytes": 7903,
+          "sha256": "7539358574af08d36bc65dea79246af3401cd3c51f74dea55c782ee97fe49479"
+        },
+        {
+          "path": "docs/reviews/2026-10-17-公告Markdown与预览.md",
+          "bytes": 5540,
+          "sha256": "50f59f31b7713a1bd54a39c97022be16ef4ce710f60180711309e57eb61a3d8c"
+        },
+        {
+          "path": "docs/reviews/2026-10-26-队员重要时刻与毕业去向.md",
+          "bytes": 7554,
+          "sha256": "a03346f92e5d2458b4fe32f74d8dd1de9b1c5a068fcb210976e32dbdd3561d89"
+        },
+        {
+          "path": "docs/reviews/2026-10-27-个人档案发布验收.md",
+          "bytes": 4735,
+          "sha256": "88eb92f33d4c4685aefa94551f78f32ab013a6c7f6bd73a03c2d67d6e030dcea"
+        },
+        {
+          "path": "docs/reviews/2026-10-27-毕业去向轻量填写.md",
+          "bytes": 2135,
+          "sha256": "ab255c5140bbb7bcebc2c7db4945ae6b1cd815bffff25cf02483208557668ce0"
+        },
+        {
+          "path": "docs/reviews/2026-10-27-精选照片与私密毕业去向拆分.md",
+          "bytes": 4692,
+          "sha256": "f1d27a5ec01f8a6ef42ade2d497950f7e0b5858fbdf8082349c0bf405d3e3921"
+        },
+        {
+          "path": "docs/reviews/2026-10-28-整理前完整验证记录.md",
+          "bytes": 22571,
+          "sha256": "f7710f7e8015a04e4f0caa23c1adef0f611b9a98e6a0514b945e3e95d32130c2"
+        },
+        {
+          "path": "docs/reviews/2026-10-28-文档整理.md",
+          "bytes": 3502,
+          "sha256": "f5ea94e3cfba1041b2bc07dc0db87f4a32d0faf4870b739d2388e1c583b4ceee"
+        },
+        {
+          "path": "docs/screenshots/database-refined.png",
+          "bytes": 86674,
+          "sha256": "e45262f8cb5c99658f4adf087a5c5bd3b213130fdd1eb6c9cb1513c7a0085d6a"
+        },
+        {
+          "path": "docs/screenshots/system-chapter-desktop.png",
+          "bytes": 88125,
+          "sha256": "3d2eaed7ba92b8b399b182e03ee288d6be256b995b7a9225154d848dc753706f"
+        },
+        {
+          "path": "docs/screenshots/system-chapter-mobile.png",
+          "bytes": 34584,
+          "sha256": "89b0ab2ebf564dfc179a91c561c1a142c70dcb3861a587f17d8bf116a5ffa1d8"
+        },
+        {
+          "path": "docs/个人精选照片与私密毕业去向.md",
+          "bytes": 8585,
+          "sha256": "8f20bd20944f601c7cd75aec8dd37d1621044d51f756730f96b2710b808daf58"
+        },
+        {
+          "path": "docs/代码结构与维护.md",
+          "bytes": 9440,
+          "sha256": "b7a3a2e8f475cc933d1deb7a8c5e6ed54a7bf1120b478e7e46727792894412d0"
+        },
+        {
+          "path": "docs/备份恢复.md",
+          "bytes": 4559,
+          "sha256": "62033064c21bf9bf7bde8ad2e7052a2f0d9ad3ee7c58e92f3c7aeb75dab1c137"
+        },
+        {
+          "path": "docs/本地验收指南.md",
+          "bytes": 12815,
+          "sha256": "ba87ac8ed4e33987276da267852abcbc1b76b1b1be4c8338b2f0b8dfbebc526d"
+        },
+        {
+          "path": "docs/队员手册维护.md",
+          "bytes": 2132,
+          "sha256": "f9e7550accda8bdbd00922f6e1e8ebefe2a005e7e03a81439e6c15d3e45cf458"
+        },
+        {
+          "path": "docs/验证记录.md",
+          "bytes": 1246,
+          "sha256": "05f5567e55b6c43d441d3902fdab4fded297f1e5635fb7f079107a34fead109e"
+        },
+        {
+          "path": "final-check-retry.log",
+          "bytes": 51635,
+          "sha256": "fdb7a0bf7c16b7e49c21a8758bbfee27eae88631ce0331026f2fa7e079aef404"
+        },
+        {
+          "path": "final-check.log",
+          "bytes": 3053,
+          "sha256": "8579a2dbe4ec461149a827f30920adc930be182f00880c8edeb9fef9ca57f3b2"
+        },
+        {
+          "path": "manifest.json",
+          "bytes": 14806,
+          "sha256": "118c1784c1be739f1152af2db670e2a4772c92699637a89d17f9bf30c05391c9"
+        },
+        {
+          "path": "outputs/check-curtain-live.mjs",
+          "bytes": 3087,
+          "sha256": "52b708b512f253c10e05fed4cda0514bd82eaed7ebeff98c43a9fd4745d45dfe"
+        },
+        {
+          "path": "outputs/diagnose-curtain.mjs",
+          "bytes": 2545,
+          "sha256": "4681aeab37b843991a438ea02b13886ebfe140f4d81b8de71c6a91cce49dd5f5"
+        },
+        {
+          "path": "README.md",
+          "bytes": 1671,
+          "sha256": "232e2f27b5029d1b53d86ba8895d7fe880809e74e8fbad2d10ed55f8d6cac826"
+        },
+        {
+          "path": "result.json",
+          "bytes": 444,
+          "sha256": "89507823f43423c93e48327fcdc9514806f53341115e4c1efd7041fa942101f4"
+        }
+      ],
+      "off_device_copy_verified": false
+    }
+  ]
+}

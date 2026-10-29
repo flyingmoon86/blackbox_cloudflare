@@ -12,7 +12,7 @@ const modulePath =
   process.env.PLAYWRIGHT_MODULE ||
   "C:/Users/gbg61/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs";
 const { chromium } = await import(modulePath.startsWith("file:") ? modulePath : pathToFileURL(modulePath).href);
-const output = resolve(process.env.EVIDENCE_DIR || ".wrangler/evidence/curtain-visual-v2");
+const output = resolve(process.env.EVIDENCE_DIR || "artifacts/curtain-visual-v2");
 const publicRoot = resolve("public");
 const texturePath = "/images/curtain-velvet-v1.webp";
 mkdirSync(output, { recursive: true });

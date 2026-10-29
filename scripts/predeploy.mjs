@@ -64,6 +64,7 @@ function wrangler(...args) {
 
 const action = process.argv[2] || "check";
 if (action === "check") {
+  npmRun("docs:check");
   npmRun("format:check");
   npmRun("typecheck");
   npmRun("test:backend");

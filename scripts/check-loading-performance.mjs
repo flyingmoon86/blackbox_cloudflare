@@ -18,7 +18,7 @@ const label = option("label", "local");
 if (!/^[a-z0-9-]+$/.test(label)) throw Error("Use a simple label");
 const snapshot = option("snapshot");
 const publicRoot = resolve(snapshot || ".", "public");
-const evidenceRoot = resolve(option("output", `.wrangler/evidence/2026-10-15/loading/${label}`));
+const evidenceRoot = resolve(option("output", `artifacts/2026-10-15/loading/${label}`));
 mkdirSync(evidenceRoot, { recursive: true });
 const playwrightPath = option(
   "playwright",

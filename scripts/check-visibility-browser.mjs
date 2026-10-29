@@ -9,7 +9,7 @@ import { context } from "./backend/harness.mjs";
 // Actual Worker routes with an isolated in-memory database; no local or live user data.
 const s = await visibilityFixture();
 const root = resolve("public");
-const dir = "docs/evidence/2026-09-20-production-visibility";
+const dir = "artifacts/2026-09-20-production-visibility";
 mkdirSync(dir, { recursive: true });
 const image = readFileSync("public/images/elephant-mascot-360-v1.webp");
 for (const key of ["public.jpg", "public-preview.jpg", "hidden.jpg", "hidden-preview.jpg"])

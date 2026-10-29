@@ -12,7 +12,7 @@ const { chromium } = await import(
       "C:/Users/gbg61/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
     ).href
 );
-const dir = resolve(process.env.EVIDENCE_DIR || ".wrangler/evidence/native-navigation/first-paint");
+const dir = resolve(process.env.EVIDENCE_DIR || "artifacts/native-navigation/first-paint");
 mkdirSync(dir, { recursive: true });
 await build({
   entryPoints: ["src/views/productions.ts"],

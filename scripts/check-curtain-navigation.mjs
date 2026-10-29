@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 const args = [
   resolve("scripts/check-loading-performance.mjs"),
   "--mode=navigation",
-  "--output=" + resolve(process.env.EVIDENCE_DIR || ".wrangler/evidence/native-navigation/navigation"),
+  "--output=" + resolve(process.env.EVIDENCE_DIR || "artifacts/native-navigation/navigation"),
 ];
 if (process.env.PLAYWRIGHT_MODULE)
   args.push(

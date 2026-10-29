@@ -1,6 +1,6 @@
 import { chromium } from "playwright";
 import { mkdirSync } from "node:fs";
-const dir = "docs/evidence/2026-09-19-curtain-folds";
+const dir = "artifacts/2026-09-19-curtain-folds";
 mkdirSync(dir, { recursive: true });
 const browser = await chromium.launch({
   channel: "chrome",

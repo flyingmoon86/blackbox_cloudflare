@@ -9,7 +9,7 @@ import { context } from "./backend/harness.mjs";
 const { chromium } = await import(
   process.env.PLAYWRIGHT_MODULE ? pathToFileURL(process.env.PLAYWRIGHT_MODULE).href : "playwright"
 );
-const dir = process.env.EVIDENCE_DIR || "docs/evidence/2026-09-21-credit-import";
+const dir = process.env.EVIDENCE_DIR || "artifacts/2026-09-21-credit-import";
 mkdirSync(dir, { recursive: true });
 const s = await creditFixture();
 const root = resolve("public");
