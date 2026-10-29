@@ -8,7 +8,7 @@ db.exec("INSERT INTO production(id,title,year) VALUES(901,'验收用作品',2026
 const worker = await loadWorker();
 const env = { DB: d1(db), FILES: fakeBucket(), SESSION_SECRET: "fixture", ENVIRONMENT: "development" };
 const browser = await chromium.launch({ channel: "chrome", headless: true });
-const directory = "artifacts/2026-09-18-backstage";
+const directory = "artifacts/working/2026-09-18-backstage";
 mkdirSync(directory, { recursive: true });
 try {
   for (const width of [1366, 390]) {

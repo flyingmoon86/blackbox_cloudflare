@@ -3,7 +3,7 @@ import { mkdirSync } from "node:fs";
 import assert from "node:assert/strict";
 const { chromium } = createRequire(import.meta.url)(process.env.PLAYWRIGHT_PATH || "playwright");
 const browser = await chromium.launch({ channel: "chrome", headless: true });
-const dir = "artifacts/2026-09-18-immersive";
+const dir = "artifacts/working/2026-09-18-immersive";
 mkdirSync(dir, { recursive: true });
 const phase = process.argv[2] || "after";
 try {

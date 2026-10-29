@@ -12,7 +12,7 @@ from pypdf import PdfReader
 from PIL import Image
 pdfmetrics.registerFont(TTFont('Sans','C:/Windows/Fonts/msyh.ttc'))
 pdfmetrics.registerFont(TTFont('Serif','C:/Windows/Fonts/simsun.ttc'))
-data=json.loads(Path('artifacts/handbook/content.json').read_text(encoding='utf-8-sig'))
+data=json.loads(Path('artifacts/working/handbook/content.json').read_text(encoding='utf-8-sig'))
 out=Path('docs/handbooks/黑匣子话剧队网站使用手册.pdf')
 out.parent.mkdir(parents=True,exist_ok=True)
 c=canvas.Canvas(str(out),pagesize=(595,842))

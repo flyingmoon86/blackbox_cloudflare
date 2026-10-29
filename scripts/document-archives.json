@@ -3,7 +3,7 @@
     {
       "date": "2026-10-29",
       "task": "2026-10-29-文档收敛",
-      "local_directory": "artifacts/2026-10-29-文档收敛",
+      "local_directory": "artifacts/archive/documents/2026-10-29-文档收敛",
       "backup_directory": "Documents/BlackboxArchives under the operator home",
       "zip": "2026-10-29-cloudflare-documents.zip",
       "zip_sha256": "d40809374bd5e6314e56bc3846e8df8e2e23185f148513c035182abb7e60deff",
@@ -414,7 +414,7 @@
     {
       "date": "20261029T014145044297Z",
       "task": "2026-10-29-文档收敛",
-      "local_directory": "artifacts/2026-10-29-文档收敛",
+      "local_directory": "artifacts/archive/documents/2026-10-29-文档收敛",
       "backup_directory": "C:\\Users\\gbg61\\Documents\\BlackboxArchives",
       "zip": "2026-10-29-文档收敛-20261029T014145044297Z.zip",
       "zip_sha256": "5566112b36f1bbdadf3c0fa39c59b41a38a317cdb655491651dce08bad6d87f9",
@@ -838,6 +838,38 @@
           "path": "result.json",
           "bytes": 444,
           "sha256": "89507823f43423c93e48327fcdc9514806f53341115e4c1efd7041fa942101f4"
+        }
+      ],
+      "off_device_copy_verified": false
+    },
+    {
+      "date": "2026-10-29",
+      "task": "artifacts分类整理",
+      "local_directory": "artifacts/archive",
+      "backup_directory": "C:\\Users\\gbg61\\Documents\\BlackboxArchives",
+      "zip": "2026-10-29-artifacts-before-layout.zip",
+      "zip_sha256": "3124876056a505d5ba2459827dda99d442d0beff0f0357488fb54562ebc8e9b3",
+      "file_count": 252,
+      "manifest": "artifacts/archive/layout-manifest.json",
+      "off_device_copy_verified": false
+    },
+    {
+      "date": "20261029T015244920596Z",
+      "task": "2026-10-29-导航与资料分类",
+      "local_directory": "artifacts/archive/documents/2026-10-29-导航与资料分类",
+      "backup_directory": "C:\\Users\\gbg61\\Documents\\BlackboxArchives",
+      "zip": "2026-10-29-导航与资料分类-20261029T015244920596Z.zip",
+      "zip_sha256": "459b430304f3e2eda2333b6eec57e49fcfc7f5734072c02bfd58d40d101040b8",
+      "files": [
+        {
+          "path": "docs-readme-before-merge.md",
+          "bytes": 1001,
+          "sha256": "60c32c2c09542d7bb33f89bb56ff842d65a4edbce32b363416cd43c7bf09e377"
+        },
+        {
+          "path": "result.json",
+          "bytes": 460,
+          "sha256": "5ee2cc8b4a60030d72260c51214dfc2f47a2ff9454a3093a9c7254a96f75af70"
         }
       ],
       "off_device_copy_verified": false

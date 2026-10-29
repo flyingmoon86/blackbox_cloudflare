@@ -10,7 +10,7 @@ from reportlab.platypus import Paragraph
 from reportlab.lib.styles import ParagraphStyle
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / 'artifacts/technical-archive/黑匣子 Cloudflare 网站技术归档.pdf'
+OUT = ROOT / 'artifacts/working/technical-archive/黑匣子 Cloudflare 网站技术归档.pdf'
 OUT.parent.mkdir(parents=True, exist_ok=True)
 pdfmetrics.registerFont(TTFont('Hei', r'C:\Windows\Fonts\msyh.ttc', subfontIndex=0))
 W,H=A4

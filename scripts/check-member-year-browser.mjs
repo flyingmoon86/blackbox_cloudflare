@@ -6,7 +6,7 @@ import { createDatabase, d1, fakeBucket, loadWorker, loadModule, context } from 
 
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || "playwright");
 const { createSession } = await loadModule("src/auth/session.ts");
-const directory = process.env.EVIDENCE_DIR || "artifacts/2026-09-23-member-year-filter";
+const directory = process.env.EVIDENCE_DIR || "artifacts/working/2026-09-23-member-year-filter";
 mkdirSync(directory, { recursive: true });
 const db = createDatabase();
 db.exec(

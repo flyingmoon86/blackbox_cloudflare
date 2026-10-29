@@ -11,13 +11,13 @@ page.on("pageerror", (e) => issues.push(e.message));
 for (const width of [1366, 390, 360]) {
   await page.setViewportSize({ width, height: width === 1366 ? 768 : 844 });
   await page.goto("http://127.0.0.1:8795/help");
-  await page.screenshot({ path: `artifacts/handbook/web-${width}.png`, fullPage: true });
+  await page.screenshot({ path: `artifacts/working/handbook/web-${width}.png`, fullPage: true });
   await page.locator(".handbook-figure").first().scrollIntoViewIfNeeded();
   await page
     .locator(".handbook-figure img")
     .first()
     .evaluate((img) => img.decode());
-  await page.screenshot({ path: `artifacts/handbook/illustrated-web-${width}.png` });
+  await page.screenshot({ path: `artifacts/working/handbook/illustrated-web-${width}.png` });
   const state = await page.evaluate(() => ({
     overflow: document.documentElement.scrollWidth > innerWidth,
     anchors: [...document.querySelectorAll(".handbook-toc a")].every((a) => document.querySelector(a.hash)),
@@ -29,7 +29,7 @@ for (const width of [1366, 390, 360]) {
 }
 await page.goto("http://127.0.0.1:8795/help?role=admin");
 if ((await page.locator("#admin-appendix").count()) !== 1) throw Error("missing admin appendix");
-await page.screenshot({ path: "artifacts/handbook/admin.png", fullPage: true });
+await page.screenshot({ path: "artifacts/working/handbook/admin.png", fullPage: true });
 for (const href of await page
   .locator(".handbook a[href^='/']")
   .evaluateAll((nodes) => [...new Set(nodes.map((n) => n.getAttribute("href")))])) {

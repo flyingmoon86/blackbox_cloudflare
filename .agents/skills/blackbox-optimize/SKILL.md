@@ -5,7 +5,7 @@ description: 优化黑匣子话剧队网站的页面、交互、权限和后端�
 
 # 网站优化 Skill
 
-先读根目录 [AGENTS.md](../../../AGENTS.md) 和 [文档入口](../../../docs/README.md)，按需阅读开发维护及发布恢复。资料归属遵守 AGENTS.md：过程证据放任务 artifacts，重要历史归档需仓库外校验副本，不重建旧文档目录。
+先读根目录 [AGENTS.md](../../../AGENTS.md) 和 [根目录 README](../../../README.md)，按需阅读开发维护及发布恢复。资料归属遵守 AGENTS.md：过程证据放任务 artifacts，重要历史归档需仓库外校验副本，不重建旧文档目录。
 
 ## 优化方法路由
 

@@ -23,7 +23,7 @@ def verify(path):
             if digest(archive.read(item["path"])) != item["sha256"]:
                 raise ValueError("Hash mismatch: " + item["path"])
     sidecar = path.with_name(path.name + ".sha256")
-    if not sidecar.is_file() or sidecar.read_text().split()[0] != digest(path.read_bytes()):
+    if not sidecar.is_file() or sidecar.read_text(encoding="utf-8-sig").split()[0] != digest(path.read_bytes()):
         raise ValueError("Missing or mismatched ZIP checksum")
     return manifest
 
@@ -41,8 +41,12 @@ def main():
     if not args.task or not args.backup_dir:
         parser.error("Supply --task and --backup-dir, or --verify")
     task = ROOT / args.task
-    if task.is_symlink() or task.resolve().parent != (ROOT / "artifacts").resolve() or not task.is_dir():
-        raise ValueError("Task must be one immediate child directory of artifacts/")
+    location = task.resolve()
+    working = (ROOT / "artifacts/working").resolve()
+    archived = (ROOT / "artifacts/archive").resolve()
+    valid = location.parent == working or (location.parent.parent == archived and location.parent.name in {"documents", "interface", "releases", "repository"})
+    if task.is_symlink() or not task.is_dir() or not valid:
+        raise ValueError("Select one task under artifacts/working or artifacts/archive/<category>")
     destination = Path(args.backup_dir).resolve()
     if destination == ROOT or ROOT in destination.parents:
         raise ValueError("Backup directory must be outside the repository")

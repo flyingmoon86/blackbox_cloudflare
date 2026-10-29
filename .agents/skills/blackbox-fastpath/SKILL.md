@@ -9,7 +9,7 @@ description: 快速接手黑匣子网站优化任务，压缩项目阅读、方�
 
 ## 固定启动顺序
 
-1. 读根目录 `AGENTS.md` 和 `docs/README.md`。
+1. 读根目录 `AGENTS.md` 和 根目录 `README.md`。
 2. 执行 `git status --short` 和 `git diff --stat`。
 3. 按需读 `docs/开发维护.md`、`docs/发布与恢复.md`；阶段证据只查对应任务 artifacts，不新建交接或验证总文档。
 4. 用 `rg` 只定位相关路由、视图、脚本、样式和测试。

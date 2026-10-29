@@ -7,7 +7,7 @@ from docx.oxml import OxmlElement
 
 ROOT = Path(__file__).resolve().parents[1]
 REF = Path(r'C:\Users\gbg61\.codex\plugins\cache\openai-curated-remote\openai-templates\0.1.1\skills\artifact-template-design-report\assets\reference.docx')
-OUT = ROOT / 'artifacts/technical-archive/黑匣子 Cloudflare 网站技术归档.docx'
+OUT = ROOT / 'artifacts/working/technical-archive/黑匣子 Cloudflare 网站技术归档.docx'
 
 OUT.parent.mkdir(parents=True, exist_ok=True)
 

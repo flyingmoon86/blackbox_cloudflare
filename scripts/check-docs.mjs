@@ -4,12 +4,17 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
-const allowed = new Set(["README.md", "开发维护.md", "发布与恢复.md", "handbooks"]);
+const allowed = new Set(["开发维护.md", "发布与恢复.md", "handbooks"]);
 for (const entry of readdirSync(resolve(root, "docs")))
   assert.ok(allowed.has(entry), `Unexpected docs entry: ${entry}; use an existing guide or artifacts/task`);
 for (const name of ["output", "outputs"])
   assert.ok(!existsSync(resolve(root, name)), `Retired output directory: ${name}`);
-const files = ["README.md", "AGENTS.md", "docs/README.md", "docs/开发维护.md", "docs/发布与恢复.md"];
+
+if (existsSync(resolve(root, "artifacts"))) {
+  for (const entry of readdirSync(resolve(root, "artifacts")))
+    assert.ok(["README.md", "working", "archive"].includes(entry), `Loose artifacts entry: ${entry}`);
+}
+const files = ["README.md", "AGENTS.md", "docs/开发维护.md", "docs/发布与恢复.md"];
 let links = 0;
 for (const file of files) {
   const text = readFileSync(resolve(root, file), "utf8");
