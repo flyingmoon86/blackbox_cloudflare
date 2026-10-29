@@ -94,9 +94,15 @@ test("guests browse public pages but cannot fetch originals, pending files or ad
   assert.equal((await s.req(0, "/resources/2/preview")).status, 403);
   const html = await (await s.req(0, "/resources/3")).text();
   assert.ok(!html.includes('src="/resources/3/media"'));
-  assert.equal((await s.req(0, "/help")).headers.get("Location"), "/thanks");
+  assert.equal((await s.req(0, "/help")).status, 200);
   const help = await (await s.req(0, "/help")).text();
-  assert.ok(!help.includes('id="captain-guide"'));
+  assert.ok(!help.includes('id="admin-appendix"'));
+  for (const id of [2, 3]) {
+    const html = await (await s.req(id, "/help")).text();
+    assert.match(html, /管理精选照片/);
+    assert.doesNotMatch(html, /id="admin-appendix"/);
+  }
+  assert.match(await (await s.req(1, "/help")).text(), /id="admin-appendix"/);
 });
 
 test("photo detail keeps gallery context and offers adjacent navigation", async () => {

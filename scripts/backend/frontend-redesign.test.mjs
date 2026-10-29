@@ -43,7 +43,7 @@ test("theatre redesign renders three real scenes, safe titles, and preserves nat
   const favicon = await req("/favicon.ico");
   assert.equal(favicon.status, 302);
   assert.equal(favicon.headers.get("location"), "/images/elephant-mascot-360-v1.webp");
-  assert.equal((await req("/help")).headers.get("Location"), "/thanks");
+  assert.equal((await req("/help")).status, 200);
   db.prepare("UPDATE site_profile SET featured_production_id=NULL WHERE id=1").run();
   const noFeature = await (await req("/")).text();
   assert.match(noFeature, /id="playbill"/);

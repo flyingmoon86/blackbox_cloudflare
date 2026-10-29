@@ -27,6 +27,10 @@ await build({
   legalComments: "eof",
 });
 const files = [
+  "handbook.css",
+  ...["account", "profile", "photos", "graduation", "credits", "upload", "help", "admin"].map(
+    (id) => `images/handbook/${id}.png`,
+  ),
   "announcement-editor.js",
   "announcement.css",
   "site-editor.js",

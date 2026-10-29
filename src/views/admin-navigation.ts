@@ -6,6 +6,7 @@ export function adminNavigation(path: string, publicSite?: string): string {
     `<a href="${href}"${active ? ' aria-current="page"' : ""}>${icon(glyph)}<span>${label}</span></a>`;
   return `<aside class="workspace-sidebar"><details class="workspace-navigation" open><summary>管理员操作与记录 <span aria-hidden="true">⌄</span></summary><nav aria-label="后台工作导航">
     ${item("/admin", "工作台", "home")}
+    ${item("/help#admin-appendix", "使用手册", "help")}
     ${item("/admin/member-requests", "队员认证", "members")}
     ${item("/admin/member-photos", "照片审核", "members")}
     <p class="workspace-caption">管理员操作</p>

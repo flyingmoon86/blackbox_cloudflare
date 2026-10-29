@@ -133,7 +133,9 @@ export function layout(title: string, content: string, signedIn = false, admin =
         "台前与幕后",
         "/members",
         "队员名录",
-        child("/profile/member", "修改我的信息") + child("/profile/member-application", "申请队员认证"),
+        child("/profile/member", "修改我的信息") +
+          child("/profile/member-application", "申请队员认证") +
+          child("/help", "队员使用手册"),
       ) + group("认识我们", "/#about", "剧团介绍", child("/#contact", "联系我们")),
     ) +
     menu(
