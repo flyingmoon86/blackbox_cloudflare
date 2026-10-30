@@ -873,6 +873,415 @@
         }
       ],
       "off_device_copy_verified": false
+    },
+    {
+      "date": "20261029T074653233118Z",
+      "task": "2026-10-29-local-navigation",
+      "local_directory": "artifacts/archive/interface/2026-10-29-local-navigation",
+      "backup_directory": "D:\\大三\\projects\\blackbox-drama-archive\\artifact-backups",
+      "zip": "2026-10-29-local-navigation-20261029T074653233118Z.zip",
+      "zip_sha256": "55590e61cc56111e2efa0b197d0e3385e42173daaedad64a2758992cba28b19f",
+      "files": [
+        {
+          "path": "backend.log",
+          "bytes": 47572,
+          "sha256": "fa3060cdc5139f7624ac61595e0dd5b1de617128fc4deab7eadcd9ff7248c3c4"
+        },
+        {
+          "path": "browser.log",
+          "bytes": 6248,
+          "sha256": "6b1732e0e47606508071c90eef6e3f44c57e312d7bde526f1b85db1ca6f167e7"
+        },
+        {
+          "path": "desktop-loading.png",
+          "bytes": 1074821,
+          "sha256": "bb57535f3bfd86c9eaaecbf948a805375da1189c4ef8a739999a8efc49d810a6"
+        },
+        {
+          "path": "desktop-productions-offline.png",
+          "bytes": 1362674,
+          "sha256": "ea058dc7dc697a757c77215751f01859ef2d1d72c71eb6be764b341078b2c862"
+        },
+        {
+          "path": "final-cache-contract.log",
+          "bytes": 434,
+          "sha256": "aaf67b98703c1eacd78ce6efb1c142850ae70586fb483085bf7c5feaf633673a"
+        },
+        {
+          "path": "final-targeted.log",
+          "bytes": 1042,
+          "sha256": "0703c7d9994d48cc2f77c7d8a624144ddbead084793ef6ec18818786366bc7d9"
+        },
+        {
+          "path": "format.log",
+          "bytes": 189,
+          "sha256": "ce7844a6e6870c2288a76ce96bbf51392683d6d0f3c655320eb5bcb07c8a25f8"
+        },
+        {
+          "path": "mobile-loading.png",
+          "bytes": 359312,
+          "sha256": "6075ae118fb36e06047b92f8a1ac9fb48e323c22e2dc69b1429658bdfad8c5b3"
+        },
+        {
+          "path": "mobile-productions-offline.png",
+          "bytes": 361707,
+          "sha256": "ea255b8728ea98c5d1c745e3179e8f8036d1f184328dd88b5aca6f5d03edb326"
+        },
+        {
+          "path": "preview-error.log",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "preview.log",
+          "bytes": 22,
+          "sha256": "3e56112628594aaef3247f8cccabbfc5e64964b7fc09a163a6a63b92b01ad9df"
+        },
+        {
+          "path": "reduced-loading.png",
+          "bytes": 1074878,
+          "sha256": "2599339eba5cc20f3d276d5f32c2fa920bf71ba7cdccf721222292fac3ccfb2d"
+        },
+        {
+          "path": "reduced-productions-offline.png",
+          "bytes": 1362674,
+          "sha256": "ea058dc7dc697a757c77215751f01859ef2d1d72c71eb6be764b341078b2c862"
+        },
+        {
+          "path": "related-tests.log",
+          "bytes": 2944,
+          "sha256": "177dd8d520c7af8f09c58403b6c98c37d28dae0f1aeffcbadb9d81661beae994"
+        },
+        {
+          "path": "results.json",
+          "bytes": 9871,
+          "sha256": "55b2c4893c44f5b9db8b9ec6f1525f2292f89aa7e7aa146f6470751af247b81d"
+        },
+        {
+          "path": "验收.md",
+          "bytes": 4132,
+          "sha256": "13338c6806fd77def145f28a76ab48c64c3c4cc496c0499e1945f4d8d22fbcc4"
+        }
+      ],
+      "off_device_copy_verified": false
+    },
+    {
+      "date": "20261030T043853986954Z",
+      "task": "2026-10-30-navigation-release",
+      "local_directory": "artifacts/archive/releases/2026-10-30-navigation-release",
+      "backup_directory": "D:\\大三\\projects\\blackbox-drama-archive\\artifact-backups",
+      "zip": "2026-10-30-navigation-release-20261030T043853986954Z.zip",
+      "zip_sha256": "7104812f9527150dcd8e3a6073035c0634e65276694ba46c03d44e40e479e555",
+      "files": [
+        {
+          "path": "backup-summary.json",
+          "bytes": 242,
+          "sha256": "b6e04912f40d6e972b1f726d191f5c265222cb64b1387a14b96a8d5843d732c4"
+        },
+        {
+          "path": "browser-before-fix.log",
+          "bytes": 855,
+          "sha256": "bb8f0a6e255e476268e8d1c72e6e7f298eb9ac905878544f4113699ab30df7d4"
+        },
+        {
+          "path": "browser-diagnostic.log",
+          "bytes": 2923,
+          "sha256": "148f4a7e9e10a0737c33048d8c8a4abed787fbf626cb698dc4ec6dd8c4d7e5ed"
+        },
+        {
+          "path": "browser-release.log",
+          "bytes": 2805,
+          "sha256": "b11c18377031c54806745892f48bab18d1cc2a177dc9421769ff03977fa5322e"
+        },
+        {
+          "path": "browser.log",
+          "bytes": 2833,
+          "sha256": "a8921eec87a1803ed8712f4a6f26dd2add3a2ebe0687df2c23579bfc5600300a"
+        },
+        {
+          "path": "build-final.json",
+          "bytes": 234,
+          "sha256": "00c94fe17d46bdac7c1e3daea4458630c89d6308b00effdb7f4afcee03f44eaa"
+        },
+        {
+          "path": "build.json",
+          "bytes": 181,
+          "sha256": "1fe14f5cb99d5d308d1c3da75da827fba600fe5bb86cf929d73c9182e8bd0a5b"
+        },
+        {
+          "path": "check.log",
+          "bytes": 50012,
+          "sha256": "3c9cfb7ba487b004a74b947323ca2573a6d651b102a38a539a91bbd3d19d5405"
+        },
+        {
+          "path": "deploy-final.log",
+          "bytes": 2388,
+          "sha256": "54bc158467543efa2b501558d2589ec5d99b71e39bba8a42f4934c0d0cf0572c"
+        },
+        {
+          "path": "deploy.log",
+          "bytes": 3795,
+          "sha256": "4ec48d1274c3ca5c4fd827fcdbcea1339ddb2bc495c96f2c2a86f0acf9fb994e"
+        },
+        {
+          "path": "deployments.log",
+          "bytes": 3116,
+          "sha256": "c7003dad66513d25ee83b67b183b5b1b91c4ae5c8ba4d2a1185c7a171cd3eb5f"
+        },
+        {
+          "path": "desktop-home.png",
+          "bytes": 1512137,
+          "sha256": "b4f9180c245731a576b206511110bfcd2db6b25f1b052a6a36bf1213f77ad307"
+        },
+        {
+          "path": "desktop-productions-offline.png",
+          "bytes": 1357599,
+          "sha256": "06deb2e66d148c4c0e7e410ebe38c7af1eb079c48012337caccc7dc245ba7847"
+        },
+        {
+          "path": "final-check.log",
+          "bytes": 50220,
+          "sha256": "2f9a2af4a3087f31c8dcf86985157bc4f2317cb974289cbbc6139c8fc494db09"
+        },
+        {
+          "path": "fix-build.log",
+          "bytes": 79,
+          "sha256": "f255ef46f8a02ac24fe57ac142192b521a0d2fd3cb84acb77dba69f7fb08ea0f"
+        },
+        {
+          "path": "fix-tests.log",
+          "bytes": 939,
+          "sha256": "86ae44b0155f7e8d0d98c1fcf7369ecc3594a2c9fe661ae08fadcaa6d0d5f7cf"
+        },
+        {
+          "path": "mobile-home.png",
+          "bytes": 339196,
+          "sha256": "76cb747686d71e2a8c3c645b423c1aa756e8141c8cf54374c88e3f4577782818"
+        },
+        {
+          "path": "mobile-productions-offline.png",
+          "bytes": 370378,
+          "sha256": "24d9913b1a3de03ad2035e129bec57c7adcd1cf22c3f32b6159024280a56e62f"
+        },
+        {
+          "path": "production-after-analytics-fix.json",
+          "bytes": 8160,
+          "sha256": "72ee202788d1f544f845defbfefa5ca254fcb85b64d036b0ef85c30b93cbd1ce"
+        },
+        {
+          "path": "production-before-fix.json",
+          "bytes": 1625,
+          "sha256": "40eeec9041a1e98e642f811b0f3704348d110225d24cf380ffb963e9fc95affd"
+        },
+        {
+          "path": "production-navigation.json",
+          "bytes": 8043,
+          "sha256": "5be38ce8728edc5e4a15eaf4145a6f98a4b792e443a951038b9c1af9e096eb12"
+        },
+        {
+          "path": "production-prefetch-diagnostic.json",
+          "bytes": 8352,
+          "sha256": "c206ca0266fbe43b9956003d09f1e0842c8917f7e0bba672538ce985651bbdfa"
+        },
+        {
+          "path": "release-build.json",
+          "bytes": 234,
+          "sha256": "72e9237c7f2f9fd14cf405309ee84f47865a7ae98f50e3976e2acc8084041520"
+        },
+        {
+          "path": "release-check.log",
+          "bytes": 50230,
+          "sha256": "e68e30643135bd9a92723860bef687915c8d72b96401d066d28e4da88ecbe0d2"
+        },
+        {
+          "path": "release-deploy.log",
+          "bytes": 2640,
+          "sha256": "73c05707400571bba0623aa7e6154c5b0473aeb63dff11508811e5758e7d3b0d"
+        },
+        {
+          "path": "release-smoke.log",
+          "bytes": 305,
+          "sha256": "d516f0806a444f5249a8cba829421cd60fa3e01826cad0193e05aa1006f5f130"
+        },
+        {
+          "path": "smoke-final.log",
+          "bytes": 305,
+          "sha256": "d516f0806a444f5249a8cba829421cd60fa3e01826cad0193e05aa1006f5f130"
+        },
+        {
+          "path": "smoke.log",
+          "bytes": 305,
+          "sha256": "d516f0806a444f5249a8cba829421cd60fa3e01826cad0193e05aa1006f5f130"
+        },
+        {
+          "path": "triggers-retry.log",
+          "bytes": 619,
+          "sha256": "3acb880aec18fe1003132106ef5d5033e81c348e5f15fbfbbc5c82e774649d53"
+        },
+        {
+          "path": "验收.md",
+          "bytes": 3889,
+          "sha256": "012ac8a2abc14ec7476222a6d14468eb133f9f76582236cf6d4d06be37c83d50"
+        }
+      ],
+      "off_device_copy_verified": false
+    },
+    {
+      "date": "20261030T060036405310Z",
+      "task": "2026-10-30-opening-speed",
+      "local_directory": "artifacts/archive/interface/2026-10-30-opening-speed",
+      "backup_directory": "D:\\Junior\\projects\\blackbox-drama-archive\\artifact-backups",
+      "zip": "2026-10-30-opening-speed-20261030T060036405310Z.zip",
+      "zip_sha256": "818a3571391e2be20e7ad01fd36eaf3e03c8659a054021c1af2ff89b4d9e9e63",
+      "files": [
+        {
+          "path": "check.log",
+          "bytes": 50197,
+          "sha256": "d910d8336e2f2b972e61cf755ae46e8d3c626ed33c30c7c51b47322b7d8a0b65"
+        },
+        {
+          "path": "curtain-before.css",
+          "bytes": 7161,
+          "sha256": "b49b9d9c8287c9fd02abba674aaf62932d50814423b336b1c2e1e59bd94acfe2"
+        },
+        {
+          "path": "desktop-loading-after-13s.png",
+          "bytes": 1074681,
+          "sha256": "0debf63edaeac822f425a7ed447fd51adfe94337d9962bc5585345ef8cbb99d2"
+        },
+        {
+          "path": "desktop-reveal.png",
+          "bytes": 1392331,
+          "sha256": "1b95e1a5a5f0028946f0e779a91b80f76ac51d277ec1ac3dd956d664eaf28f48"
+        },
+        {
+          "path": "local-browser.log",
+          "bytes": 266,
+          "sha256": "863f0bb1e84df237ddd3dbc77c1c75ffcf6d4b9c85a74432d1ed66c5aeaa1611"
+        },
+        {
+          "path": "local-results.json",
+          "bytes": 44988,
+          "sha256": "89071bdc7c7065daff49167846ee4762884bd270027632cbbb5f21a3ec7ff67d"
+        },
+        {
+          "path": "mobile-loading-after-13s.png",
+          "bytes": 359277,
+          "sha256": "ed2ca80fce970ec502a6692ad9ae6c94226f0dec09bfa753ba40933e7fdd9a5b"
+        },
+        {
+          "path": "mobile-reveal.png",
+          "bytes": 385957,
+          "sha256": "53ab3528a54d5bce8a8a1eedf1173043360a63c19b0f0af714473ad2c20b6ff7"
+        },
+        {
+          "path": "navigation-before.js",
+          "bytes": 16238,
+          "sha256": "eb340cdc257958b9fbd941d9e19cd380d688ae837aeece5972e576e37f6975bd"
+        },
+        {
+          "path": "navigation-regression.log",
+          "bytes": 6235,
+          "sha256": "d683cef5b14dd4faf15c8e7724f7be834954515e09d6df8a804d16c782d1980c"
+        },
+        {
+          "path": "public-network-results.json",
+          "bytes": 48867,
+          "sha256": "3b4864dfceda2a02d0f43da2787b732dcf276c15b350af5a5cadee0477d0f506"
+        },
+        {
+          "path": "public-network.log",
+          "bytes": 270,
+          "sha256": "1486d6e783a471125eaf6dc1b6a5fe1b3a88086ac02d27d7fefe52855affdc9e"
+        },
+        {
+          "path": "验收.md",
+          "bytes": 3128,
+          "sha256": "d9e513970b5cb8019a05a2b4f5e423b0a02e4d4e412e7b3467346bad5bce25b6"
+        }
+      ],
+      "off_device_copy_verified": false
+    },
+    {
+      "date": "20261030T060146862675Z",
+      "task": "2026-10-30-opening-speed",
+      "local_directory": "artifacts/archive/interface/2026-10-30-opening-speed",
+      "backup_directory": "D:\\Junior\\projects\\blackbox-drama-archive\\artifact-backups",
+      "zip": "2026-10-30-opening-speed-20261030T060146862675Z.zip",
+      "zip_sha256": "694094d3a6f6a9b62d5f0ece1406a17d1d85cf9bab7718d3660b47e8ced6a8e4",
+      "files": [
+        {
+          "path": "build-retry.log",
+          "bytes": 1545,
+          "sha256": "1105378832126c0f2eccb2adc9c5ab462e4829fabe497e7f9d2fc4627e4b2484"
+        },
+        {
+          "path": "check.log",
+          "bytes": 50197,
+          "sha256": "d910d8336e2f2b972e61cf755ae46e8d3c626ed33c30c7c51b47322b7d8a0b65"
+        },
+        {
+          "path": "curtain-before.css",
+          "bytes": 7161,
+          "sha256": "b49b9d9c8287c9fd02abba674aaf62932d50814423b336b1c2e1e59bd94acfe2"
+        },
+        {
+          "path": "desktop-loading-after-13s.png",
+          "bytes": 1074681,
+          "sha256": "0debf63edaeac822f425a7ed447fd51adfe94337d9962bc5585345ef8cbb99d2"
+        },
+        {
+          "path": "desktop-reveal.png",
+          "bytes": 1392331,
+          "sha256": "1b95e1a5a5f0028946f0e779a91b80f76ac51d277ec1ac3dd956d664eaf28f48"
+        },
+        {
+          "path": "local-browser.log",
+          "bytes": 266,
+          "sha256": "863f0bb1e84df237ddd3dbc77c1c75ffcf6d4b9c85a74432d1ed66c5aeaa1611"
+        },
+        {
+          "path": "local-results.json",
+          "bytes": 44988,
+          "sha256": "89071bdc7c7065daff49167846ee4762884bd270027632cbbb5f21a3ec7ff67d"
+        },
+        {
+          "path": "mobile-loading-after-13s.png",
+          "bytes": 359277,
+          "sha256": "ed2ca80fce970ec502a6692ad9ae6c94226f0dec09bfa753ba40933e7fdd9a5b"
+        },
+        {
+          "path": "mobile-reveal.png",
+          "bytes": 385957,
+          "sha256": "53ab3528a54d5bce8a8a1eedf1173043360a63c19b0f0af714473ad2c20b6ff7"
+        },
+        {
+          "path": "navigation-before.js",
+          "bytes": 16238,
+          "sha256": "eb340cdc257958b9fbd941d9e19cd380d688ae837aeece5972e576e37f6975bd"
+        },
+        {
+          "path": "navigation-regression.log",
+          "bytes": 6235,
+          "sha256": "d683cef5b14dd4faf15c8e7724f7be834954515e09d6df8a804d16c782d1980c"
+        },
+        {
+          "path": "public-network-results.json",
+          "bytes": 48867,
+          "sha256": "3b4864dfceda2a02d0f43da2787b732dcf276c15b350af5a5cadee0477d0f506"
+        },
+        {
+          "path": "public-network.log",
+          "bytes": 270,
+          "sha256": "1486d6e783a471125eaf6dc1b6a5fe1b3a88086ac02d27d7fefe52855affdc9e"
+        },
+        {
+          "path": "验收.md",
+          "bytes": 3371,
+          "sha256": "3db04fbed1d370392da029407d9dd271557910002b0895ad51568ce0b51e8ff2"
+        }
+      ],
+      "off_device_copy_verified": false
     }
   ]
 }
