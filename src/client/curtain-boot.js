@@ -1,12 +1,11 @@
 import { createCurtainScene } from "./curtain/scene.js";
-// The curtain belongs only to first-entry loading. Internal links stay native.
+// The curtain belongs only to first-entry loading. Prepared public pages switch locally.
 (() => {
   const script = document.currentScript;
   const version = script?.dataset.siteOpening;
   const enabled = script?.hasAttribute("data-curtain-page");
   const motion = matchMedia("(prefers-reduced-motion: reduce)");
   const navigationKey = "blackbox-curtain-navigation";
-  const enteredKey = "blackbox-site-entered:v1";
   const read = (key) => {
     try {
       return sessionStorage.getItem(key);
@@ -35,8 +34,6 @@ import { createCurtainScene } from "./curtain/scene.js";
     (incoming?.to === location.href && Date.now() - incoming.at >= 0 && Date.now() - incoming.at < 300000 && !history),
   );
   window.blackboxCurtainArrival = arriving;
-  const entered = read(enteredKey) === "entered";
-  if (enabled) write(enteredKey, "entered");
   let overlay, mode, cleanupTimer;
   const state = (window.blackboxCurtain = { active: false });
   const recovery = (message) => {
@@ -110,17 +107,9 @@ import { createCurtainScene } from "./curtain/scene.js";
   };
   const storageKey = version && `blackbox-navigation-ready:${version}`;
   const dismissalKey = version && `blackbox-navigation-dismissed:${version}`;
-  const connection = navigator.connection;
-  const shouldLoad =
-    version &&
-    !entered &&
-    !arriving &&
-    !history &&
-    navigator.onLine !== false &&
-    !connection?.saveData &&
-    !/(^|-)2g$/.test(connection?.effectiveType || "") &&
-    read(storageKey) !== "ready" &&
-    read(dismissalKey) !== "dismissed";
+  // A session marker is not a page cache. Refresh/external entry creates a new
+  // document and must prepare it again; local router switches never run boot.
+  const shouldLoad = version && !arriving && !history && navigator.onLine !== false;
   let openingObserver, openingDeadline;
   if (shouldLoad) {
     const opening = (window.blackboxSiteOpening = {
@@ -160,7 +149,7 @@ import { createCurtainScene } from "./curtain/scene.js";
             },
           }),
         );
-        if (["partial", "timeout"].includes(opening.status)) recovery("部分资源尚未就绪，已显示页面，可继续浏览。");
+        if (["partial", "timeout"].includes(opening.status)) recovery("部分页面未缓存，打开时将联网加载。");
       },
     });
     const render = () => {
@@ -172,8 +161,8 @@ import { createCurtainScene } from "./curtain/scene.js";
       } else meter.removeAttribute("value");
       const failures = opening.failed ? ` · ${opening.failed} 项暂不可用` : "";
       overlay.querySelector(".curtain-detail").textContent = opening.discovering
-        ? `正在获取页面与资源清单${opening.completed ? ` · 已就绪 ${opening.completed} 项` : ""}${failures}`
-        : `${opening.completed} / ${opening.total} 项资源已就绪${failures}`;
+        ? `正在准备导航页面${opening.completed ? ` · 已就绪 ${opening.completed} 项` : ""}${failures}`
+        : `${opening.completed} / ${opening.total} 项准备完成${failures}`;
     };
     const show = () => {
       if (!opening.active || !document.body) return;
@@ -195,7 +184,7 @@ import { createCurtainScene } from "./curtain/scene.js";
       node.querySelector(".curtain-detail").before(meter);
       render();
     };
-    openingDeadline = setTimeout(() => opening.finish({ status: "timeout" }), 10000);
+    openingDeadline = setTimeout(() => opening.finish({ status: "timeout" }), 65000);
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", show, { once: true });
       if (typeof MutationObserver !== "undefined") {
@@ -249,6 +238,16 @@ import { createCurtainScene } from "./curtain/scene.js";
     "error",
     (event) => {
       if (!(event.target instanceof HTMLScriptElement) && !event.error) return;
+      // Cloudflare may inject optional cross-origin analytics. Its CSP/network
+      // failure is unrelated to our page runtime and must not abort preparation.
+      const source = event.target instanceof HTMLScriptElement ? event.target.src : event.filename;
+      if (source) {
+        try {
+          if (new URL(source, location.href).origin !== location.origin) return;
+        } catch {
+          return;
+        }
+      }
       window.blackboxSiteOpening?.finish({ status: "partial" });
       clear();
     },

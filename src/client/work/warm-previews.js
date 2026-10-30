@@ -1,5 +1,5 @@
 import { limited, previewURL, connection } from "./policy.js";
-export function warmWorkPreviews(cards) {
+export function warmWorkPreviews(cards, scope) {
   // These requests are only public, existing low-resolution covers. They never
   // fetch document HTML, originals, or hold up a user's native navigation.
   const queued = [];
@@ -7,7 +7,12 @@ export function warmWorkPreviews(cards) {
   const active = new Set();
   let viewportCandidates = 0;
   let navigating = false;
-  const canWarm = () => !limited() && !document.hidden && !navigating && !window.blackboxSiteOpening?.active;
+  const canWarm = () =>
+    !window.blackboxNavigation?.eligible(location.href) &&
+    !limited() &&
+    !document.hidden &&
+    !navigating &&
+    !window.blackboxSiteOpening?.active;
   const pump = () => {
     while (canWarm() && active.size < 2 && attempted.size < 8 && queued.length) {
       const url = queued.shift();
@@ -75,29 +80,30 @@ export function warmWorkPreviews(cards) {
     observer?.disconnect();
     [...active].forEach((cancel) => cancel());
   };
+  scope.dispose(stop);
   const resume = () => observe();
-  document.addEventListener("pointerover", (event) => {
+  scope.listen(document, "pointerover", (event) => {
     if (event.pointerType !== "touch") enqueue(event.target.closest?.("[data-work-card]"), true);
   });
-  document.addEventListener("focusin", (event) => enqueue(event.target.closest?.("[data-work-card]"), true));
-  document.addEventListener("blackbox:opening-finished", observe);
-  document.addEventListener("blackbox:navigation-start", () => {
+  scope.listen(document, "focusin", (event) => enqueue(event.target.closest?.("[data-work-card]"), true));
+  scope.listen(document, "blackbox:opening-finished", observe);
+  scope.listen(document, "blackbox:navigation-start", () => {
     navigating = true;
     stop();
   });
-  document.addEventListener("blackbox:navigation-cancel", () => {
+  scope.listen(document, "blackbox:navigation-cancel", () => {
     navigating = false;
     resume();
   });
-  document.addEventListener("visibilitychange", () => (document.hidden ? stop() : resume()));
-  connection?.addEventListener?.("change", () => (limited() ? stop() : resume()));
-  window.addEventListener("offline", stop);
-  window.addEventListener("online", resume);
-  window.addEventListener("pagehide", () => {
+  scope.listen(document, "visibilitychange", () => (document.hidden ? stop() : resume()));
+  scope.listen(connection, "change", () => (limited() ? stop() : resume()));
+  scope.listen(window, "offline", stop);
+  scope.listen(window, "online", resume);
+  scope.listen(window, "pagehide", () => {
     navigating = true;
     stop();
   });
-  window.addEventListener("pageshow", () => {
+  scope.listen(window, "pageshow", () => {
     navigating = false;
     resume();
   });

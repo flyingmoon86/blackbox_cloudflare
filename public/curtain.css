@@ -2,7 +2,7 @@
 :root {
   --blackbox-curtain-ready: 1;
 }
-.blackbox-curtain {
+#site-opening-curtain.blackbox-curtain {
   --curtain-reveal-duration: 900ms;
   position: fixed;
   inset: 0;
@@ -21,9 +21,11 @@
   color: #f3eadb;
   isolation: isolate;
   pointer-events: none;
-  animation: curtain-safety 0s 12s forwards;
+  /* After the JS preparation deadline (60s), boot fallback (65s), and reveal.
+     The former 12s safety hid healthy long-running preparation permanently. */
+  animation: curtain-safety 0s 68s forwards;
 }
-.blackbox-curtain::backdrop {
+#site-opening-curtain.blackbox-curtain::backdrop {
   background: transparent;
   backdrop-filter: none;
   pointer-events: none;
@@ -226,6 +228,10 @@
 }
 /* Pull at the rail, compress the folds into the wings, let the lower hem follow.
    No hold or animation delay. Only two cloth layers are transformed. */
+#site-opening-curtain.blackbox-curtain.is-revealing {
+  animation: none;
+  visibility: visible;
+}
 .blackbox-curtain.is-revealing .curtain-wing-left {
   animation: curtain-reveal-left var(--curtain-reveal-duration) cubic-bezier(0.32, 0, 0.2, 1) both;
 }

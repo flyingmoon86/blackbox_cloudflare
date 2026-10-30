@@ -4,7 +4,7 @@ import test from "node:test";
 import { runInNewContext } from "node:vm";
 
 const app = readFileSync(new URL("../../public/app.js", import.meta.url), "utf8");
-const code = app.slice(app.indexOf("const photoNavigation ="));
+const code = app.slice(app.indexOf("const photoNavigation ="), app.indexOf("window.blackboxPages?.register"));
 
 class FakeElement extends EventTarget {
   constructor(href = "") {

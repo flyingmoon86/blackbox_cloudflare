@@ -346,30 +346,6 @@ if (notificationHost) {
   });
 }
 
-const announcementUpdate = document.querySelector("[data-announcement-update]");
-if (announcementUpdate) {
-  const key = `blackbox-announcement-${announcementUpdate.dataset.announcementUser}`;
-  const revision = announcementUpdate.dataset.announcementUpdate;
-  let seen = false;
-  try {
-    seen = localStorage.getItem(key) === revision;
-  } catch {}
-  const show = () => {
-    if (!seen) announcementUpdate.hidden = false;
-  };
-  if (notice instanceof HTMLDialogElement && notice.open) notice.addEventListener("close", show, { once: true });
-  else show();
-  const acknowledge = () => {
-    seen = true;
-    announcementUpdate.hidden = true;
-    try {
-      localStorage.setItem(key, revision);
-    } catch {}
-  };
-  announcementUpdate.querySelector("[data-announcement-read]").addEventListener("click", acknowledge);
-  announcementUpdate.querySelector("[data-announcement-dismiss]").addEventListener("click", acknowledge);
-}
-
 for (const video of document.querySelectorAll("video[data-preview-frame]")) {
   video.addEventListener(
     "loadedmetadata",
@@ -434,14 +410,6 @@ for (const section of document.querySelectorAll("[data-role-counts]")) {
   kind.addEventListener("change", updateOptions);
   updateOptions();
   name.addEventListener("input", updateRoleHint);
-}
-
-for (const mascot of document.querySelectorAll("[data-home-mascot]")) {
-  const ready = () => mascot.classList.add("is-ready");
-  const missing = () => mascot.classList.add("is-missing");
-  mascot.addEventListener("load", ready, { once: true });
-  mascot.addEventListener("error", missing, { once: true });
-  if (mascot.complete) (mascot.naturalWidth ? ready : missing)();
 }
 
 const themeEditor = document.querySelector("[data-theme-editor]");
@@ -531,42 +499,6 @@ if (themeEditor) {
   themeEditor.querySelector("[data-theme-reset]").addEventListener("click", () => update("#ffb547"));
   themeEditor.querySelector("[data-theme-cancel]").addEventListener("click", () => update(initial));
 }
-const posterDialog = document.querySelector(".poster-dialog");
-const recruitmentImage = document.querySelector(".recruitment-poster img");
-if (recruitmentImage instanceof HTMLImageElement) {
-  const updateRatio = () =>
-    recruitmentImage
-      .closest("figure")
-      .classList.toggle("poster-portrait", recruitmentImage.naturalHeight > recruitmentImage.naturalWidth);
-  recruitmentImage.addEventListener("load", updateRatio);
-  if (recruitmentImage.complete) updateRatio();
-}
-if (posterDialog instanceof HTMLDialogElement) {
-  const image = posterDialog.querySelector("img");
-  const zoom = posterDialog.querySelector(".poster-zoom");
-  document.querySelector("[data-poster-open]")?.addEventListener("click", (event) => {
-    event.preventDefault();
-    image.src = event.currentTarget.querySelector("img").currentSrc;
-    zoom.classList.remove("is-zoomed");
-    image.setAttribute("aria-pressed", "false");
-    posterDialog.showModal();
-  });
-  posterDialog.querySelector("[data-poster-close]").addEventListener("click", () => posterDialog.close());
-  image.tabIndex = 0;
-  image.setAttribute("role", "button");
-  image.setAttribute("aria-label", "切换海报放大");
-  const toggle = () => {
-    zoom.classList.toggle("is-zoomed");
-    image.setAttribute("aria-pressed", String(zoom.classList.contains("is-zoomed")));
-  };
-  image.addEventListener("click", toggle);
-  image.addEventListener("keydown", (event) => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      toggle();
-    }
-  });
-}
 document.querySelectorAll("[data-add-edition]").forEach((button) =>
   button.addEventListener("click", () => {
     const container = button.closest("[data-edition-fields]");
@@ -635,3 +567,90 @@ if (resourceMedia && resourceMediaError) {
   if (resourceMedia instanceof HTMLImageElement && resourceMedia.complete && !resourceMedia.naturalWidth)
     showResourceMediaError();
 }
+
+window.blackboxPages?.register("public-controls", (root) => {
+  const notice = root.querySelector("[data-test-notice]");
+  const announcementUpdate = document.querySelector("[data-announcement-update]");
+  if (announcementUpdate) {
+    const key = `blackbox-announcement-${announcementUpdate.dataset.announcementUser}`;
+    const revision = announcementUpdate.dataset.announcementUpdate;
+    let seen = false;
+    try {
+      seen = localStorage.getItem(key) === revision;
+    } catch {}
+    const show = () => {
+      if (!seen) announcementUpdate.hidden = false;
+    };
+    if (notice instanceof HTMLDialogElement && notice.open) notice.addEventListener("close", show, { once: true });
+    else show();
+    const acknowledge = () => {
+      seen = true;
+      announcementUpdate.hidden = true;
+      try {
+        localStorage.setItem(key, revision);
+      } catch {}
+    };
+    announcementUpdate.querySelector("[data-announcement-read]").addEventListener("click", acknowledge);
+    announcementUpdate.querySelector("[data-announcement-dismiss]").addEventListener("click", acknowledge);
+  }
+
+  for (const mascot of document.querySelectorAll("[data-home-mascot]")) {
+    const ready = () => mascot.classList.add("is-ready");
+    const missing = () => mascot.classList.add("is-missing");
+    mascot.addEventListener("load", ready, { once: true });
+    mascot.addEventListener("error", missing, { once: true });
+    if (mascot.complete) (mascot.naturalWidth ? ready : missing)();
+  }
+
+  const posterDialog = document.querySelector(".poster-dialog");
+  const recruitmentImage = document.querySelector(".recruitment-poster img");
+  if (recruitmentImage instanceof HTMLImageElement) {
+    const updateRatio = () =>
+      recruitmentImage
+        .closest("figure")
+        .classList.toggle("poster-portrait", recruitmentImage.naturalHeight > recruitmentImage.naturalWidth);
+    recruitmentImage.addEventListener("load", updateRatio);
+    if (recruitmentImage.complete) updateRatio();
+  }
+  if (posterDialog instanceof HTMLDialogElement) {
+    const image = posterDialog.querySelector("img");
+    const zoom = posterDialog.querySelector(".poster-zoom");
+    document.querySelector("[data-poster-open]")?.addEventListener("click", (event) => {
+      event.preventDefault();
+      image.src = event.currentTarget.querySelector("img").currentSrc;
+      zoom.classList.remove("is-zoomed");
+      image.setAttribute("aria-pressed", "false");
+      posterDialog.showModal();
+    });
+    posterDialog.querySelector("[data-poster-close]").addEventListener("click", () => posterDialog.close());
+    image.tabIndex = 0;
+    image.setAttribute("role", "button");
+    image.setAttribute("aria-label", "切换海报放大");
+    const toggle = () => {
+      zoom.classList.toggle("is-zoomed");
+      image.setAttribute("aria-pressed", String(zoom.classList.contains("is-zoomed")));
+    };
+    image.addEventListener("click", toggle);
+    image.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        toggle();
+      }
+    });
+  }
+});
+
+if (["/login", "/profile"].includes(location.pathname)) {
+  try {
+    localStorage.setItem("blackbox-account-change", String(Date.now()));
+  } catch {}
+}
+document.addEventListener("submit", (event) => {
+  const form = event.target;
+  if (!(form instanceof HTMLFormElement)) return;
+  const action = new URL(form.getAttribute("action") || location.href, location.href);
+  if (action.origin !== location.origin || !["/login", "/logout", "/register"].includes(action.pathname)) return;
+  try {
+    localStorage.setItem("blackbox-account-change", String(Date.now()));
+  } catch {}
+});

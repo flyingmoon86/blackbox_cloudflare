@@ -13,6 +13,10 @@ export const securityHeaders: MiddlewareHandler<AppEnv> = async (c, next) => {
   c.header("Referrer-Policy", "same-origin");
   c.header("X-Frame-Options", visualPreview ? "SAMEORIGIN" : "DENY");
   c.header("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
+  // Our router prepares public pages explicitly. An origin-owned empty rule set
+  // prevents Cloudflare Speed Brain from injecting duplicate hover/tap prefetches.
+  if (c.res.headers.get("Content-Type")?.includes("text/html"))
+    c.header("Speculation-Rules", '"/navigation-speculation.json"');
   if (new URL(c.req.url).protocol === "https:")
     c.header("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   c.header(

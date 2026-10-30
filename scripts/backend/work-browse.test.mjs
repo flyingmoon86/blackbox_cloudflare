@@ -1,3 +1,4 @@
+import { pageScope } from "./page-scope.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 import vm from "node:vm";
@@ -118,6 +119,7 @@ function harness({
   window.scrollTo = (value) => {
     window.scrolled = value;
   };
+  window.blackboxPages = { register: (_, setup) => setup(null, pageScope) };
   vm.runInNewContext(source, context);
   return { cards, requests, images, window, document, navigator, connection, observer, timers, frames, storage };
 }

@@ -40,7 +40,6 @@
     const enabled = script?.hasAttribute("data-curtain-page");
     const motion = matchMedia("(prefers-reduced-motion: reduce)");
     const navigationKey = "blackbox-curtain-navigation";
-    const enteredKey = "blackbox-site-entered:v1";
     const read = (key) => {
       try {
         return sessionStorage.getItem(key);
@@ -71,8 +70,6 @@
       internalReferrer || incoming?.to === location.href && Date.now() - incoming.at >= 0 && Date.now() - incoming.at < 3e5 && !history
     );
     window.blackboxCurtainArrival = arriving;
-    const entered = read(enteredKey) === "entered";
-    if (enabled) write(enteredKey, "entered");
     let overlay, mode, cleanupTimer;
     const state = window.blackboxCurtain = { active: false };
     const recovery = (message) => {
@@ -141,8 +138,7 @@
     };
     const storageKey = version && `blackbox-navigation-ready:${version}`;
     const dismissalKey = version && `blackbox-navigation-dismissed:${version}`;
-    const connection = navigator.connection;
-    const shouldLoad = version && !entered && !arriving && !history && navigator.onLine !== false && !connection?.saveData && !/(^|-)2g$/.test(connection?.effectiveType || "") && read(storageKey) !== "ready" && read(dismissalKey) !== "dismissed";
+    const shouldLoad = version && !arriving && !history && navigator.onLine !== false;
     let openingObserver, openingDeadline;
     if (shouldLoad) {
       const opening = window.blackboxSiteOpening = {
@@ -182,7 +178,7 @@
               }
             })
           );
-          if (["partial", "timeout"].includes(opening.status)) recovery("\u90E8\u5206\u8D44\u6E90\u5C1A\u672A\u5C31\u7EEA\uFF0C\u5DF2\u663E\u793A\u9875\u9762\uFF0C\u53EF\u7EE7\u7EED\u6D4F\u89C8\u3002");
+          if (["partial", "timeout"].includes(opening.status)) recovery("\u90E8\u5206\u9875\u9762\u672A\u7F13\u5B58\uFF0C\u6253\u5F00\u65F6\u5C06\u8054\u7F51\u52A0\u8F7D\u3002");
         }
       };
       const render = () => {
@@ -193,7 +189,7 @@
           meter.value = opening.completed;
         } else meter.removeAttribute("value");
         const failures = opening.failed ? ` \xB7 ${opening.failed} \u9879\u6682\u4E0D\u53EF\u7528` : "";
-        overlay.querySelector(".curtain-detail").textContent = opening.discovering ? `\u6B63\u5728\u83B7\u53D6\u9875\u9762\u4E0E\u8D44\u6E90\u6E05\u5355${opening.completed ? ` \xB7 \u5DF2\u5C31\u7EEA ${opening.completed} \u9879` : ""}${failures}` : `${opening.completed} / ${opening.total} \u9879\u8D44\u6E90\u5DF2\u5C31\u7EEA${failures}`;
+        overlay.querySelector(".curtain-detail").textContent = opening.discovering ? `\u6B63\u5728\u51C6\u5907\u5BFC\u822A\u9875\u9762${opening.completed ? ` \xB7 \u5DF2\u5C31\u7EEA ${opening.completed} \u9879` : ""}${failures}` : `${opening.completed} / ${opening.total} \u9879\u51C6\u5907\u5B8C\u6210${failures}`;
       };
       const show = () => {
         if (!opening.active || !document.body) return;
@@ -215,7 +211,7 @@
         node.querySelector(".curtain-detail").before(meter);
         render();
       };
-      openingDeadline = setTimeout(() => opening.finish({ status: "timeout" }), 1e4);
+      openingDeadline = setTimeout(() => opening.finish({ status: "timeout" }), 65e3);
       if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", show, { once: true });
         if (typeof MutationObserver !== "undefined") {
@@ -254,6 +250,14 @@
       "error",
       (event) => {
         if (!(event.target instanceof HTMLScriptElement) && !event.error) return;
+        const source = event.target instanceof HTMLScriptElement ? event.target.src : event.filename;
+        if (source) {
+          try {
+            if (new URL(source, location.href).origin !== location.origin) return;
+          } catch {
+            return;
+          }
+        }
         window.blackboxSiteOpening?.finish({ status: "partial" });
         clear();
       },

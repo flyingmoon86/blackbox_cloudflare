@@ -60,6 +60,7 @@
       position();
     };
     syncCurrent();
+    document.addEventListener("blackbox:page-changed", syncCurrent);
     new ResizeObserver(position).observe(header);
     const navigation = header.querySelector("#main-navigation");
     if (navigation)

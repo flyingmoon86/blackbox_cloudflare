@@ -27,6 +27,7 @@ await build({
   legalComments: "eof",
 });
 const files = [
+  "page-runtime.js",
   "handbook.css",
   ...["account", "profile", "photos", "graduation", "credits", "upload", "help", "admin"].map(
     (id) => `images/handbook/${id}.png`,

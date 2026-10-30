@@ -99,7 +99,12 @@ contentRoutes.get("/announcements", async (c) => {
     "SELECT id,title,content,created_at FROM announcement ORDER BY created_at DESC,id DESC",
   ).all<AnnouncementRow>();
   return c.html(
-    announcementListPage(result.results, c.get("user")?.role === "admin", await csrfFor(c), Boolean(c.get("user"))),
+    announcementListPage(
+      result.results,
+      c.get("user")?.role === "admin",
+      c.get("user")?.role === "admin" ? await csrfFor(c) : "",
+      Boolean(c.get("user")),
+    ),
   );
 });
 

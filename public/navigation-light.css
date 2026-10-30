@@ -8,7 +8,7 @@
   pointer-events: none;
   opacity: 0;
   transform: translateX(var(--spot-x, 0px));
-  transition: transform 620ms cubic-bezier(.22,.7,.25,1), opacity 180ms ease;
+  transition: transform 150ms ease-out, opacity 150ms ease;
   z-index: 0;
 }
 .nav-followspot.is-positioned { opacity: 1; }

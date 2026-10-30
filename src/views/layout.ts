@@ -26,6 +26,15 @@ export function layout(title: string, content: string, signedIn = false, admin =
     ? JSON.stringify([
         ...[
           "/navigation-preload.js",
+          "/page-runtime.js",
+          "/navigation-light.js",
+          "/navigation-light.css",
+          "/home-recommendations.js",
+          "/layout-book.css",
+          "/layout-members.css",
+          "/layout-gallery.css",
+          "/handbook.css",
+          "/announcement.css",
           "/fonts.css",
           "/curtain-boot.js",
           "/curtain.css",
@@ -223,6 +232,8 @@ export function layout(title: string, content: string, signedIn = false, admin =
       ? '<link rel="stylesheet" href="' + assetUrl("/navigation-light.css") + '">'
       : "") +
     '<script src="' +
+    assetUrl("/page-runtime.js") +
+    '"></script><script src="' +
     assetUrl("/app.js") +
     '" defer></script><script src="' +
     assetUrl("/member-dossier.js") +

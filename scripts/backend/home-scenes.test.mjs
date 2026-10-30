@@ -1,3 +1,4 @@
+import { pageScope } from "./page-scope.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 import vm from "node:vm";
@@ -50,6 +51,7 @@ function setup(hash = "", ids = ["welcome", "playbill", "about"]) {
   stage.querySelectorAll = (s) => (s === ".stage-scene" ? scenes : links);
   const events = {};
   const context = {
+    scope: pageScope,
     document: {
       querySelector: (s) => (s === ".theatre-stage" ? stage : null),
       body: { classList: { contains: () => false } },

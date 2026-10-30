@@ -1,297 +1,141 @@
-import { describe } from "./preload/discovery.js";
-import { createAssetWarmer } from "./preload/assets.js";
 import { PUBLIC_LANDING_PATHS } from "../shared/navigation.ts";
+import { createNavigationAssets } from "./navigation/assets.js";
+import { installRouter } from "./navigation/router.js";
+
 (() => {
+  if (document.body?.dataset.navigationPreload !== "public" || !window.blackboxPages) return;
   const paths = new Set(PUBLIC_LANDING_PATHS);
-  const publicPage = document.body?.dataset.navigationCache === "public-v1";
-  if ((!publicPage && document.body?.dataset.navigationPreload !== "public") || !window.fetch) return;
-  const entries = new Map();
-  const { warm, abort: abortAssets } = createAssetWarmer();
-  const connection = navigator.connection;
-  const limited = () =>
-    navigator.onLine === false || connection?.saveData || /(^|-)2g$/.test(connection?.effectiveType || "");
   const canonical = (href) => {
     try {
       const url = new URL(href, location.href);
-      if (url.origin !== location.origin || !paths.has(url.pathname) || url.search) return null;
-      url.hash = "";
-      return url.href;
+      return url.origin === location.origin && paths.has(url.pathname) && !url.search ? url.pathname : null;
     } catch {
       return null;
     }
   };
-  const current = canonical(location.href);
-  if (!current) return;
+  if (!canonical(location.href)) return;
+  const pages = new Map();
+  const controller = new AbortController();
+  const assets = createNavigationAssets(controller.signal);
   const opening = window.blackboxSiteOpening;
-  const version = opening?.version || document.querySelector("script[data-site-opening]")?.dataset.siteOpening;
-  const storageKey = opening?.storageKey || (version && "blackbox-navigation-ready:" + version);
-  const dismissalKey = opening?.dismissalKey || (version && "blackbox-navigation-dismissed:" + version);
-  const alreadyPrepared = () => {
-    try {
-      return storageKey && sessionStorage.getItem(storageKey) === "ready";
-    } catch {
-      return false;
-    }
+  const version = document.querySelector("script[data-site-opening]")?.dataset.siteOpening;
+  const router = installRouter(pages, assets, canonical);
+  let completed = 0,
+    failed = 0;
+  const failures = [];
+  const total = paths.size + 1;
+  const update = () => opening?.update({ completed, total, failed, discovering: false });
+  const fonts = (text) =>
+    new Promise((resolve, reject) => {
+      const abort = () => reject(new DOMException("Aborted", "AbortError"));
+      if (controller.signal.aborted) return abort();
+      controller.signal.addEventListener("abort", abort, { once: true });
+      Promise.resolve(document.fonts?.load('900 32px "Blackbox Display"', text))
+        .then(resolve, reject)
+        .finally(() => controller.signal.removeEventListener("abort", abort));
+    });
+  const prepare = async (path) => {
+    // Deliberately anonymous: never put admin controls, CSRF, hidden records or
+    // internal photos in a route snapshot, even when the shell is signed in.
+    const response = await fetch(path, {
+      credentials: "omit",
+      cache: "no-store",
+      redirect: "error",
+      headers: { Accept: "text/html" },
+      signal: controller.signal,
+    });
+    if (
+      !response.ok ||
+      response.headers.get("X-Blackbox-Navigation") !== "public-v1" ||
+      !response.headers.get("Content-Type")?.includes("text/html")
+    )
+      throw Error("page-response");
+    const html = await response.text();
+    if (html.length > 1500000) throw Error("page-size");
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const main = doc.querySelector("#main-content");
+    if (
+      !main ||
+      doc.querySelector("script[data-site-opening]")?.dataset.siteOpening !== version ||
+      doc.body.dataset.navigationCache !== "public-v1" ||
+      main.querySelector('input[name="csrf"][value]:not([value=""])')
+    )
+      throw Error("page-contract");
+    const styles = await assets.styles(doc);
+    const text = main.textContent;
+    // Font subsets and pictures can load together as soon as this HTML arrives.
+    await Promise.all([assets.scripts(doc), assets.images(main, location.origin + path), fonts(text)]);
+    main.querySelectorAll("script,link[rel=stylesheet]").forEach((node) => node.remove());
+    pages.set(path, {
+      main,
+      styles,
+      text,
+      title: doc.title,
+      classes: [...doc.body.classList],
+      section: doc.body.dataset.section || "",
+      ready: false,
+    });
   };
-  let suspended = false,
-    leaving = false,
-    generation = 0,
-    startupRunning = false,
-    stopped = "",
-    intentTimer,
-    cancelFonts;
-  const cancel = (except) => {
-    generation++;
-    suspended = true;
-    clearTimeout(intentTimer);
-    for (const [url, entry] of entries) {
-      if (url !== except && !entry.ready) {
-        entry.controller.abort();
-        entries.delete(url);
-      }
-    }
-  };
-  const prepare = (href, foreground = false, refresh = false) => {
-    const url = canonical(href);
-    if (!url) return null;
-    if (foreground && !startupRunning) cancel(url);
-    const cached = entries.get(url);
-    if (cached && !refresh && (!cached.ready || cached.expires > Date.now())) return cached.promise;
-    cached?.controller.abort();
-    const controller = new AbortController();
-    const entry = { controller, ready: false, expires: 0 };
-    entries.set(url, entry);
-    const timeout = setTimeout(() => controller.abort(), 6000);
-    entry.promise = (async () => {
-      const response = await fetch(url, {
-        // Logged-in pages discover only anonymous public resources, never private HTML.
-        credentials: publicPage ? "same-origin" : "omit",
-        cache: refresh ? "reload" : "default",
-        signal: controller.signal,
-        priority: foreground ? "high" : "low",
-        headers: { Accept: "text/html" },
-        redirect: "manual",
-      });
-      if (
-        response.type === "opaqueredirect" ||
-        !response.ok ||
-        response.redirected ||
-        response.headers.get("X-Blackbox-Navigation") !== "public-v1" ||
-        !response.headers.get("Content-Type")?.includes("text/html")
-      )
-        throw new Error("navigation-response");
-      const html = await response.text();
-      if (controller.signal.aborted) throw new Error("navigation-aborted");
-      if (html.length > 750000) throw new Error("navigation-size");
-      const template = document.createElement("template");
-      template.innerHTML = html; // Inert discovery only: never execute or replay destination HTML.
-      const data = describe(template.content, url);
-      entry.ready = true;
-      const responseDate = Date.parse(response.headers.get("Date") || "");
-      const age = Math.max(
-        Number(response.headers.get("Age")) || 0,
-        Number.isFinite(responseDate) ? (Date.now() - responseDate) / 1000 : 0,
-      );
-      entry.expires = Date.now() + Math.max(0, 15 - age) * 1000;
-      return data;
-    })()
-      .catch((error) => {
-        if (entries.get(url) === entry) entries.delete(url);
-        throw error;
-      })
-      .finally(() => clearTimeout(timeout));
-    return entry.promise;
-  };
-  const descriptors = (data, includeImages) => [
-    ...data.styles.map((url) => ({ url, image: false })),
-    ...data.scripts.map((url) => ({ url, image: false })),
-    ...(includeImages ? data.images.map((url) => ({ url, image: true })) : []),
-  ];
-  const warmAssets = (data, includeImages = false) =>
-    Promise.allSettled(
-      data ? descriptors(data, includeImages && !limited()).map((asset) => warm(asset.url, asset.image)) : [],
-    );
-  const abortStartup = (status) => {
-    if (!startupRunning || stopped) return;
-    stopped = status;
-    cancel();
-    abortAssets();
-    cancelFonts?.();
-  };
-  const pause = () => {
-    abortStartup("skipped");
-    cancel();
-    abortAssets();
-  };
-  const blocked = () => leaving || document.hidden || limited();
-  const resume = () => {
-    suspended = blocked();
-  };
-  document.addEventListener("blackbox:navigation-start", () => {
-    leaving = true;
-    pause();
-  });
-  document.addEventListener("blackbox:navigation-cancel", () => {
-    leaving = false;
-    resume();
-  });
-  document.addEventListener("blackbox:opening-finished", (event) => {
-    if (["timeout", "skipped", "partial"].includes(event.detail?.status)) abortStartup(event.detail.status);
-  });
   const startup = async () => {
-    if (window.blackboxCurtainArrival) return { status: "navigation", completed: 0, total: 0, failed: 0 };
-    if (opening && !opening.active && ["timeout", "skipped", "partial"].includes(opening.status))
-      return { status: opening.status, completed: 0, total: 0, failed: 0 };
-    if (limited()) {
-      opening?.finish({ status: "limited" });
-      return { status: "limited", completed: 0, total: 0, failed: 0 };
-    }
-    if (alreadyPrepared()) return { status: "warm", completed: 0, total: 0, failed: 0 };
+    const deadline = setTimeout(() => controller.abort(), 60000);
+    update();
     try {
-      if (dismissalKey && sessionStorage.getItem(dismissalKey) === "dismissed")
-        return { status: "deferred", completed: 0, total: 0, failed: 0 };
-    } catch {}
-    startupRunning = true;
-    let completed = 0,
-      failed = 0,
-      remainingPages = paths.size;
-    const fontTask = Boolean(document.fonts?.load);
-    let total = paths.size + Number(fontTask);
-    const deadline = setTimeout(() => abortStartup("timeout"), 10000);
-    const pages = [];
-    const manifest = new Map();
-    let truncated = false;
-    const update = () => opening?.update({ completed, total, failed, discovering: remainingPages > 0 });
-    const prepareFonts = async () => {
-      let fontTimer;
-      try {
-        const text = ("黑匣子首页作品资料库队员鸣谢" + pages.map((page) => page.text).join("")).slice(0, 512);
-        await Promise.race([
-          document.fonts.load('900 32px "Blackbox Display"', text),
-          new Promise((_, reject) => {
-            cancelFonts = () => reject(new Error("navigation-aborted"));
-            fontTimer = setTimeout(cancelFonts, 6000);
-          }),
-        ]);
-      } finally {
-        clearTimeout(fontTimer);
-        cancelFonts = null;
+      // Persistent storage is optional; in-tab navigation also works without it.
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker
+          .register("/navigation-worker.js", { scope: "/", updateViaCache: "none" })
+          .catch(() => {});
       }
-    };
-    try {
-      update();
-      // One bounded queue owns both discovery and downloads. A slow later page
-      // cannot hold back already discovered assets; at most two jobs run at once.
-      await new Promise((resolve) => {
-        let running = 0;
-        const queue = [];
-        const addPage = async (path) => {
+      await Promise.all(
+        [...paths].map(async (path) => {
           try {
-            const page = path === location.pathname && publicPage ? describe(document, current) : await prepare(path);
-            if (stopped) return;
-            pages.push(page);
-            const discovered = [];
-            for (const asset of descriptors(page, true)) {
-              if (manifest.has(asset.url)) continue;
-              if (manifest.size >= 40) {
-                truncated = true;
-                continue;
-              }
-              manifest.set(asset.url, asset);
-              total++;
-              discovered.push(() => warm(asset.url, asset.image));
-            }
-            queue.unshift(...discovered);
-          } finally {
-            remainingPages--;
-            if (!remainingPages && fontTask) queue.unshift(prepareFonts);
+            await prepare(path);
+            completed++;
+          } catch (error) {
+            failed++;
+            failures.push({ path, reason: error.name === "AbortError" ? "timeout" : error.message });
           }
-        };
-        const orderedPaths = [location.pathname, ...paths].filter(
-          (path, index, all) => paths.has(path) && all.indexOf(path) === index,
-        );
-        for (const path of orderedPaths) queue.push(() => addPage(path));
-        const pump = () => {
-          if (stopped) queue.length = 0;
-          while (running < 2 && queue.length) {
-            const job = queue.shift();
-            running++;
-            Promise.resolve()
-              .then(() => {
-                if (!stopped) return job();
-              })
-              .then(
-                () => completed++,
-                () => failed++,
-              )
-              .finally(() => {
-                running--;
-                update();
-                pump();
-              });
-          }
-          if (!running && !queue.length) resolve();
-        };
-        pump();
-      });
-      const status = stopped || (failed || completed !== total || truncated ? "partial" : "ready");
-      if (status === "ready" && storageKey) {
+          update();
+        }),
+      );
+      if (!controller.signal.aborted) {
         try {
-          sessionStorage.setItem(storageKey, "ready");
-        } catch {}
+          await Promise.all([
+            assets.shell(),
+            assets.images(document.querySelector("#main-content"), location.href, true),
+          ]);
+          completed++;
+        } catch {
+          failed++;
+        }
       }
+      for (const page of pages.values()) page.ready = true;
+      update();
+      const status = controller.signal.aborted ? "timeout" : failed || completed !== total ? "partial" : "ready";
+      api.status = status;
       opening?.finish({ status });
-      return { status, completed, total, failed };
+      return { status, completed, total, failed, routes: [...pages.keys()], failures };
     } finally {
       clearTimeout(deadline);
-      startupRunning = false;
-      resume();
     }
   };
-  const intent = (event) => {
-    const link = event.target instanceof Element ? event.target.closest(".top a[href], .mobile-nav a[href]") : null;
-    if (!link || (link.target && link.target !== "_self") || link.hasAttribute("download")) return;
-    const url = canonical(link.href);
-    if (!url || url === current || limited() || suspended || startupRunning) return;
-    clearTimeout(intentTimer);
-    intentTimer = setTimeout(
-      async () => {
-        if (blocked() || suspended || startupRunning) return;
-        const pending = prepare(url, true);
-        const intentGeneration = generation;
-        try {
-          const data = await pending;
-          if (intentGeneration === generation && !blocked()) await warmAssets(data, true);
-        } catch {
-        } finally {
-          if (intentGeneration === generation) resume();
-        }
-      },
-      event.type === "pointerover" ? 120 : 0,
-    );
-  };
-  document.addEventListener("pointerover", intent, { passive: true });
-  document.addEventListener("pointerdown", intent, { passive: true });
-  document.addEventListener("focusin", intent);
-  document.addEventListener("pointerout", () => clearTimeout(intentTimer), { passive: true });
-  window.addEventListener("pagehide", () => {
-    leaving = true;
-    pause();
-  });
-  window.addEventListener("pageshow", () => {
-    leaving = false;
-    resume();
-  });
-  document.addEventListener("visibilitychange", () => (document.hidden ? pause() : resume()));
-  window.addEventListener("offline", pause);
-  window.addEventListener("online", resume);
-  connection?.addEventListener?.("change", () => (limited() ? pause() : resume()));
-  window.blackboxNavigationPrefetch = {
-    prepare,
-    warmAssets,
-    cancel,
-    resume,
+  const api = (window.blackboxNavigation = {
+    status: "loading",
     eligible: (href) => Boolean(canonical(href)),
-    startupPromise: startup(),
-  };
+    cached: (href) => Boolean(pages.get(canonical(href))?.ready),
+    invalidate: router.invalidate,
+  });
+  // Keep the existing diagnostic entry point, without its old marker-only skip.
+  window.blackboxNavigationPrefetch = api;
+  document.addEventListener("blackbox:opening-finished", (event) => {
+    if (api.status === "loading" && ["partial", "timeout", "skipped"].includes(event.detail?.status))
+      controller.abort();
+  });
+  api.startupPromise = startup();
+  window.addEventListener("pagehide", (event) => {
+    if (!event.persisted) {
+      controller.abort();
+      assets.release();
+    }
+  });
 })();

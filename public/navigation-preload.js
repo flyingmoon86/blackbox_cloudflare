@@ -1,7 +1,18 @@
 // Generated from src/client/navigation-preload.js by npm run assets:build. Do not edit this output.
 "use strict";
 (() => {
-  // src/client/preload/discovery.js
+  // src/shared/navigation.ts
+  var PUBLIC_LANDING_PATHS = [
+    "/",
+    "/productions",
+    "/resources",
+    "/members",
+    "/thanks",
+    "/help",
+    "/announcements"
+  ];
+
+  // src/client/navigation/image-source.js
   var sameOrigin = (value, base) => {
     if (!value) return null;
     try {
@@ -10,10 +21,6 @@
     } catch {
       return null;
     }
-  };
-  var allowedImage = (href) => {
-    const url = new URL(href);
-    return /^\/assets\/[^/]+\.(?:png|jpe?g|webp|avif)$/.test(url.pathname) || /^\/site\/stage-image\/(?:home|productions|members|thanks)\/(?:unlit|light)$/.test(url.pathname) || /^\/productions\/\d+\/cover$/.test(url.pathname) && url.searchParams.get("size") === "preview" || /^\/members\/\d+\/avatar$/.test(url.pathname) && !url.search || /^\/resources\/\d+\/preview$/.test(url.pathname) || /^\/site\/(?:featured-cover|poster)$/.test(url.pathname);
   };
   var imageSource = (node, base) => {
     const picture = node.parentElement?.tagName === "PICTURE" ? node.parentElement : null;
@@ -24,374 +31,374 @@
     const selected = candidate && !/[\s,]/.test(candidate) ? candidate : node.currentSrc || node.getAttribute("src");
     return sameOrigin(selected, base);
   };
-  var describe = (root, url) => {
-    const present = new Set(
-      [...document.querySelectorAll('link[rel="stylesheet"],script[src]')].map((node) => node.href || node.src)
-    );
-    const styles = [...root.querySelectorAll('link[rel="stylesheet"][href]')].map((node) => sameOrigin(node.getAttribute("href"), url)).filter((href) => href && new URL(href).pathname.endsWith(".css") && !present.has(href));
-    const scripts = [...root.querySelectorAll("script[src]")].map((node) => sameOrigin(node.getAttribute("src"), url)).filter((href) => href && /^\/assets\/[^/]+\.js$/.test(new URL(href).pathname) && !present.has(href));
-    const imageNodes = [
-      ...root.querySelectorAll("img[data-theatre-base],img[data-theatre-light]"),
-      ...[
-        ...root.querySelectorAll(".production-stage-image,.production-cover,.member-card-media,.resource-card img")
-      ].slice(0, 4)
-    ];
-    if (new URL(url).pathname === "/") {
-      imageNodes.push(...[...root.querySelectorAll(".recommendation-still")].slice(0, 3));
-      imageNodes.push(...[...root.querySelectorAll(".playbill-art img")].slice(0, 1));
-    }
-    const images = imageNodes.map((node) => imageSource(node, url)).filter((href) => href && allowedImage(href));
-    const text = [...root.querySelectorAll("h1,h2,.playbill-recommendation strong")].map((node) => node.textContent).join("").slice(0, 256);
-    return {
-      styles: [...new Set(styles)].slice(0, 8),
-      scripts: [...new Set(scripts)].slice(0, 8),
-      images: [...new Set(images)].slice(0, 10),
-      text
-    };
-  };
 
-  // src/client/preload/assets.js
-  function createAssetWarmer() {
-    const assets = /* @__PURE__ */ new Map();
-    const warm = (url, image = false) => {
-      if (assets.has(url)) return assets.get(url).promise;
-      const controller = new AbortController();
-      const entry = { controller, ready: false };
-      assets.set(url, entry);
-      const timeout = setTimeout(() => controller.abort(), 6e3);
-      const work = image ? new Promise((resolve, reject) => {
-        const existing = [...document.querySelectorAll("img[src]")].find(
-          (node) => imageSource(node, location.href) === url
-        );
-        const photo = existing || new Image();
-        let settled = false;
-        const done = (error) => {
-          if (settled) return;
-          settled = true;
-          photo.removeEventListener("load", loaded);
-          photo.removeEventListener("error", failed);
-          controller.signal.removeEventListener("abort", aborted);
-          if (error) reject(error);
-          else resolve();
-        };
-        const loaded = () => {
-          if (!photo.naturalWidth) return failed();
-          if (typeof photo.decode === "function") photo.decode().then(() => done(), done);
-          else done();
-        };
-        const failed = () => done(new Error("navigation-image"));
-        const aborted = () => {
-          if (!existing) photo.removeAttribute("src");
-          done(new Error("navigation-aborted"));
-        };
-        photo.addEventListener("load", loaded, { once: true });
-        photo.addEventListener("error", failed, { once: true });
-        controller.signal.addEventListener("abort", aborted, { once: true });
-        photo.loading = "eager";
-        if (!existing) {
-          photo.fetchPriority = "low";
-          photo.src = url;
-        }
-        if (photo.complete) (photo.naturalWidth ? loaded : failed)();
-      }) : fetch(url, { priority: "low", signal: controller.signal }).then((response) => {
-        if (!response.ok || response.redirected) throw new Error("navigation-asset");
-        return response.arrayBuffer();
-      }).then(() => {
-      });
-      entry.promise = work.then(() => {
-        entry.ready = true;
-      }).catch((error) => {
-        if (assets.get(url) === entry) assets.delete(url);
-        throw error;
-      }).finally(() => clearTimeout(timeout));
-      return entry.promise;
-    };
-    const abort = () => {
-      for (const [url, entry] of assets) {
-        if (!entry.ready) {
-          assets.delete(url);
-          entry.controller.abort();
-        }
+  // src/client/navigation/assets.js
+  function publicImage(href) {
+    const url = new URL(href, location.href);
+    return url.origin === location.origin && (/^\/assets\/[^/]+\.[a-f0-9]{16}\.(?:png|jpe?g|webp|avif|svg)$/.test(url.pathname) || /^\/site\/stage-image\/(?:home|productions|members|thanks)\/(?:unlit|light)$/.test(url.pathname) || /^\/site\/(?:featured-cover|poster|mascot|hero|background)$/.test(url.pathname) || /^\/productions\/\d+\/cover$/.test(url.pathname) && url.searchParams.get("size") === "preview" || /^\/members\/\d+\/avatar$/.test(url.pathname) && !url.search || /^\/resources\/\d+\/preview$/.test(url.pathname));
+  }
+  function createNavigationAssets(signal) {
+    const pictures = /* @__PURE__ */ new Map();
+    const styles = /* @__PURE__ */ new Map();
+    const scripts = /* @__PURE__ */ new Map();
+    const blobs = /* @__PURE__ */ new Set();
+    const queue = [];
+    let active = 0;
+    const drain = () => {
+      while (active < 6 && queue.length) {
+        const { run, resolve, reject } = queue.shift();
+        active++;
+        Promise.resolve().then(() => {
+          if (signal.aborted) throw new DOMException("Aborted", "AbortError");
+          return run();
+        }).then(resolve, reject).finally(() => {
+          active--;
+          drain();
+        });
       }
     };
-    return { warm, abort };
+    const schedule = (run) => new Promise((resolve, reject) => {
+      queue.push({ run, resolve, reject });
+      drain();
+    });
+    document.querySelectorAll('link[rel="stylesheet"][href]').forEach((node) => {
+      styles.set(node.href, { node, promise: node.sheet ? Promise.resolve() : loaded(node, signal) });
+      if (node.closest("main")) document.head.append(node);
+    });
+    document.querySelectorAll("script[src]").forEach((node) => scripts.set(node.src, Promise.resolve()));
+    async function picture(url) {
+      if (pictures.has(url)) return pictures.get(url);
+      const pending = schedule(async () => {
+        const response = await fetch(url, { credentials: "omit", signal, redirect: "error" });
+        if (!response.ok || !/^image\//.test(response.headers.get("Content-Type") || "")) throw Error("image-response");
+        const blob = await response.blob();
+        if (signal.aborted || blob.size > 25 * 1024 * 1024) throw Error("image-size");
+        const local = URL.createObjectURL(blob);
+        blobs.add(local);
+        const image = new Image();
+        image.src = local;
+        await image.decode();
+        return local;
+      });
+      pictures.set(url, pending);
+      return pending;
+    }
+    return {
+      async images(root, base, preparedOnly = false) {
+        const images = [...root.querySelectorAll("img[src],svg image[href]")];
+        let next = 0;
+        await Promise.all(
+          Array.from({ length: Math.min(3, images.length) }, async () => {
+            while (next < images.length) {
+              const node = images[next++];
+              const svg = node.localName === "image";
+              const url = svg ? new URL(node.getAttribute("href"), base).href : imageSource(node, base);
+              if (preparedOnly && !pictures.has(url)) continue;
+              if (!url || !publicImage(url)) throw Error("unlisted-image");
+              const local = await picture(url);
+              if (svg) {
+                node.setAttribute("href", local);
+                continue;
+              }
+              if (node.parentElement?.tagName === "PICTURE")
+                node.parentElement.querySelectorAll("source").forEach((s) => s.remove());
+              node.removeAttribute("srcset");
+              node.src = local;
+              node.loading = "eager";
+            }
+          })
+        );
+      },
+      async shell() {
+        const icon = document.querySelector('link[rel="icon"]');
+        if (icon && publicImage(icon.href)) icon.href = await picture(icon.href);
+      },
+      async styles(root) {
+        const hrefs = [...new Set([...root.querySelectorAll('link[rel="stylesheet"][href]')].map((node) => node.href))];
+        await Promise.all(
+          hrefs.map(async (href) => {
+            const url = new URL(href);
+            if (url.origin !== location.origin || !/^\/assets\/[^/]+\.[a-f0-9]{16}\.css$/.test(url.pathname) && href !== location.origin + "/site/theme.css")
+              throw Error("stylesheet-policy");
+            if (!styles.has(href)) {
+              const node = document.createElement("link");
+              node.rel = "stylesheet";
+              node.href = href;
+              node.media = "not all";
+              const promise = loaded(node, signal);
+              styles.set(href, { node, promise });
+              document.head.append(node);
+            }
+            await styles.get(href).promise;
+          })
+        );
+        return hrefs;
+      },
+      activate(hrefs) {
+        for (const [href, entry] of styles) {
+          const media = hrefs.includes(href) ? "all" : "not all";
+          if (entry.node.media !== media) entry.node.media = media;
+        }
+      },
+      async scripts(root) {
+        for (const source of root.querySelectorAll("script[src]")) {
+          const href = source.src;
+          if (!/^\/assets\/(?:home-light|home-recommendations|work-browse)\.[a-f0-9]{16}\.js$/.test(
+            new URL(href).pathname
+          ) || scripts.has(href))
+            continue;
+          const node = document.createElement("script");
+          node.src = href;
+          const promise = loaded(node, signal);
+          scripts.set(href, promise);
+          document.head.append(node);
+          await promise;
+        }
+      },
+      release() {
+        for (const url of blobs) URL.revokeObjectURL(url);
+        blobs.clear();
+      }
+    };
+  }
+  function loaded(node, signal) {
+    return new Promise((resolve, reject) => {
+      const done = (error) => {
+        node.removeEventListener("load", success);
+        node.removeEventListener("error", failure);
+        signal.removeEventListener("abort", failure);
+        error ? reject(error) : resolve();
+      };
+      const success = () => done();
+      const failure = () => done(Error("asset-unavailable"));
+      node.addEventListener("load", success, { once: true });
+      node.addEventListener("error", failure, { once: true });
+      signal.addEventListener("abort", failure, { once: true });
+      if (signal.aborted) failure();
+    });
   }
 
-  // src/shared/navigation.ts
-  var PUBLIC_LANDING_PATHS = ["/", "/productions", "/resources", "/members", "/thanks"];
+  // src/client/navigation/router.js
+  function installRouter(pages, assets, canonical) {
+    let current = location.pathname;
+    let sequence = 0;
+    let valid = true;
+    let accountVersion;
+    try {
+      accountVersion = localStorage.getItem("blackbox-account-change");
+    } catch {
+    }
+    const positions = /* @__PURE__ */ new Map();
+    let key = history.state?.blackboxRoute || `route-${++sequence}`;
+    history.replaceState({ ...history.state, blackboxRoute: key }, "");
+    history.scrollRestoration = "manual";
+    const save = () => positions.set(key, { x: scrollX, y: scrollY });
+    const commit = (url, back = false) => {
+      const page = pages.get(url.pathname);
+      if (!valid || !page?.ready || !window.blackboxPages) return false;
+      const before = performance.now();
+      const previous = document.querySelector("#main-content");
+      if (!previous) return false;
+      save();
+      const next = page.main.cloneNode(true);
+      try {
+        window.blackboxPages.unmount();
+        if (!back) {
+          key = `route-${Date.now()}-${++sequence}`;
+          history.pushState({ blackboxRoute: key }, "", url);
+        } else key = history.state?.blackboxRoute;
+        assets.activate(page.styles);
+        for (const name of ["layout-book", "layout-members", "layout-gallery", "archive-page"])
+          document.body.classList.toggle(name, page.classes.includes(name));
+        document.body.dataset.section = page.section;
+        document.title = page.title;
+        previous.replaceWith(next);
+        document.querySelectorAll(".nav-menu.is-open,#main-navigation.is-open").forEach((node) => node.classList.remove("is-open"));
+        document.querySelectorAll(".nav-panel").forEach((node) => node.hidden = true);
+        document.querySelectorAll(".menu-toggle,.nav-menu-toggle").forEach((node) => node.setAttribute("aria-expanded", "false"));
+        document.body.classList.remove("navigation-open");
+        window.blackboxPages.mount(next);
+        current = url.pathname;
+        const position = back && positions.get(key);
+        next.focus({ preventScroll: true });
+        window.scrollTo({ left: position?.x || 0, top: position?.y || 0, behavior: "instant" });
+        if (url.hash) {
+          window.dispatchEvent(new HashChangeEvent("hashchange"));
+          const anchor = document.getElementById(decodeURIComponent(url.hash.slice(1)));
+          if (anchor && !anchor.closest(".stage-scene")) anchor.scrollIntoView({ behavior: "instant" });
+        }
+        document.dispatchEvent(
+          new CustomEvent("blackbox:page-changed", { detail: { path: current, commitMs: performance.now() - before } })
+        );
+        return true;
+      } catch {
+        valid = false;
+        location.assign(url.href);
+        return true;
+      }
+    };
+    document.addEventListener("click", (event) => {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
+        return;
+      const link = event.target.closest?.("a[href]");
+      if (!link || link.hasAttribute("download") || link.target && link.target !== "_self") return;
+      try {
+        if (localStorage.getItem("blackbox-account-change") !== accountVersion) valid = false;
+      } catch {
+      }
+      const path = canonical(link.href);
+      if (!path) return;
+      const url = new URL(link.href);
+      if (url.pathname === current && url.hash) return;
+      if (commit(url)) event.preventDefault();
+    });
+    window.addEventListener("popstate", () => {
+      if (location.pathname === current) return;
+      if (!canonical(location.href) || !commit(new URL(location.href), true)) location.reload();
+    });
+    window.addEventListener("storage", (event) => {
+      if (event.key === "blackbox-account-change") {
+        valid = false;
+        pages.clear();
+      }
+    });
+    window.addEventListener("pagehide", save);
+    window.addEventListener("pageshow", (event) => {
+      if (!event.persisted) return;
+      try {
+        if (localStorage.getItem("blackbox-account-change") !== accountVersion) {
+          valid = false;
+          pages.clear();
+        }
+      } catch {
+      }
+    });
+    return {
+      navigate: commit,
+      invalidate() {
+        valid = false;
+        pages.clear();
+      }
+    };
+  }
 
   // src/client/navigation-preload.js
   (() => {
+    if (document.body?.dataset.navigationPreload !== "public" || !window.blackboxPages) return;
     const paths = new Set(PUBLIC_LANDING_PATHS);
-    const publicPage = document.body?.dataset.navigationCache === "public-v1";
-    if (!publicPage && document.body?.dataset.navigationPreload !== "public" || !window.fetch) return;
-    const entries = /* @__PURE__ */ new Map();
-    const { warm, abort: abortAssets } = createAssetWarmer();
-    const connection = navigator.connection;
-    const limited = () => navigator.onLine === false || connection?.saveData || /(^|-)2g$/.test(connection?.effectiveType || "");
     const canonical = (href) => {
       try {
         const url = new URL(href, location.href);
-        if (url.origin !== location.origin || !paths.has(url.pathname) || url.search) return null;
-        url.hash = "";
-        return url.href;
+        return url.origin === location.origin && paths.has(url.pathname) && !url.search ? url.pathname : null;
       } catch {
         return null;
       }
     };
-    const current = canonical(location.href);
-    if (!current) return;
+    if (!canonical(location.href)) return;
+    const pages = /* @__PURE__ */ new Map();
+    const controller = new AbortController();
+    const assets = createNavigationAssets(controller.signal);
     const opening = window.blackboxSiteOpening;
-    const version = opening?.version || document.querySelector("script[data-site-opening]")?.dataset.siteOpening;
-    const storageKey = opening?.storageKey || version && "blackbox-navigation-ready:" + version;
-    const dismissalKey = opening?.dismissalKey || version && "blackbox-navigation-dismissed:" + version;
-    const alreadyPrepared = () => {
-      try {
-        return storageKey && sessionStorage.getItem(storageKey) === "ready";
-      } catch {
-        return false;
-      }
-    };
-    let suspended = false, leaving = false, generation = 0, startupRunning = false, stopped = "", intentTimer, cancelFonts;
-    const cancel = (except) => {
-      generation++;
-      suspended = true;
-      clearTimeout(intentTimer);
-      for (const [url, entry] of entries) {
-        if (url !== except && !entry.ready) {
-          entry.controller.abort();
-          entries.delete(url);
-        }
-      }
-    };
-    const prepare = (href, foreground = false, refresh = false) => {
-      const url = canonical(href);
-      if (!url) return null;
-      if (foreground && !startupRunning) cancel(url);
-      const cached = entries.get(url);
-      if (cached && !refresh && (!cached.ready || cached.expires > Date.now())) return cached.promise;
-      cached?.controller.abort();
-      const controller = new AbortController();
-      const entry = { controller, ready: false, expires: 0 };
-      entries.set(url, entry);
-      const timeout = setTimeout(() => controller.abort(), 6e3);
-      entry.promise = (async () => {
-        const response = await fetch(url, {
-          // Logged-in pages discover only anonymous public resources, never private HTML.
-          credentials: publicPage ? "same-origin" : "omit",
-          cache: refresh ? "reload" : "default",
-          signal: controller.signal,
-          priority: foreground ? "high" : "low",
-          headers: { Accept: "text/html" },
-          redirect: "manual"
-        });
-        if (response.type === "opaqueredirect" || !response.ok || response.redirected || response.headers.get("X-Blackbox-Navigation") !== "public-v1" || !response.headers.get("Content-Type")?.includes("text/html"))
-          throw new Error("navigation-response");
-        const html = await response.text();
-        if (controller.signal.aborted) throw new Error("navigation-aborted");
-        if (html.length > 75e4) throw new Error("navigation-size");
-        const template = document.createElement("template");
-        template.innerHTML = html;
-        const data = describe(template.content, url);
-        entry.ready = true;
-        const responseDate = Date.parse(response.headers.get("Date") || "");
-        const age = Math.max(
-          Number(response.headers.get("Age")) || 0,
-          Number.isFinite(responseDate) ? (Date.now() - responseDate) / 1e3 : 0
-        );
-        entry.expires = Date.now() + Math.max(0, 15 - age) * 1e3;
-        return data;
-      })().catch((error) => {
-        if (entries.get(url) === entry) entries.delete(url);
-        throw error;
-      }).finally(() => clearTimeout(timeout));
-      return entry.promise;
-    };
-    const descriptors = (data, includeImages) => [
-      ...data.styles.map((url) => ({ url, image: false })),
-      ...data.scripts.map((url) => ({ url, image: false })),
-      ...includeImages ? data.images.map((url) => ({ url, image: true })) : []
-    ];
-    const warmAssets = (data, includeImages = false) => Promise.allSettled(
-      data ? descriptors(data, includeImages && !limited()).map((asset) => warm(asset.url, asset.image)) : []
-    );
-    const abortStartup = (status) => {
-      if (!startupRunning || stopped) return;
-      stopped = status;
-      cancel();
-      abortAssets();
-      cancelFonts?.();
-    };
-    const pause = () => {
-      abortStartup("skipped");
-      cancel();
-      abortAssets();
-    };
-    const blocked = () => leaving || document.hidden || limited();
-    const resume = () => {
-      suspended = blocked();
-    };
-    document.addEventListener("blackbox:navigation-start", () => {
-      leaving = true;
-      pause();
+    const version = document.querySelector("script[data-site-opening]")?.dataset.siteOpening;
+    const router = installRouter(pages, assets, canonical);
+    let completed = 0, failed = 0;
+    const failures = [];
+    const total = paths.size + 1;
+    const update = () => opening?.update({ completed, total, failed, discovering: false });
+    const fonts = (text) => new Promise((resolve, reject) => {
+      const abort = () => reject(new DOMException("Aborted", "AbortError"));
+      if (controller.signal.aborted) return abort();
+      controller.signal.addEventListener("abort", abort, { once: true });
+      Promise.resolve(document.fonts?.load('900 32px "Blackbox Display"', text)).then(resolve, reject).finally(() => controller.signal.removeEventListener("abort", abort));
     });
-    document.addEventListener("blackbox:navigation-cancel", () => {
-      leaving = false;
-      resume();
-    });
-    document.addEventListener("blackbox:opening-finished", (event) => {
-      if (["timeout", "skipped", "partial"].includes(event.detail?.status)) abortStartup(event.detail.status);
-    });
+    const prepare = async (path) => {
+      const response = await fetch(path, {
+        credentials: "omit",
+        cache: "no-store",
+        redirect: "error",
+        headers: { Accept: "text/html" },
+        signal: controller.signal
+      });
+      if (!response.ok || response.headers.get("X-Blackbox-Navigation") !== "public-v1" || !response.headers.get("Content-Type")?.includes("text/html"))
+        throw Error("page-response");
+      const html = await response.text();
+      if (html.length > 15e5) throw Error("page-size");
+      const doc = new DOMParser().parseFromString(html, "text/html");
+      const main = doc.querySelector("#main-content");
+      if (!main || doc.querySelector("script[data-site-opening]")?.dataset.siteOpening !== version || doc.body.dataset.navigationCache !== "public-v1" || main.querySelector('input[name="csrf"][value]:not([value=""])'))
+        throw Error("page-contract");
+      const styles = await assets.styles(doc);
+      const text = main.textContent;
+      await Promise.all([assets.scripts(doc), assets.images(main, location.origin + path), fonts(text)]);
+      main.querySelectorAll("script,link[rel=stylesheet]").forEach((node) => node.remove());
+      pages.set(path, {
+        main,
+        styles,
+        text,
+        title: doc.title,
+        classes: [...doc.body.classList],
+        section: doc.body.dataset.section || "",
+        ready: false
+      });
+    };
     const startup = async () => {
-      if (window.blackboxCurtainArrival) return { status: "navigation", completed: 0, total: 0, failed: 0 };
-      if (opening && !opening.active && ["timeout", "skipped", "partial"].includes(opening.status))
-        return { status: opening.status, completed: 0, total: 0, failed: 0 };
-      if (limited()) {
-        opening?.finish({ status: "limited" });
-        return { status: "limited", completed: 0, total: 0, failed: 0 };
-      }
-      if (alreadyPrepared()) return { status: "warm", completed: 0, total: 0, failed: 0 };
+      const deadline = setTimeout(() => controller.abort(), 6e4);
+      update();
       try {
-        if (dismissalKey && sessionStorage.getItem(dismissalKey) === "dismissed")
-          return { status: "deferred", completed: 0, total: 0, failed: 0 };
-      } catch {
-      }
-      startupRunning = true;
-      let completed = 0, failed = 0, remainingPages = paths.size;
-      const fontTask = Boolean(document.fonts?.load);
-      let total = paths.size + Number(fontTask);
-      const deadline = setTimeout(() => abortStartup("timeout"), 1e4);
-      const pages = [];
-      const manifest = /* @__PURE__ */ new Map();
-      let truncated = false;
-      const update = () => opening?.update({ completed, total, failed, discovering: remainingPages > 0 });
-      const prepareFonts = async () => {
-        let fontTimer;
-        try {
-          const text = ("\u9ED1\u5323\u5B50\u9996\u9875\u4F5C\u54C1\u8D44\u6599\u5E93\u961F\u5458\u9E23\u8C22" + pages.map((page) => page.text).join("")).slice(0, 512);
-          await Promise.race([
-            document.fonts.load('900 32px "Blackbox Display"', text),
-            new Promise((_, reject) => {
-              cancelFonts = () => reject(new Error("navigation-aborted"));
-              fontTimer = setTimeout(cancelFonts, 6e3);
-            })
-          ]);
-        } finally {
-          clearTimeout(fontTimer);
-          cancelFonts = null;
+        if ("serviceWorker" in navigator) {
+          navigator.serviceWorker.register("/navigation-worker.js", { scope: "/", updateViaCache: "none" }).catch(() => {
+          });
         }
-      };
-      try {
-        update();
-        await new Promise((resolve) => {
-          let running = 0;
-          const queue = [];
-          const addPage = async (path) => {
+        await Promise.all(
+          [...paths].map(async (path) => {
             try {
-              const page = path === location.pathname && publicPage ? describe(document, current) : await prepare(path);
-              if (stopped) return;
-              pages.push(page);
-              const discovered = [];
-              for (const asset of descriptors(page, true)) {
-                if (manifest.has(asset.url)) continue;
-                if (manifest.size >= 40) {
-                  truncated = true;
-                  continue;
-                }
-                manifest.set(asset.url, asset);
-                total++;
-                discovered.push(() => warm(asset.url, asset.image));
-              }
-              queue.unshift(...discovered);
-            } finally {
-              remainingPages--;
-              if (!remainingPages && fontTask) queue.unshift(prepareFonts);
+              await prepare(path);
+              completed++;
+            } catch (error) {
+              failed++;
+              failures.push({ path, reason: error.name === "AbortError" ? "timeout" : error.message });
             }
-          };
-          const orderedPaths = [location.pathname, ...paths].filter(
-            (path, index, all) => paths.has(path) && all.indexOf(path) === index
-          );
-          for (const path of orderedPaths) queue.push(() => addPage(path));
-          const pump = () => {
-            if (stopped) queue.length = 0;
-            while (running < 2 && queue.length) {
-              const job = queue.shift();
-              running++;
-              Promise.resolve().then(() => {
-                if (!stopped) return job();
-              }).then(
-                () => completed++,
-                () => failed++
-              ).finally(() => {
-                running--;
-                update();
-                pump();
-              });
-            }
-            if (!running && !queue.length) resolve();
-          };
-          pump();
-        });
-        const status = stopped || (failed || completed !== total || truncated ? "partial" : "ready");
-        if (status === "ready" && storageKey) {
+            update();
+          })
+        );
+        if (!controller.signal.aborted) {
           try {
-            sessionStorage.setItem(storageKey, "ready");
+            await Promise.all([
+              assets.shell(),
+              assets.images(document.querySelector("#main-content"), location.href, true)
+            ]);
+            completed++;
           } catch {
+            failed++;
           }
         }
+        for (const page of pages.values()) page.ready = true;
+        update();
+        const status = controller.signal.aborted ? "timeout" : failed || completed !== total ? "partial" : "ready";
+        api.status = status;
         opening?.finish({ status });
-        return { status, completed, total, failed };
+        return { status, completed, total, failed, routes: [...pages.keys()], failures };
       } finally {
         clearTimeout(deadline);
-        startupRunning = false;
-        resume();
       }
     };
-    const intent = (event) => {
-      const link = event.target instanceof Element ? event.target.closest(".top a[href], .mobile-nav a[href]") : null;
-      if (!link || link.target && link.target !== "_self" || link.hasAttribute("download")) return;
-      const url = canonical(link.href);
-      if (!url || url === current || limited() || suspended || startupRunning) return;
-      clearTimeout(intentTimer);
-      intentTimer = setTimeout(
-        async () => {
-          if (blocked() || suspended || startupRunning) return;
-          const pending = prepare(url, true);
-          const intentGeneration = generation;
-          try {
-            const data = await pending;
-            if (intentGeneration === generation && !blocked()) await warmAssets(data, true);
-          } catch {
-          } finally {
-            if (intentGeneration === generation) resume();
-          }
-        },
-        event.type === "pointerover" ? 120 : 0
-      );
-    };
-    document.addEventListener("pointerover", intent, { passive: true });
-    document.addEventListener("pointerdown", intent, { passive: true });
-    document.addEventListener("focusin", intent);
-    document.addEventListener("pointerout", () => clearTimeout(intentTimer), { passive: true });
-    window.addEventListener("pagehide", () => {
-      leaving = true;
-      pause();
-    });
-    window.addEventListener("pageshow", () => {
-      leaving = false;
-      resume();
-    });
-    document.addEventListener("visibilitychange", () => document.hidden ? pause() : resume());
-    window.addEventListener("offline", pause);
-    window.addEventListener("online", resume);
-    connection?.addEventListener?.("change", () => limited() ? pause() : resume());
-    window.blackboxNavigationPrefetch = {
-      prepare,
-      warmAssets,
-      cancel,
-      resume,
+    const api = window.blackboxNavigation = {
+      status: "loading",
       eligible: (href) => Boolean(canonical(href)),
-      startupPromise: startup()
+      cached: (href) => Boolean(pages.get(canonical(href))?.ready),
+      invalidate: router.invalidate
     };
+    window.blackboxNavigationPrefetch = api;
+    document.addEventListener("blackbox:opening-finished", (event) => {
+      if (api.status === "loading" && ["partial", "timeout", "skipped"].includes(event.detail?.status))
+        controller.abort();
+    });
+    api.startupPromise = startup();
+    window.addEventListener("pagehide", (event) => {
+      if (!event.persisted) {
+        controller.abort();
+        assets.release();
+      }
+    });
   })();
 })();

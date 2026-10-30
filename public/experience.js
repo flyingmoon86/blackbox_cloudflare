@@ -101,6 +101,9 @@
   document.addEventListener("click", (event) => {
     if (!event.target.closest(".top")) close();
   });
+})();
+
+window.blackboxPages?.register("experience", (root, scope) => {
   const stage = document.querySelector(".theatre-stage");
   if (stage) {
     const scenes = [...stage.querySelectorAll(".stage-scene")];
@@ -137,7 +140,7 @@
         }
       }
       links.forEach((link, i) => link.setAttribute("aria-current", String(i === index)));
-      if (update) history.replaceState(null, "", "#" + scenes[index].id);
+      if (update) history.replaceState(history.state, "", "#" + scenes[index].id);
     };
     const canScroll = (target, direction) => {
       for (let node = target; node && node !== stage; node = node.parentElement) {
@@ -161,7 +164,7 @@
         show(sceneIndex(link.hash), true);
       });
     });
-    window.addEventListener("hashchange", () => {
+    scope.listen(window, "hashchange", () => {
       show(sceneIndex(location.hash));
       if (location.hash === "#contact") stage.querySelector("#contact")?.scrollIntoView({ block: "nearest" });
     });
@@ -202,7 +205,7 @@
       },
       { passive: false },
     );
-    document.addEventListener("keydown", (event) => {
+    scope.listen(document, "keydown", (event) => {
       if (
         event.defaultPrevented ||
         event.repeat ||
@@ -388,7 +391,7 @@
         show(index + (event.key === "ArrowRight" ? 1 : -1));
       }
     });
-    window.addEventListener("popstate", () => {
+    scope.listen(window, "popstate", () => {
       if (photoDialog.open && history.state?.photoViewer !== historyKey) close();
     });
     photoDialog.addEventListener("close", () => {
@@ -428,7 +431,7 @@
       error.hidden = false;
     });
   }
-})();
+});
 
 // Preserve the native POST when JavaScript is unavailable. Update only after the
 // server's redirect confirms the write result; an uncertain request is never retried.

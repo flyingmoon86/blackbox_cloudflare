@@ -1,4 +1,4 @@
-(() => {
+window.blackboxPages?.register("stage-light", (root, scope) => {
   const scene = document.querySelector("[data-theatre-scene]");
   const base = scene?.querySelector("[data-theatre-base]");
   const light = scene?.querySelector("[data-theatre-light]");
@@ -93,7 +93,7 @@
         localStorage.setItem(key, on ? "on" : "off");
       } catch {}
   });
-  window.addEventListener("storage", (event) => {
+  scope.listen(window, "storage", (event) => {
     if (!preview && !failed && (event.key === key || event.key === null)) setLights(savedState());
     if (event.key === hintKey || event.key === null) {
       try {
@@ -102,23 +102,23 @@
       updateHint();
     }
   });
-  window.addEventListener("pageshow", () => {
+  scope.listen(window, "pageshow", () => {
     if (!preview && !failed) setLights(savedState());
   });
-  new ResizeObserver(crop).observe(art);
-  window.addEventListener("resize", crop);
+  scope.observe(new ResizeObserver(crop), art);
+  scope.listen(window, "resize", crop);
   apply();
   ready();
   if (preview) {
     document.documentElement.classList.add("stage-preview-page");
     // Keep a preview on its selected page; it must not submit forms or navigate
     // the administrator away from the visual editor.
-    document.addEventListener("click", (event) => {
+    scope.listen(document, "click", (event) => {
       const link = event.target.closest("a");
       if (link && !link.getAttribute("href")?.startsWith("#")) event.preventDefault();
     });
-    document.addEventListener("submit", (event) => event.preventDefault());
-    window.addEventListener("message", (event) => {
+    scope.listen(document, "submit", (event) => event.preventDefault());
+    scope.listen(window, "message", (event) => {
       if (
         event.origin !== location.origin ||
         event.source !== parent ||
@@ -145,4 +145,4 @@
     });
     parent.postMessage({ type: "stage-preview-ready", scene: scene.dataset.theatreScene }, location.origin);
   }
-})();
+});

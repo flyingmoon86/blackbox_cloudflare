@@ -1,4 +1,4 @@
-(() => {
+window.blackboxPages?.register("recommendations", (root, scope) => {
   const fine = matchMedia("(hover: hover) and (pointer: fine)");
   const inline = matchMedia("(max-width: 900px)");
   const reduced = matchMedia("(prefers-reduced-motion: reduce)");
@@ -75,14 +75,19 @@
     if (image.complete && !image.naturalWidth) image.hidden = true;
     // Prepare the existing preview while the opening scene is still visible.
     if (typeof image.decode === "function") image.decode().catch(() => {});
-    fine.addEventListener("change", hide);
-    inline.addEventListener("change", hide);
-    reduced.addEventListener("change", hide);
-    window.addEventListener("blur", hide);
-    window.addEventListener("resize", hide);
+    scope.listen(fine, "change", hide);
+    scope.listen(inline, "change", hide);
+    scope.listen(reduced, "change", hide);
+    scope.listen(window, "blur", hide);
+    scope.listen(window, "resize", hide);
     document.querySelector("#playbill")?.addEventListener("scroll", hide, { passive: true });
-    new MutationObserver(() => {
-      if (row.closest(".stage-scene").hidden) hide();
-    }).observe(row.closest(".stage-scene"), { attributes: true, attributeFilter: ["hidden"] });
+    scope.dispose(hide);
+    scope.observe(
+      new MutationObserver(() => {
+        if (row.closest(".stage-scene").hidden) hide();
+      }),
+      row.closest(".stage-scene"),
+      { attributes: true, attributeFilter: ["hidden"] },
+    );
   });
-})();
+});

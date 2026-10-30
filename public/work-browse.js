@@ -16,13 +16,13 @@
   };
 
   // src/client/work/warm-previews.js
-  function warmWorkPreviews(cards2) {
+  function warmWorkPreviews(cards, scope) {
     const queued = [];
     const attempted = /* @__PURE__ */ new Set();
     const active = /* @__PURE__ */ new Set();
     let viewportCandidates = 0;
     let navigating = false;
-    const canWarm = () => !limited() && !document.hidden && !navigating && !window.blackboxSiteOpening?.active;
+    const canWarm = () => !window.blackboxNavigation?.eligible(location.href) && !limited() && !document.hidden && !navigating && !window.blackboxSiteOpening?.active;
     const pump = () => {
       while (canWarm() && active.size < 2 && attempted.size < 8 && queued.length) {
         const url = queued.shift();
@@ -70,7 +70,7 @@
     };
     const observe = () => {
       if (!canWarm()) return;
-      cards2.forEach((card) => observer?.observe(card));
+      cards.forEach((card) => observer?.observe(card));
     };
     const observer = "IntersectionObserver" in window ? new IntersectionObserver(
       (entries) => {
@@ -87,29 +87,30 @@
       observer?.disconnect();
       [...active].forEach((cancel) => cancel());
     };
+    scope.dispose(stop);
     const resume = () => observe();
-    document.addEventListener("pointerover", (event) => {
+    scope.listen(document, "pointerover", (event) => {
       if (event.pointerType !== "touch") enqueue(event.target.closest?.("[data-work-card]"), true);
     });
-    document.addEventListener("focusin", (event) => enqueue(event.target.closest?.("[data-work-card]"), true));
-    document.addEventListener("blackbox:opening-finished", observe);
-    document.addEventListener("blackbox:navigation-start", () => {
+    scope.listen(document, "focusin", (event) => enqueue(event.target.closest?.("[data-work-card]"), true));
+    scope.listen(document, "blackbox:opening-finished", observe);
+    scope.listen(document, "blackbox:navigation-start", () => {
       navigating = true;
       stop();
     });
-    document.addEventListener("blackbox:navigation-cancel", () => {
+    scope.listen(document, "blackbox:navigation-cancel", () => {
       navigating = false;
       resume();
     });
-    document.addEventListener("visibilitychange", () => document.hidden ? stop() : resume());
-    connection?.addEventListener?.("change", () => limited() ? stop() : resume());
-    window.addEventListener("offline", stop);
-    window.addEventListener("online", resume);
-    window.addEventListener("pagehide", () => {
+    scope.listen(document, "visibilitychange", () => document.hidden ? stop() : resume());
+    scope.listen(connection, "change", () => limited() ? stop() : resume());
+    scope.listen(window, "offline", stop);
+    scope.listen(window, "online", resume);
+    scope.listen(window, "pagehide", () => {
       navigating = true;
       stop();
     });
-    window.addEventListener("pageshow", () => {
+    scope.listen(window, "pageshow", () => {
       navigating = false;
       resume();
     });
@@ -151,7 +152,7 @@
   }
 
   // src/client/work/return-position.js
-  function restoreWorkReturn(cards2) {
+  function restoreWorkReturn(cards, scope) {
     const storageKey = "blackbox-work-return:v1";
     const current = location.pathname + location.search + location.hash;
     const readReturn = () => {
@@ -176,7 +177,7 @@
     const saved = readReturn();
     const back = document.querySelector("[data-work-return]");
     if (back && saved?.to === location.pathname) back.href = saved.url;
-    document.addEventListener("click", (event) => {
+    scope.listen(document, "click", (event) => {
       const link = event.target.closest?.("a[href]");
       if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || link.target || link.hasAttribute("download"))
         return;
@@ -195,11 +196,11 @@
         writeReturn({ ...saved, explicit: true, at: Date.now() });
       }
     });
-    if (location.pathname !== "/productions" || !cards2.length) return;
+    if (location.pathname !== "/productions" || !cards.length) return;
     let interacted = false;
     let restored = false;
     for (const event of ["pointerdown", "touchstart", "wheel", "keydown"])
-      window.addEventListener(event, () => interacted = true, { passive: true });
+      scope.listen(window, event, () => interacted = true, { passive: true });
     const restoreReturn = (persisted = false) => {
       if (persisted) {
         interacted = false;
@@ -214,7 +215,7 @@
       writeReturn({ ...pending, explicit: false });
       requestAnimationFrame(() => {
         if (interacted) return;
-        const link = cards2.flatMap((card) => [...card.querySelectorAll("a[href]")]).find((candidate) => {
+        const link = cards.flatMap((card) => [...card.querySelectorAll("a[href]")]).find((candidate) => {
           const url = new URL(candidate.href, location.href);
           return url.pathname + url.search + url.hash === pending.focus;
         });
@@ -223,13 +224,15 @@
           link.focus({ preventScroll: true });
       });
     };
-    document.addEventListener("DOMContentLoaded", () => restoreReturn());
-    window.addEventListener("pageshow", (event) => restoreReturn(event.persisted));
+    scope.listen(document, "DOMContentLoaded", () => restoreReturn());
+    scope.listen(window, "pageshow", (event) => restoreReturn(event.persisted));
   }
 
   // src/client/work-browse.js
-  var cards = [...document.querySelectorAll("[data-work-card]")];
-  warmWorkPreviews(cards);
-  enhanceDetailCover();
-  restoreWorkReturn(cards);
+  window.blackboxPages?.register("work-browse", (root, scope) => {
+    const cards = [...document.querySelectorAll("[data-work-card]")];
+    warmWorkPreviews(cards, scope);
+    enhanceDetailCover();
+    restoreWorkReturn(cards, scope);
+  });
 })();

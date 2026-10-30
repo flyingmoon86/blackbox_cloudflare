@@ -24,10 +24,11 @@ function fixture() {
 test("only anonymous unfiltered landing pages have short browser-only cache variants", async () => {
   const s = fixture();
   try {
-    for (const path of ["/", "/productions", "/resources", "/members", "/thanks"]) {
+    for (const path of ["/", "/productions", "/resources", "/members", "/thanks", "/help", "/announcements"]) {
       for (const method of ["GET", "HEAD"]) {
         const r = await s.request(path, { method });
         assert.equal(r.status, 200, path);
+        assert.equal(r.headers.get("Speculation-Rules"), '"/navigation-speculation.json"');
         assert.equal(r.headers.get("Cache-Control"), "private, max-age=20, must-revalidate");
         assert.match(r.headers.get("Vary"), /Cookie/);
         assert.match(r.headers.get("Vary"), /Authorization/);
@@ -55,6 +56,7 @@ test("session variants, expired cookies, personal pages, queries, errors and the
       { headers: { Authorization: "Bearer fixture" } },
     ]) {
       const r = await s.request("/productions", options);
+      assert.equal(r.headers.get("Speculation-Rules"), '"/navigation-speculation.json"');
       assert.equal(r.headers.get("Cache-Control"), "private, no-store");
       assert.equal(r.headers.get("X-Blackbox-Navigation"), null);
       assert.match(await r.text(), /data-navigation-cache="none"/);

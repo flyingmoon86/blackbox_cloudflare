@@ -1,4 +1,4 @@
-export function restoreWorkReturn(cards) {
+export function restoreWorkReturn(cards, scope) {
   const storageKey = "blackbox-work-return:v1";
   const current = location.pathname + location.search + location.hash;
   const readReturn = () => {
@@ -33,7 +33,7 @@ export function restoreWorkReturn(cards) {
   const saved = readReturn();
   const back = document.querySelector("[data-work-return]");
   if (back && saved?.to === location.pathname) back.href = saved.url;
-  document.addEventListener("click", (event) => {
+  scope.listen(document, "click", (event) => {
     const link = event.target.closest?.("a[href]");
     if (
       !link ||
@@ -71,7 +71,7 @@ export function restoreWorkReturn(cards) {
   let interacted = false;
   let restored = false;
   for (const event of ["pointerdown", "touchstart", "wheel", "keydown"])
-    window.addEventListener(event, () => (interacted = true), { passive: true });
+    scope.listen(window, event, () => (interacted = true), { passive: true });
   const restoreReturn = (persisted = false) => {
     if (persisted) {
       interacted = false;
@@ -106,6 +106,6 @@ export function restoreWorkReturn(cards) {
   };
   // Deferred script + DOMContentLoaded means the list and its CSS are ready.
   // Do not wait for unrelated backgrounds to finish before restoring focus.
-  document.addEventListener("DOMContentLoaded", () => restoreReturn());
-  window.addEventListener("pageshow", (event) => restoreReturn(event.persisted));
+  scope.listen(document, "DOMContentLoaded", () => restoreReturn());
+  scope.listen(window, "pageshow", (event) => restoreReturn(event.persisted));
 }

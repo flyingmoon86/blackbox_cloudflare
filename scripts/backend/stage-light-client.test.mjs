@@ -1,3 +1,4 @@
+import { pageScope } from "./page-scope.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 import vm from "node:vm";
@@ -73,6 +74,7 @@ function fixture({
   vm.runInNewContext(source, {
     document: { querySelector: () => scene, documentElement: { classList: { add() {} } }, addEventListener() {} },
     window: {
+      blackboxPages: { register: (_, setup) => setup(null, pageScope) },
       addEventListener(k, f) {
         handlers[k] = f;
       },
