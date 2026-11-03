@@ -18,7 +18,7 @@ export const createCurtainScene = (texture) => {
       cloth.alt = "";
       cloth.draggable = false;
       cloth.decoding = "async";
-      cloth.fetchPriority = "high";
+      cloth.fetchPriority = "low";
       cloth.addEventListener("error", () => cloth.remove(), { once: true });
       cloth.src = texture;
       wing.append(cloth);

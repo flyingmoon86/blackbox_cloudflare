@@ -20,7 +20,7 @@
         cloth.alt = "";
         cloth.draggable = false;
         cloth.decoding = "async";
-        cloth.fetchPriority = "high";
+        cloth.fetchPriority = "low";
         cloth.addEventListener("error", () => cloth.remove(), { once: true });
         cloth.src = texture;
         wing.append(cloth);
@@ -92,27 +92,62 @@
       state.active = false;
       if (wasActive) document.dispatchEvent(new CustomEvent("blackbox:curtain-finished"));
     };
-    const reveal = () => {
-      if (!overlay || mode === "revealing") return;
+    const reveal = async () => {
+      if (!overlay || mode === "settling" || mode === "revealing") return;
       clearTimeout(cleanupTimer);
       if (motion.matches) {
         clear();
         return;
       }
-      mode = "revealing";
-      overlay.close?.();
-      if (overlay.tagName === "DIALOG") overlay.setAttribute("open", "");
-      overlay.className = "blackbox-curtain is-revealing";
-      overlay.setAttribute("aria-hidden", "true");
-      overlay.querySelector(".curtain-panel").inert = true;
-      overlay.addEventListener("animationend", (event) => {
-        if (event.animationName === "curtain-reveal-depth") clear();
+      const curtain = overlay;
+      mode = "settling";
+      curtain.className = "blackbox-curtain is-settling";
+      const cloths = [...curtain.querySelectorAll(".curtain-cloth")];
+      const decoded = /* @__PURE__ */ new Set();
+      let textureTimer;
+      await Promise.race([
+        Promise.all(
+          cloths.map(
+            (cloth) => cloth.decode().then(
+              () => decoded.add(cloth),
+              () => {
+              }
+            )
+          )
+        ),
+        new Promise((resolve) => textureTimer = setTimeout(resolve, 250))
+      ]);
+      clearTimeout(textureTimer);
+      if (overlay !== curtain || mode !== "settling") return;
+      cloths.filter((cloth) => !decoded.has(cloth)).forEach((cloth) => cloth.remove());
+      requestAnimationFrame(() => {
+        if (overlay !== curtain || mode !== "settling") return;
+        requestAnimationFrame(() => {
+          if (overlay !== curtain || mode !== "settling") return;
+          if (motion.matches) return clear();
+          mode = "revealing";
+          curtain.querySelector(".curtain-panel").inert = true;
+          curtain.setAttribute("aria-label", "\u6B63\u5728\u8FDB\u5165\u9ED1\u5323\u5B50");
+          const wings = new Set(curtain.querySelectorAll(".curtain-wing"));
+          curtain.addEventListener("animationend", (event) => {
+            if (!/^curtain-reveal-(?:left|right)$/.test(event.animationName)) return;
+            wings.delete(event.target);
+            if (!wings.size && overlay === curtain) clear();
+          });
+          curtain.className = "blackbox-curtain is-revealing";
+          const milliseconds = (value) => parseFloat(value) * (value.trim().endsWith("ms") ? 1 : 1e3);
+          const duration = Math.max(
+            0,
+            ...[...wings].map((wing) => {
+              const css = getComputedStyle(wing);
+              return milliseconds(css.animationDuration) + milliseconds(css.animationDelay);
+            })
+          );
+          cleanupTimer = setTimeout(() => {
+            if (overlay === curtain) clear();
+          }, duration + 250);
+        });
       });
-      const duration = Math.min(
-        2e3,
-        Math.max(0, parseFloat(getComputedStyle(overlay).getPropertyValue("--curtain-reveal-duration")) || 900)
-      );
-      cleanupTimer = setTimeout(clear, duration + 120);
     };
     const mount = () => {
       if (overlay) return overlay;
@@ -127,7 +162,10 @@
       overlay = node;
       mode = "loading";
       state.active = true;
-      node.addEventListener("cancel", (event) => event.preventDefault());
+      node.addEventListener("cancel", (event) => {
+        event.preventDefault();
+        if (mode === "settling" || mode === "revealing") clear();
+      });
       try {
         node.showModal();
       } catch {
@@ -259,13 +297,11 @@
           }
         }
         window.blackboxSiteOpening?.finish({ status: "partial" });
-        clear();
       },
       true
     );
     window.addEventListener("unhandledrejection", () => {
       window.blackboxSiteOpening?.finish({ status: "partial" });
-      clear();
     });
     window.addEventListener("pagehide", () => {
       window.blackboxSiteOpening?.finish({ status: "skipped" });

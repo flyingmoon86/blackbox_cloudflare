@@ -9,7 +9,7 @@ const { chromium } = await import(
       "C:/Users/gbg61/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
   ).href
 );
-const output = resolve("artifacts/working/2026-10-29-local-navigation");
+const output = resolve(process.env.NAVIGATION_EVIDENCE || "artifacts/working/2026-10-29-local-navigation");
 mkdirSync(output, { recursive: true });
 const fixture = await navigationFixture();
 const browser = await chromium.launch({ channel: "msedge", headless: true });

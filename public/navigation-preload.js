@@ -62,7 +62,7 @@
       drain();
     });
     document.querySelectorAll('link[rel="stylesheet"][href]').forEach((node) => {
-      styles.set(node.href, { node, promise: node.sheet ? Promise.resolve() : loaded(node, signal) });
+      styles.set(node.href, { node, promise: node.sheet ? Promise.resolve() : null });
       if (node.closest("main")) document.head.append(node);
     });
     document.querySelectorAll("script[src]").forEach((node) => scripts.set(node.src, Promise.resolve()));
@@ -114,6 +114,7 @@
         if (icon && publicImage(icon.href)) icon.href = await picture(icon.href);
       },
       async styles(root) {
+        if (signal.aborted) throw new DOMException("Aborted", "AbortError");
         const hrefs = [...new Set([...root.querySelectorAll('link[rel="stylesheet"][href]')].map((node) => node.href))];
         await Promise.all(
           hrefs.map(async (href) => {
@@ -129,7 +130,17 @@
               styles.set(href, { node, promise });
               document.head.append(node);
             }
-            await styles.get(href).promise;
+            const entry = styles.get(href);
+            if (!entry.promise) {
+              if (entry.node.sheet) entry.promise = Promise.resolve();
+              else {
+                const previous = entry.node;
+                entry.node = previous.cloneNode();
+                entry.promise = loaded(entry.node, signal);
+                previous.replaceWith(entry.node);
+              }
+            }
+            await entry.promise;
           })
         );
         return hrefs;
@@ -141,6 +152,7 @@
         }
       },
       async scripts(root) {
+        if (signal.aborted) throw new DOMException("Aborted", "AbortError");
         for (const source of root.querySelectorAll("script[src]")) {
           const href = source.src;
           if (!/^\/assets\/(?:home-light|home-recommendations|work-browse)\.[a-f0-9]{16}\.js$/.test(
@@ -303,6 +315,7 @@
     const router = installRouter(pages, assets, canonical);
     let completed = 0, failed = 0;
     const failures = [];
+    const initialDocument = document.body.dataset.navigationCache === "public-v1" && !document.body.classList.contains("signed-in") ? document.cloneNode(true) : null;
     const total = paths.size + 1;
     const update = () => opening?.update({ completed, total, failed, discovering: false });
     const fonts = (text) => new Promise((resolve, reject) => {
@@ -312,24 +325,33 @@
       Promise.resolve(document.fonts?.load('900 32px "Blackbox Display"', text)).then(resolve, reject).finally(() => controller.signal.removeEventListener("abort", abort));
     });
     const prepare = async (path) => {
-      const response = await fetch(path, {
-        credentials: "omit",
-        cache: "no-store",
-        redirect: "error",
-        headers: { Accept: "text/html" },
-        signal: controller.signal
-      });
-      if (!response.ok || response.headers.get("X-Blackbox-Navigation") !== "public-v1" || !response.headers.get("Content-Type")?.includes("text/html"))
-        throw Error("page-response");
-      const html = await response.text();
-      if (html.length > 15e5) throw Error("page-size");
-      const doc = new DOMParser().parseFromString(html, "text/html");
+      let doc;
+      if (path === location.pathname && initialDocument) doc = initialDocument;
+      else {
+        const response = await fetch(path, {
+          credentials: "omit",
+          cache: "no-store",
+          redirect: "error",
+          headers: { Accept: "text/html" },
+          signal: controller.signal
+        });
+        if (!response.ok || response.headers.get("X-Blackbox-Navigation") !== "public-v1" || !response.headers.get("Content-Type")?.includes("text/html"))
+          throw Error("page-response");
+        const html = await response.text();
+        if (html.length > 15e5) throw Error("page-size");
+        doc = new DOMParser().parseFromString(html, "text/html");
+      }
       const main = doc.querySelector("#main-content");
       if (!main || doc.querySelector("script[data-site-opening]")?.dataset.siteOpening !== version || doc.body.dataset.navigationCache !== "public-v1" || main.querySelector('input[name="csrf"][value]:not([value=""])'))
         throw Error("page-contract");
-      const styles = await assets.styles(doc);
+      const stylesReady = assets.styles(doc);
       const text = main.textContent;
-      await Promise.all([assets.scripts(doc), assets.images(main, location.origin + path), fonts(text)]);
+      await Promise.all([
+        stylesReady.then(() => fonts(text)),
+        assets.scripts(doc),
+        assets.images(main, location.origin + path)
+      ]);
+      const styles = await stylesReady;
       main.querySelectorAll("script,link[rel=stylesheet]").forEach((node) => node.remove());
       pages.set(path, {
         main,

@@ -56,31 +56,66 @@ import { createCurtainScene } from "./curtain/scene.js";
     state.active = false;
     if (wasActive) document.dispatchEvent(new CustomEvent("blackbox:curtain-finished"));
   };
-  const reveal = () => {
-    if (!overlay || mode === "revealing") return;
+  const reveal = async () => {
+    if (!overlay || mode === "settling" || mode === "revealing") return;
     clearTimeout(cleanupTimer);
     if (motion.matches) {
       clear();
       return;
     }
-    mode = "revealing";
-    // End modal focus capture as soon as content becomes usable. The visual
-    // fabric remains for its short CSS motion, without delaying any request.
-    overlay.close?.();
-    if (overlay.tagName === "DIALOG") overlay.setAttribute("open", "");
-    overlay.className = "blackbox-curtain is-revealing";
-    overlay.setAttribute("aria-hidden", "true");
-    overlay.querySelector(".curtain-panel").inert = true;
-    overlay.addEventListener("animationend", (event) => {
-      if (event.animationName === "curtain-reveal-depth") clear();
+    const curtain = overlay;
+    mode = "settling";
+    curtain.className = "blackbox-curtain is-settling";
+    // Optional cloth must not decode or appear halfway through the pull.
+    // Keep the CSS fabric if this decorative asset is still unavailable.
+    const cloths = [...curtain.querySelectorAll(".curtain-cloth")];
+    const decoded = new Set();
+    let textureTimer;
+    await Promise.race([
+      Promise.all(
+        cloths.map((cloth) =>
+          cloth.decode().then(
+            () => decoded.add(cloth),
+            () => {},
+          ),
+        ),
+      ),
+      new Promise((resolve) => (textureTimer = setTimeout(resolve, 250))),
+    ]);
+    clearTimeout(textureTimer);
+    if (overlay !== curtain || mode !== "settling") return;
+    cloths.filter((cloth) => !decoded.has(cloth)).forEach((cloth) => cloth.remove());
+    // Let final image swaps, fonts and the closed cloth paint before motion.
+    // Keep the dialog in the top layer until both wings have actually finished.
+    requestAnimationFrame(() => {
+      if (overlay !== curtain || mode !== "settling") return;
+      requestAnimationFrame(() => {
+        if (overlay !== curtain || mode !== "settling") return;
+        if (motion.matches) return clear();
+        mode = "revealing";
+        curtain.querySelector(".curtain-panel").inert = true;
+        curtain.setAttribute("aria-label", "正在进入黑匣子");
+        const wings = new Set(curtain.querySelectorAll(".curtain-wing"));
+        curtain.addEventListener("animationend", (event) => {
+          if (!/^curtain-reveal-(?:left|right)$/.test(event.animationName)) return;
+          wings.delete(event.target);
+          if (!wings.size && overlay === curtain) clear();
+        });
+        curtain.className = "blackbox-curtain is-revealing";
+        // Computed wing timing is authoritative, including s/ms and any delay.
+        const milliseconds = (value) => parseFloat(value) * (value.trim().endsWith("ms") ? 1 : 1000);
+        const duration = Math.max(
+          0,
+          ...[...wings].map((wing) => {
+            const css = getComputedStyle(wing);
+            return milliseconds(css.animationDuration) + milliseconds(css.animationDelay);
+          }),
+        );
+        cleanupTimer = setTimeout(() => {
+          if (overlay === curtain) clear();
+        }, duration + 250);
+      });
     });
-    // CSS owns the visual duration (milliseconds); keep removal in sync so a
-    // design change cannot cut the gathering fabric off mid-motion.
-    const duration = Math.min(
-      2000,
-      Math.max(0, parseFloat(getComputedStyle(overlay).getPropertyValue("--curtain-reveal-duration")) || 900),
-    );
-    cleanupTimer = setTimeout(clear, duration + 120); // Removal fallback, never an entrance delay.
   };
   const mount = () => {
     if (overlay) return overlay;
@@ -96,7 +131,10 @@ import { createCurtainScene } from "./curtain/scene.js";
     overlay = node;
     mode = "loading";
     state.active = true;
-    node.addEventListener("cancel", (event) => event.preventDefault());
+    node.addEventListener("cancel", (event) => {
+      event.preventDefault();
+      if (mode === "settling" || mode === "revealing") clear();
+    });
     try {
       node.showModal();
     } catch {
@@ -249,13 +287,11 @@ import { createCurtainScene } from "./curtain/scene.js";
         }
       }
       window.blackboxSiteOpening?.finish({ status: "partial" });
-      clear();
     },
     true,
   );
   window.addEventListener("unhandledrejection", () => {
     window.blackboxSiteOpening?.finish({ status: "partial" });
-    clear();
   });
   window.addEventListener("pagehide", () => {
     window.blackboxSiteOpening?.finish({ status: "skipped" });

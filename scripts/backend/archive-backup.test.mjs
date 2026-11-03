@@ -15,6 +15,31 @@ import { DatabaseSync } from "node:sqlite";
 import { createHash } from "node:crypto";
 import { archiveFixture } from "../archive-backup-fixture.mjs";
 
+test("recovery drill fixture preserves non-empty private records, audit history and active/archived photo references", async () => {
+  const fixture = archiveFixture({ privateRecords: true });
+  const original = inspectDatabase(fixture.sql);
+  assert.equal(original.counts.member_record, 2);
+  assert.equal(original.counts.member_record_history, 3);
+  assert.equal(original.counts.member_record_photo, 2);
+  assert.equal(original.counts.member_record_photo_history, 2);
+  assert.equal(original.counts.member_featured_photo, 2);
+  assert.equal(original.counts.member_featured_photo_history, 2);
+  assert.equal(original.references.length, 9);
+  const replayed = inspectDatabase(restoreSql(fixture.sql));
+  assert.deepEqual(replayed.counts, original.counts);
+  assert.deepEqual(replayed.rowHashes, original.rowHashes);
+  const directory = await mkdtemp(join(tmpdir(), "blackbox-private-drill-fixture-"));
+  const completed = await createSnapshot({
+    directory,
+    source: fixture.source,
+    client: fixture.client,
+    exportDatabase: (path) => writeFile(path, fixture.sql),
+  });
+  const verified = await verifySnapshot(completed.snapshot);
+  assert.equal(verified.manifest.objects.length, 9);
+  assert.deepEqual(verified.manifest.database.rowHashes, original.rowHashes);
+});
+
 test("photo references include both member stores and archived photos, while pre-feature exports still load", async () => {
   const legacySql = await Promise.all(
     (await readdir("migrations"))

@@ -3,7 +3,7 @@
   --blackbox-curtain-ready: 1;
 }
 #site-opening-curtain.blackbox-curtain {
-  --curtain-reveal-duration: 900ms;
+  --curtain-reveal-duration: 2600ms;
   position: fixed;
   inset: 0;
   z-index: 2147480000;
@@ -226,17 +226,23 @@
     sans-serif;
   pointer-events: none;
 }
-/* Pull at the rail, compress the folds into the wings, let the lower hem follow.
-   No hold or animation delay. Only two cloth layers are transformed. */
+/* Paint the prepared page under closed cloth before a complete, unhurried pull.
+   Only the two cloth layers transform; their highlights remain rasterized. */
+#site-opening-curtain.blackbox-curtain.is-settling,
 #site-opening-curtain.blackbox-curtain.is-revealing {
   animation: none;
   visibility: visible;
 }
+/* Slide a prepainted cloth layer without continuously squeezing its texture.
+   The inner fabric lighting remains; no outer blur may linger at the edge. */
+.blackbox-curtain:is(.is-settling, .is-revealing) .curtain-wing {
+  box-shadow: none;
+}
 .blackbox-curtain.is-revealing .curtain-wing-left {
-  animation: curtain-reveal-left var(--curtain-reveal-duration) cubic-bezier(0.32, 0, 0.2, 1) both;
+  animation: curtain-reveal-left var(--curtain-reveal-duration) cubic-bezier(0.42, 0, 0.58, 1) both;
 }
 .blackbox-curtain.is-revealing .curtain-wing-right {
-  animation: curtain-reveal-right var(--curtain-reveal-duration) cubic-bezier(0.32, 0, 0.2, 1) both;
+  animation: curtain-reveal-right var(--curtain-reveal-duration) cubic-bezier(0.42, 0, 0.58, 1) both;
 }
 .blackbox-curtain.is-revealing .curtain-atmosphere {
   animation: curtain-reveal-depth var(--curtain-reveal-duration) linear both;
@@ -248,38 +254,23 @@
 }
 @keyframes curtain-reveal-left {
   0% {
-    transform: translateX(0) scaleX(1) skewX(0);
-  }
-  55% {
-    transform: translateX(-4%) scaleX(0.48) skewX(2deg);
-  }
-  82% {
-    transform: translateX(-7%) scaleX(0.2) skewX(1deg);
+    transform: translate3d(0, 0, 0);
   }
   100% {
-    transform: translateX(-18%) scaleX(0.12) skewX(0);
+    transform: translate3d(-102%, 0, 0);
   }
 }
 @keyframes curtain-reveal-right {
   0% {
-    transform: translateX(0) scaleX(1) skewX(0);
-  }
-  55% {
-    transform: translateX(4%) scaleX(0.48) skewX(-2deg);
-  }
-  82% {
-    transform: translateX(7%) scaleX(0.2) skewX(-1deg);
+    transform: translate3d(0, 0, 0);
   }
   100% {
-    transform: translateX(18%) scaleX(0.12) skewX(0);
+    transform: translate3d(102%, 0, 0);
   }
 }
 @keyframes curtain-reveal-depth {
   0% {
     opacity: 1;
-  }
-  65% {
-    opacity: 0.25;
   }
   100% {
     opacity: 0;

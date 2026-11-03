@@ -23,6 +23,12 @@ import { installRouter } from "./navigation/router.js";
   let completed = 0,
     failed = 0;
   const failures = [];
+  // The server only marks anonymous, unfiltered documents public-v1. Reuse
+  // this already-delivered page; signed-in shells still fetch anonymously.
+  const initialDocument =
+    document.body.dataset.navigationCache === "public-v1" && !document.body.classList.contains("signed-in")
+      ? document.cloneNode(true)
+      : null;
   const total = paths.size + 1;
   const update = () => opening?.update({ completed, total, failed, discovering: false });
   const fonts = (text) =>
@@ -35,24 +41,28 @@ import { installRouter } from "./navigation/router.js";
         .finally(() => controller.signal.removeEventListener("abort", abort));
     });
   const prepare = async (path) => {
-    // Deliberately anonymous: never put admin controls, CSRF, hidden records or
-    // internal photos in a route snapshot, even when the shell is signed in.
-    const response = await fetch(path, {
-      credentials: "omit",
-      cache: "no-store",
-      redirect: "error",
-      headers: { Accept: "text/html" },
-      signal: controller.signal,
-    });
-    if (
-      !response.ok ||
-      response.headers.get("X-Blackbox-Navigation") !== "public-v1" ||
-      !response.headers.get("Content-Type")?.includes("text/html")
-    )
-      throw Error("page-response");
-    const html = await response.text();
-    if (html.length > 1500000) throw Error("page-size");
-    const doc = new DOMParser().parseFromString(html, "text/html");
+    let doc;
+    if (path === location.pathname && initialDocument) doc = initialDocument;
+    else {
+      // Deliberately anonymous: never put admin controls, CSRF, hidden records or
+      // internal photos in a route snapshot, even when the shell is signed in.
+      const response = await fetch(path, {
+        credentials: "omit",
+        cache: "no-store",
+        redirect: "error",
+        headers: { Accept: "text/html" },
+        signal: controller.signal,
+      });
+      if (
+        !response.ok ||
+        response.headers.get("X-Blackbox-Navigation") !== "public-v1" ||
+        !response.headers.get("Content-Type")?.includes("text/html")
+      )
+        throw Error("page-response");
+      const html = await response.text();
+      if (html.length > 1500000) throw Error("page-size");
+      doc = new DOMParser().parseFromString(html, "text/html");
+    }
     const main = doc.querySelector("#main-content");
     if (
       !main ||
@@ -61,10 +71,15 @@ import { installRouter } from "./navigation/router.js";
       main.querySelector('input[name="csrf"][value]:not([value=""])')
     )
       throw Error("page-contract");
-    const styles = await assets.styles(doc);
+    const stylesReady = assets.styles(doc);
     const text = main.textContent;
     // Font subsets and pictures can load together as soon as this HTML arrives.
-    await Promise.all([assets.scripts(doc), assets.images(main, location.origin + path), fonts(text)]);
+    await Promise.all([
+      stylesReady.then(() => fonts(text)),
+      assets.scripts(doc),
+      assets.images(main, location.origin + path),
+    ]);
+    const styles = await stylesReady;
     main.querySelectorAll("script,link[rel=stylesheet]").forEach((node) => node.remove());
     pages.set(path, {
       main,

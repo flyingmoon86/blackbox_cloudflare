@@ -46,7 +46,9 @@ export function createNavigationAssets(signal) {
       drain();
     });
   document.querySelectorAll('link[rel="stylesheet"][href]').forEach((node) => {
-    styles.set(node.href, { node, promise: node.sheet ? Promise.resolve() : loaded(node, signal) });
+    // Deferred startup may have missed this link's error event. A missing
+    // sheet is retried when first consumed, with listeners attached first.
+    styles.set(node.href, { node, promise: node.sheet ? Promise.resolve() : null });
     if (node.closest("main")) document.head.append(node);
   });
   document.querySelectorAll("script[src]").forEach((node) => scripts.set(node.src, Promise.resolve()));
@@ -102,6 +104,7 @@ export function createNavigationAssets(signal) {
       if (icon && publicImage(icon.href)) icon.href = await picture(icon.href);
     },
     async styles(root) {
+      if (signal.aborted) throw new DOMException("Aborted", "AbortError");
       const hrefs = [...new Set([...root.querySelectorAll('link[rel="stylesheet"][href]')].map((node) => node.href))];
       await Promise.all(
         hrefs.map(async (href) => {
@@ -120,7 +123,17 @@ export function createNavigationAssets(signal) {
             styles.set(href, { node, promise });
             document.head.append(node);
           }
-          await styles.get(href).promise;
+          const entry = styles.get(href);
+          if (!entry.promise) {
+            if (entry.node.sheet) entry.promise = Promise.resolve();
+            else {
+              const previous = entry.node;
+              entry.node = previous.cloneNode();
+              entry.promise = loaded(entry.node, signal);
+              previous.replaceWith(entry.node);
+            }
+          }
+          await entry.promise;
         }),
       );
       return hrefs;
@@ -132,6 +145,7 @@ export function createNavigationAssets(signal) {
       }
     },
     async scripts(root) {
+      if (signal.aborted) throw new DOMException("Aborted", "AbortError");
       for (const source of root.querySelectorAll("script[src]")) {
         const href = source.src;
         // Only audited, lifecycle-aware enhancements may execute from a page.
