@@ -654,3 +654,43 @@ document.addEventListener("submit", (event) => {
     localStorage.setItem("blackbox-account-change", String(Date.now()));
   } catch {}
 });
+// Keep unsaved match choices across the existing GET search within this tab.
+const importDraft = document.querySelector("form.import-review[data-draft-batch]");
+if (importDraft) {
+  const draftKey = `blackbox-import-draft:${importDraft.dataset.draftOwner}:${importDraft.dataset.draftBatch}`;
+  const revision = importDraft.dataset.draftRevision;
+  const choices = [...importDraft.querySelectorAll('select[name^="decision_"]')];
+  const notice = document.createElement("p");
+  notice.className = "hint";
+  notice.setAttribute("role", "status");
+  importDraft.prepend(notice);
+  let storage;
+  try {
+    storage = sessionStorage;
+  } catch {}
+  try {
+    const saved = JSON.parse(storage?.getItem(draftKey) || "null");
+    if (saved?.revision === revision) {
+      for (const select of choices) {
+        const item = saved.choices?.[select.name];
+        if (!item || !/^(keep|auto|create|skip|match:\d+)$/.test(item.value)) continue;
+        if (![...select.options].some((o) => o.value === item.value) && /^match:\d+$/.test(item.value))
+          select.add(new Option(String(item.label || "暂存的关联档案").slice(0, 150), item.value));
+        select.value = item.value;
+      }
+      notice.textContent = "已恢复本标签页未提交的选择，请保存并重新检查。";
+    } else if (saved) storage.removeItem(draftKey);
+  } catch {}
+  importDraft.addEventListener("change", () => {
+    const values = Object.fromEntries(
+      choices.map((s) => [s.name, { value: s.value, label: s.selectedOptions[0]?.textContent || "" }]),
+    );
+    try {
+      if (!storage) throw Error();
+      storage.setItem(draftKey, JSON.stringify({ revision, choices: values }));
+      notice.textContent = "选择已在本标签页暂存；点击保存后生效。";
+    } catch {
+      notice.textContent = "浏览器无法暂存选择，请先保存再搜索或离开。";
+    }
+  });
+}

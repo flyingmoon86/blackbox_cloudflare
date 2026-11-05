@@ -80,8 +80,10 @@ function adminResourceFilter(raw: Record<string, string>, pending = false) {
   const clauses: string[] = [],
     values: (string | number)[] = [];
   if (params.q) {
-    clauses.push("(r.title LIKE ? ESCAPE '\\' OR r.original_name LIKE ? ESCAPE '\\' OR p.title LIKE ? ESCAPE '\\')");
-    values.push(...Array(3).fill(likeTerm(params.q)));
+    clauses.push(
+      "(r.title LIKE ? ESCAPE '\\' OR r.original_name LIKE ? ESCAPE '\\' OR p.title LIKE ? ESCAPE '\\' OR e.name LIKE ? ESCAPE '\\' OR u.username LIKE ? ESCAPE '\\')",
+    );
+    values.push(...Array(5).fill(likeTerm(params.q)));
   }
   if (params.year) {
     clauses.push("COALESCE(e.year,p.year)=?");
@@ -176,6 +178,7 @@ resourceRoutes.get("/resources/submit", async (c) => {
         ).all<EditionRow>()
       ).results,
       Number(c.req.query("edition_id")) || null,
+      u.id,
     ),
   );
 });

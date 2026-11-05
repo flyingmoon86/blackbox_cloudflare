@@ -130,3 +130,19 @@ html{background:#e8e5df}body{position:relative;isolation:isolate;background:tran
 .credit-import:has(.import-review){margin-top:8px;padding-top:8px}.credit-import:has(.import-review) header{max-width:none;margin-bottom:12px}.credit-import:has(.import-review) header h1{font-size:2rem;margin:4px 0}.credit-import:has(.import-review) header p{margin:4px 0}.credit-import:has(.import-review) .import-summary{margin:12px 0}.import-review-board:has(.import-review-attention>.notice){grid-template-columns:minmax(0,1fr)}.import-review-board:has(.import-review-attention>.notice) .import-review-settled{background:transparent;padding:0}.import-row--compact summary:focus-visible{outline:2px solid currentColor;outline-offset:3px}
 @media(max-width:900px){.import-review-board{grid-template-columns:minmax(0,1fr)}.import-review-settled{padding:18px}.import-result-list{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:700px){.credit-import{padding:12px;margin-top:8px}.import-steps,.import-row,.import-history{grid-template-columns:minmax(0,1fr);gap:20px}.import-match-tools{display:block}.import-search{display:block;width:auto}.import-review-board{gap:28px}.import-review-settled{padding:14px}.import-row--compact .import-row-copy>p:not(.eyebrow){display:block}.import-row--compact .import-row-copy>p:not(.eyebrow)+p:before{content:none}.import-confirm{padding:16px}.credit-import button,.credit-import select,.credit-import input:not([type=hidden]):not([type=checkbox]){min-height:44px}.credit-import .button{display:inline-flex;align-items:center;min-height:44px}}
+/* Batch work keeps controls and per-item results together on narrow screens. */
+.review-batch { padding:16px; margin:16px 0; border:1px solid var(--line); }
+.review-batch-selection,.review-batch-actions { display:flex; flex-wrap:wrap; align-items:center; gap:12px; }
+.review-batch label { display:block; margin:12px 0; }
+.review-batch .review-batch-confirm,.review-select { display:flex; align-items:center; gap:10px; }
+.review-batch-confirm input,.review-select input { width:20px; height:20px; min-height:20px; flex:none; }
+.review-preview { display:block; max-width:440px; margin:12px 0; }
+.review-preview img { position:static; inset:auto; display:block; width:100%; height:auto; max-height:240px; object-fit:contain; }
+.review-preview span { display:block; margin-top:8px; }
+@media(min-width:1200px){[data-review-queue="resource"] .review-grid { grid-template-columns:repeat(2,minmax(0,1fr)); align-items:start; }}
+[data-review-row-status] { overflow-wrap:anywhere; }
+#upload-batch { margin-top:24px; }
+#upload-batch-list { padding-left:24px; max-height:420px; overflow:auto; }
+#upload-batch-list li { margin:12px 0; padding:8px 0; border-bottom:1px solid var(--line); overflow-wrap:anywhere; }
+#upload-batch-list li a,#upload-batch-list li button { margin:8px; }
+@media(max-width:700px){.review-batch {padding:12px}.review-batch button{min-height:44px}.review-batch textarea{font-size:16px}.review-tools{grid-template-columns:minmax(0,1fr)}}

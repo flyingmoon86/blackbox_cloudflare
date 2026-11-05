@@ -56,6 +56,21 @@ export async function unlockUploadTask(env: Bindings, id: string, token: string)
     .run();
 }
 
+/** Persist the acknowledged part and release this lease in one atomic round trip. */
+export async function saveUploadPart(env: Bindings, id: string, token: string, part: UploadPart): Promise<void> {
+  const results = await env.DB.batch([
+    env.DB.prepare(
+      "INSERT INTO upload_part(task_id,part_number,etag,size_bytes) SELECT ?,?,?,? WHERE EXISTS(SELECT 1 FROM upload_task WHERE id=? AND lease_token=?) ON CONFLICT(task_id,part_number) DO UPDATE SET etag=excluded.etag,size_bytes=excluded.size_bytes",
+    ).bind(id, part.part_number, part.etag, part.size_bytes, id, token),
+    env.DB.prepare("UPDATE upload_task SET lease_token=NULL,lease_expires_at=NULL WHERE id=? AND lease_token=?").bind(
+      id,
+      token,
+    ),
+  ]);
+  if (results[0].meta.changes !== 1 || results[1].meta.changes !== 1)
+    throw new UploadError("上传任务状态已变化，请重新读取进度后继续。", 409);
+}
+
 async function checkObjectContent(env: Bindings, task: UploadTask): Promise<void> {
   const object = await env.FILES.get(task.object_key, { range: { offset: 0, length: 512 } });
   if (!object) throw new UploadError("文件尚未完整保存，可以稍后重试。", 502);
@@ -92,7 +107,7 @@ async function completedResult(env: Bindings, task: UploadTask): Promise<{ resou
  */
 export async function completeUpload(env: Bindings, id: string): Promise<{ resourceId: number; status: string }> {
   await ensureStorageBudget(env);
-  let task = await getUploadTask(env, id);
+  const task = await getUploadTask(env, id);
   if (!task) throw new UploadError("上传任务不存在。", 404);
   if (
     task.production_id &&
@@ -109,6 +124,7 @@ export async function completeUpload(env: Bindings, id: string): Promise<{ resou
   if (task.status !== "uploading" && task.status !== "completing") throw new UploadError("上传任务已结束。", 410);
   if (task.status === "uploading" && taskExpired(task)) throw new UploadError("上传任务已过期，请重新上传。", 410);
   const token = await lockUploadTask(env, task, true);
+  let leaseReleased = false;
   try {
     let object = await env.FILES.head(task.object_key);
     if (!object) {
@@ -135,7 +151,7 @@ export async function completeUpload(env: Bindings, id: string): Promise<{ resou
       try {
         if (task.upload_mode === "direct")
           await completeDirectUpload(env, task.object_key, task.multipart_upload_id, parts);
-        else await env.FILES.resumeMultipartUpload(task.object_key, task.multipart_upload_id).complete(parts);
+        else object = await env.FILES.resumeMultipartUpload(task.object_key, task.multipart_upload_id).complete(parts);
       } catch (error) {
         // A response may be lost after R2 has already committed the object.
         object = await env.FILES.head(task.object_key);
@@ -181,15 +197,10 @@ export async function completeUpload(env: Bindings, id: string): Promise<{ resou
     const guard = "EXISTS(SELECT 1 FROM upload_task t WHERE t.id=? AND t.lease_token=?)";
     const committed =
       "EXISTS(SELECT 1 FROM upload_task t JOIN resource r ON r.source_upload_task_id=t.id WHERE t.id=? AND t.lease_token=?)";
-    const legacy = await env.DB.prepare(
-      "SELECT id FROM resource WHERE filename=? AND source_upload_task_id IS NULL ORDER BY id LIMIT 1",
-    )
-      .bind(task.object_key)
-      .first<{ id: number }>();
-    await env.DB.batch([
+    const committedResults = await env.DB.batch([
       env.DB.prepare(
-        `UPDATE resource SET source_upload_task_id=? WHERE id=? AND source_upload_task_id IS NULL AND ${guard}`,
-      ).bind(id, legacy?.id ?? null, id, token),
+        `UPDATE resource SET source_upload_task_id=? WHERE id=(SELECT id FROM resource WHERE filename=? AND source_upload_task_id IS NULL ORDER BY id LIMIT 1) AND source_upload_task_id IS NULL AND ${guard}`,
+      ).bind(id, task.object_key, id, token),
       env.DB.prepare(
         `INSERT INTO resource(production_id,edition_id,status,uploader_id,title,res_type,description,filename,original_name,preview_filename,source_upload_task_id,content_fingerprint) SELECT t.production_id,t.edition_id,CASE WHEN u.role='admin' THEN 'approved' ELSE 'pending' END,t.user_id,t.title,t.res_type,t.description,t.object_key,t.original_name,?,t.id,? FROM upload_task t JOIN user u ON u.id=t.user_id WHERE t.id=? AND t.lease_token=? AND u.status='active' AND u.role IN ('user','member','admin') AND (u.role='admin' OR t.production_id IS NULL OR EXISTS(SELECT 1 FROM production p WHERE p.id=t.production_id AND p.is_hidden=0)) AND NOT EXISTS(SELECT 1 FROM resource WHERE source_upload_task_id=t.id) ON CONFLICT DO NOTHING`,
       ).bind(preview ? preview.key : "", fingerprint, id, token),
@@ -208,11 +219,19 @@ export async function completeUpload(env: Bindings, id: string): Promise<{ resou
         "UPDATE upload_task SET status='completed',resource_id=(SELECT id FROM resource WHERE source_upload_task_id=?),preview_filename=?,lease_token=NULL,lease_expires_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=? AND lease_token=? AND EXISTS(SELECT 1 FROM resource WHERE source_upload_task_id=?)",
       ).bind(id, preview ? preview.key : "", id, token, id),
     ]);
-    task = await getUploadTask(env, id);
-    if (!task || task.status !== "completed") throw new UploadError("上传状态已变化，请重试确认结果。", 409);
-    return completedResult(env, task);
+    // The successful transaction already releases its lease. Failed/ambiguous commits
+    // still reach the finally path and unlock only the token held by this request.
+    leaseReleased = committedResults.at(-1)?.meta.changes === 1;
+    const result = await env.DB.prepare(
+      "SELECT t.status task_status,r.id resource_id,r.status resource_status FROM upload_task t LEFT JOIN resource r ON r.id=t.resource_id WHERE t.id=?",
+    )
+      .bind(id)
+      .first<{ task_status: string; resource_id: number | null; resource_status: string | null }>();
+    if (!result || result.task_status !== "completed") throw new UploadError("上传状态已变化，请重试确认结果。", 409);
+    if (!result.resource_id) throw new UploadError("该资料已提交，随后已被删除，请勿重复上传。", 410);
+    return { resourceId: result.resource_id, status: result.resource_status! };
   } finally {
-    await unlockUploadTask(env, id, token);
+    if (!leaseReleased) await unlockUploadTask(env, id, token);
   }
 }
 

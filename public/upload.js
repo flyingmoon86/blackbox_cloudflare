@@ -15,7 +15,6 @@ if (form) {
   requirePhotoProduction();
   const csrf = form.dataset.csrf;
   let activeTask = "";
-  let storageKey = "";
   let canceled = false;
   let uploading = false;
   let wakeLock = null;
@@ -48,7 +47,12 @@ if (form) {
   });
   const readJson = async (response) => {
     const body = await response.json().catch(() => ({ error: "服务器返回异常。" }));
-    if (!response.ok) throw new Error(body.error || `请求失败（${response.status}）`);
+    if (!response.ok || response.redirected) {
+      const error = new Error(body.error || `请求失败（${response.status}）`);
+      error.status = response.status;
+      error.retryAfter = Number(response.headers.get("Retry-After")) || 0;
+      throw error;
+    }
     return body;
   };
   let policyPromise;
@@ -66,6 +70,7 @@ if (form) {
         return await action();
       } catch (error) {
         lastError = error;
+        if (error.status >= 400 && error.status < 500) throw error;
         if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 800 * 2 ** attempt));
       }
     }
@@ -159,7 +164,12 @@ if (form) {
       });
       task.hasPreview = true;
     } catch (error) {
-      throw new Error("预览图生成或保存失败，请重试；如仍失败，请将图片另存为 JPEG 后上传。已上传的分片会保留。");
+      const failure = new Error(
+        "预览图生成或保存失败，请重试；如仍失败，请将图片另存为 JPEG 后上传。已上传的分片会保留。",
+      );
+      failure.status = error.status;
+      failure.retryAfter = error.retryAfter;
+      throw failure;
     }
   };
   const videoNotice = "测试阶段不支持视频";
@@ -178,7 +188,7 @@ if (form) {
   });
   const syncFileMode = () => {
     const photos = type.value === "photo";
-    fileInput.multiple = photos;
+    fileInput.multiple = type.value !== "video";
     fileInput.accept = photos ? "image/jpeg,image/png,image/webp,image/avif" : "";
     fileInput.value = "";
     fileInput.disabled = type.value === "video";
@@ -212,31 +222,49 @@ if (form) {
   const uploadOne = async (file, index, total, bytesBefore, totalBytes) => {
     const enteredTitle = form.elements.title.value.trim();
     const title = total > 1 ? baseName(file.name) : enteredTitle || baseName(file.name);
-    storageKey = `blackbox-upload:${type.value}:${form.elements.production_id.value}:${form.elements.edition_id?.value || ""}:${file.name}:${file.size}:${file.lastModified}`;
+    const item = batch.items[index - 1];
     let task;
-    const savedId = localStorage.getItem(storageKey);
-    if (savedId) {
-      const response = await fetch(`/api/uploads/${savedId}`);
-      if (response.ok) {
-        const saved = await response.json();
-        if (
-          ["uploading", "completing", "completed"].includes(saved.status) &&
-          saved.originalName === file.name &&
-          saved.sizeBytes === file.size
-        )
-          task = saved;
+    if (item.taskId) {
+      const saved = await readJson(await fetch(`/api/uploads/${item.taskId}`));
+      if (saved.originalName !== file.name || saved.sizeBytes !== file.size)
+        throw new Error("文件与原上传任务不匹配，请重新选择原文件。");
+      if (!["uploading", "completing", "completed"].includes(saved.status))
+        throw new Error("原任务已取消或失效，请结束本批后重新添加该文件。");
+      task = saved;
+    }
+    if (!task && !item.taskId) {
+      // Adopt an unfinished task from the previous uploader; only its owner can read it.
+      const legacyKey = `blackbox-upload:${type.value}:${form.elements.production_id.value}:${form.elements.edition_id?.value || ""}:${file.name}:${file.size}:${file.lastModified}`;
+      let legacyId;
+      try {
+        legacyId = storage?.getItem(legacyKey);
+      } catch {}
+      if (legacyId) {
+        const response = await fetch(`/api/uploads/${encodeURIComponent(legacyId)}`);
+        if (response.ok) {
+          const saved = await readJson(response);
+          if (
+            ["uploading", "completing", "completed"].includes(saved.status) &&
+            saved.originalName === file.name &&
+            saved.sizeBytes === file.size
+          ) {
+            task = saved;
+            item.taskId = saved.id;
+            saveBatch();
+          }
+        } else if (response.status !== 404) await readJson(response);
       }
     }
     if (!task) {
       show(`正在准备第 ${index}/${total} 个文件：${file.name}`);
       task = await createTask(file, title);
-      localStorage.setItem(storageKey, task.id);
+      item.taskId = task.id;
+      saveBatch();
     } else show(`继续第 ${index}/${total} 个文件：${file.name}`);
-
     activeTask = task.id;
     if (task.status === "completed" || task.status === "completing") {
-      await retry(async () => readJson(await fetchComplete(task.id)));
-      localStorage.removeItem(storageKey);
+      const result = await retry(async () => readJson(await fetchComplete(task.id)));
+      item.resourceId = result.resourceId || task.resourceId;
       activeTask = "";
       return;
     }
@@ -257,18 +285,23 @@ if (form) {
         const blob = file.slice(start, end);
         show(`第 ${index}/${total} 个文件，正在上传第 ${part}/${task.totalParts} 片……`);
         await retry(async () => {
-          const target = await readJson(
-            await fetch(`/api/uploads/${activeTask}/parts/${part}/url`, {
-              method: "POST",
-              headers: { "x-csrf-token": csrf },
-            }),
-          );
+          // Proxy PUT performs the same owner, visibility, CSRF and part validation.
+          // Only direct R2 transport needs a separate signed-URL request.
+          const target =
+            task.mode === "local"
+              ? { mode: "local", url: `/api/uploads/${activeTask}/parts/${part}` }
+              : await readJson(
+                  await fetch(`/api/uploads/${activeTask}/parts/${part}/url`, {
+                    method: "POST",
+                    headers: { "x-csrf-token": csrf },
+                  }),
+                );
           const uploaded = await fetch(target.url, {
             method: "PUT",
             headers: target.mode === "local" ? { "x-csrf-token": csrf } : {},
             body: blob,
           });
-          if (!uploaded.ok) throw new Error(`第 ${part} 片上传失败（${uploaded.status}）`);
+          if (!uploaded.ok) await readJson(uploaded);
           if (target.mode === "direct") {
             const etag = uploaded.headers.get("etag");
             if (!etag) throw new Error("R2 未返回 ETag，请检查 Bucket CORS。");
@@ -288,73 +321,275 @@ if (form) {
     const concurrency = 1;
     await Promise.all(Array.from({ length: Math.min(concurrency, pendingParts.length) }, uploadPart));
     show(`正在保存第 ${index}/${total} 个文件……`);
-    await retry(async () => readJson(await fetchComplete(activeTask)));
-    localStorage.removeItem(storageKey);
+    const result = await retry(async () => readJson(await fetchComplete(activeTask)));
+    item.resourceId = result.resourceId;
     activeTask = "";
   };
 
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const files = [...fileInput.files];
-    if (type.value === "video" || files.some(isVideoFile)) {
-      blockVideo();
-      return;
-    }
-    if (!files.length) return show("请选择文件。");
-    if (files.length > 1 && type.value !== "photo") return show("只有剧照支持一次选择多个文件。");
-    if (files.length === 1 && !form.elements.title.value.trim()) return show("上传单个文件时请填写资料标题。");
+  const pause = document.querySelector("#upload-pause");
+  const batchPanel = document.querySelector("#upload-batch");
+  const batchList = document.querySelector("#upload-batch-list");
+  const batchSummary = document.querySelector("#upload-batch-summary");
+  const newBatch = document.querySelector("#upload-new-batch");
+  const batchKey = `blackbox-upload-batch-v1:${form.dataset.uploadOwner}`;
+  const fieldNames = ["title", "res_type", "production_id", "edition_id", "description"];
+  let batch = null,
+    stopAfterFile = false,
+    storage,
+    storageAvailable = true;
+  const availableFiles = new Map();
+  const fileKey = (file) => JSON.stringify([file.name, file.size, file.lastModified]);
+  try {
+    storage = localStorage;
+  } catch {}
+  const saveBatch = () => {
     try {
-      const policy = await getPolicy();
-      const maximum = policy.limits[type.value];
-      if (!maximum || files.some((file) => file.size < 1 || file.size > maximum))
-        return show("此类资料单个文件上限为 " + maximum / 1024 / 1024 + "MB。");
+      if (!storage) throw Error();
+      if (batch) storage.setItem(batchKey, JSON.stringify(batch));
+      else storage.removeItem(batchKey);
     } catch {
-      return show("暂时无法读取上传限制，请刷新后重试。");
+      storageAvailable = false;
     }
-    canceled = false;
-    uploading = true;
-    await keepScreenAwake();
-    submit.disabled = true;
-    cancel.hidden = false;
-    const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
-    let bytesBefore = 0;
-    try {
-      for (let index = 0; index < files.length; index += 1) {
-        await uploadOne(files[index], index + 1, files.length, bytesBefore, totalBytes);
-        bytesBefore += files[index].size;
+  };
+  const renderBatch = () => {
+    batchPanel.hidden = !batch;
+    if (!batch) return;
+    const done = batch.items.filter((i) => i.state === "done").length;
+    const failed = batch.items.filter((i) => i.state === "failed").length;
+    const skipped = batch.items.filter((i) => i.state === "skipped").length;
+    batchSummary.textContent = `共 ${batch.items.length} 份 · 成功 ${done} · 失败 ${failed} · 跳过 ${skipped} · 待处理 ${batch.items.length - done - failed - skipped}${storageAvailable ? "" : "。浏览器无法保存进度，请保持页面打开。"}`;
+    batchList.replaceChildren();
+    for (const item of batch.items) {
+      const row = document.createElement("li");
+      const text = document.createElement("span");
+      const labels = {
+        done: "已完成",
+        failed: "失败",
+        pending: "待上传",
+        uploading: uploading ? "正在上传" : "待继续",
+        skipped: "已跳过",
+      };
+      text.textContent = `${item.name} · ${labels[item.state]}${item.error ? " · " + item.error : ""}`;
+      row.append(text);
+      if (item.resourceId && item.state === "done") {
+        const link = document.createElement("a");
+        link.href = `/resources/${Number(item.resourceId)}`;
+        link.textContent = "查看";
+        link.target = "_blank";
+        link.rel = "noopener";
+        row.append(link);
       }
-      show(`${files.length} 个文件已提交，请在我的资料查看入库或待审核状态。`);
-      uploading = false;
-      await releaseScreen();
-      location.href = "/my-resources";
-    } catch (error) {
-      show(error.message || "上传失败，可以稍后重试。");
-      uploading = false;
-      await releaseScreen();
-      submit.disabled = false;
-      cancel.hidden = !activeTask;
+      if (item.state !== "done") {
+        const skip = document.createElement("button");
+        skip.type = "button";
+        skip.className = "secondary";
+        skip.disabled = uploading;
+        skip.textContent = item.state === "skipped" ? "恢复到队列" : "跳过此项";
+        skip.addEventListener("click", () =>
+          withBatchLock(() => {
+            item.state = item.state === "skipped" ? "pending" : "skipped";
+            saveBatch();
+            renderBatch();
+          }),
+        );
+        row.append(skip);
+        if (item.taskId && item.state !== "skipped") {
+          const abort = document.createElement("button");
+          abort.type = "button";
+          abort.className = "secondary";
+          abort.disabled = uploading;
+          abort.textContent = "取消此文件任务";
+          abort.addEventListener("click", () =>
+            withBatchLock(async () => {
+              if (uploading) return;
+              uploading = true;
+              renderBatch();
+              try {
+                await readJson(
+                  await fetch(`/api/uploads/${item.taskId}`, { method: "DELETE", headers: { "x-csrf-token": csrf } }),
+                );
+                item.taskId = null;
+                item.state = "skipped";
+                item.error = "已取消任务";
+              } catch (error) {
+                item.error = error.message;
+              } finally {
+                uploading = false;
+                saveBatch();
+                renderBatch();
+              }
+            }),
+          );
+          row.append(abort);
+        }
+      }
+      batchList.append(row);
     }
+    submit.textContent = done + skipped === batch.items.length ? "本批处理完毕" : "继续待传与失败项";
+    submit.disabled = uploading || done + skipped === batch.items.length;
+    newBatch.disabled = uploading;
+  };
+  const restoreFields = () => {
+    if (!batch) return;
+    for (const name of fieldNames)
+      if (form.elements[name]) {
+        form.elements[name].value = batch.fields[name] || "";
+        if (name === "res_type" || name === "production_id")
+          form.elements[name].dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    for (const name of fieldNames) if (form.elements[name]) form.elements[name].disabled = true;
+    fileInput.required = false;
+  };
+  try {
+    const saved = JSON.parse(storage?.getItem(batchKey) || "null");
+    if (saved?.version === 1 && saved.fields && Array.isArray(saved.items) && saved.items.length <= 1000) {
+      batch = saved;
+      restoreFields();
+      renderBatch();
+      show("已恢复本批进度，请重新选择原文件以继续；成功项不会重复提交。");
+    }
+  } catch {}
+  fileInput.addEventListener("change", () => {
+    for (const file of fileInput.files) availableFiles.set(fileKey(file), file);
+    if (batch) show("已重新选择文件，点击继续上传；未选中的待传项会保留。");
   });
-
-  cancel.addEventListener("click", async () => {
-    canceled = true;
-    if (!activeTask) return;
-    try {
-      await readJson(
-        await fetch(`/api/uploads/${activeTask}`, {
-          method: "DELETE",
-          headers: { "x-csrf-token": csrf },
-        }),
-      );
-      localStorage.removeItem(storageKey);
-      show("当前文件上传已取消。已完成的其他剧照仍会保留，可在我的资料查看状态。");
-      activeTask = "";
-      uploading = false;
-      await releaseScreen();
-      cancel.hidden = true;
+  pause.addEventListener("click", () => {
+    stopAfterFile = true;
+    pause.disabled = true;
+    show("当前文件完成后暂停，进度会保留。");
+  });
+  newBatch.addEventListener("click", () =>
+    withBatchLock(() => {
+      if (uploading) return;
+      if (
+        batch.items.some((i) => i.state !== "done" && i.state !== "skipped") &&
+        !confirm("本批仍有未完成文件。结束后只能到“我的资料”核对已成功项目，确定结束？")
+      )
+        return;
+      batch = null;
+      availableFiles.clear();
+      saveBatch();
+      batchPanel.hidden = true;
+      for (const name of fieldNames) if (form.elements[name]) form.elements[name].disabled = false;
+      fileInput.value = "";
+      fileInput.required = true;
       submit.disabled = false;
-    } catch (error) {
-      show(error.message);
+      submit.textContent = "开始上传";
+      show("选择下一批文件后开始上传。");
+    }),
+  );
+  const submitBatch = async () => {
+    if (uploading) return;
+    if (!batch) {
+      const files = [...fileInput.files];
+      if (type.value === "video" || files.some(isVideoFile)) {
+        blockVideo();
+        return;
+      }
+      if (!files.length) return show("请选择文件。");
+      if (files.length > 1000) return show("请将本批控制在1000份以内，完成后继续下一批。");
+      if (files.length === 1 && !form.elements.title.value.trim()) return show("上传单个文件时请填写资料标题。");
+      try {
+        const policy = await getPolicy();
+        const max = policy.limits[type.value];
+        if (!max || files.some((f) => f.size < 1 || f.size > max))
+          return show(`此类资料单个文件上限为 ${max / 1024 / 1024}MB。`);
+      } catch {
+        return show("暂时无法读取上传限制，请稍后重试。");
+      }
+      batch = {
+        version: 1,
+        createdAt: Date.now(),
+        fields: Object.fromEntries(fieldNames.map((n) => [n, form.elements[n]?.value || ""])),
+        items: files.map((f) => ({ key: fileKey(f), name: f.name, size: f.size, state: "pending" })),
+      };
+      files.forEach((f) => availableFiles.set(fileKey(f), f));
+      saveBatch();
+      restoreFields();
     }
+    const pending = batch.items.filter((i) => i.state !== "done" && i.state !== "skipped");
+    if (!pending.some((i) => availableFiles.has(i.key)))
+      return show("请重新选择原文件；浏览器刷新后不能自动读取电脑文件。");
+    if (batch.retryAt > Date.now())
+      return show(`上传额度暂时用尽，请在 ${new Date(batch.retryAt).toLocaleTimeString()} 后继续。本批进度已保留。`);
+    canceled = false;
+    stopAfterFile = false;
+    uploading = true;
+    pause.disabled = false;
+    pause.hidden = false;
+    fileInput.disabled = true;
+    renderBatch();
+    await keepScreenAwake();
+    const totalBytes = batch.items.reduce((sum, i) => sum + i.size, 0);
+    let bytesBefore = batch.items.filter((i) => i.state === "done").reduce((sum, i) => sum + i.size, 0);
+    try {
+      for (let index = 0; index < batch.items.length; index++) {
+        const item = batch.items[index];
+        const file = availableFiles.get(item.key);
+        if (item.state === "done" || item.state === "skipped" || !file) continue;
+        item.state = "uploading";
+        item.error = "";
+        saveBatch();
+        renderBatch();
+        try {
+          await uploadOne(file, index + 1, batch.items.length, bytesBefore, totalBytes);
+          item.state = "done";
+          bytesBefore += item.size;
+        } catch (error) {
+          item.state = "failed";
+          item.error = error.message || "上传失败，可稍后继续。";
+          if (error.status === 429) {
+            batch.retryAt = Date.now() + Math.max(1, error.retryAfter || 60) * 1000;
+            stopAfterFile = true;
+          }
+          if ([401, 403, 413].includes(error.status)) stopAfterFile = true;
+        }
+        saveBatch();
+        renderBatch();
+        if (stopAfterFile) break;
+      }
+    } finally {
+      uploading = false;
+      activeTask = "";
+      fileInput.disabled = false;
+      pause.hidden = true;
+      cancel.hidden = true;
+      await releaseScreen();
+      saveBatch();
+      renderBatch();
+      show(
+        batch.items.every((i) => i.state === "done" || i.state === "skipped")
+          ? "本批处理完成，结果保留在下方；可开始下一批。"
+          : "进度已保留，可继续待传与失败项；成功项不会重复提交。",
+      );
+    }
+  };
+  const withBatchLock = async (action) => {
+    const run = async () => {
+      if (uploading) return;
+      // A stale tab must reload progress before it is allowed to create tasks.
+      if (storageAvailable) {
+        try {
+          const saved = JSON.parse(storage?.getItem(batchKey) || "null");
+          if (JSON.stringify(saved) !== JSON.stringify(batch))
+            return show("批次已被另一标签页更新，请刷新后继续，避免重复上传。");
+        } catch {}
+      }
+      return action();
+    };
+    try {
+      if (navigator.locks)
+        return await navigator.locks.request(batchKey, { ifAvailable: true }, async (lock) => {
+          if (!lock) return show("另一个标签页正在处理本账号的上传，请等待完成后刷新本页。");
+          return run();
+        });
+      return await run();
+    } catch {
+      show("未能处理上传，请保持页面并稍后重试。");
+    }
+  };
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    withBatchLock(submitBatch);
   });
 }

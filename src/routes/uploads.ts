@@ -1,5 +1,5 @@
 import { Hono, type Context } from "hono";
-import { canAccessProduction, resourceVisible } from "../services/production-visibility";
+import { productionVisible, resourceVisible } from "../services/production-visibility";
 import { HTTPException } from "hono/http-exception";
 import { csrfValid } from "../http/cookies";
 import { createDirectUpload, presignDirectPart, usesDirectR2 } from "../storage/r2-s3";
@@ -19,12 +19,12 @@ import {
 import {
   completeUpload,
   cancelUpload,
-  getUploadTask,
   assertTaskWritable,
   expectedParts,
   expectedPartSize,
   lockUploadTask,
   unlockUploadTask,
+  saveUploadPart,
   previewKeyFor,
   type UploadTask,
   type UploadPart,
@@ -52,18 +52,16 @@ async function jsonBody(c: Context<AppEnv>): Promise<Record<string, unknown>> {
   }
 }
 async function ownedTask(c: Context<AppEnv>, writable = false): Promise<UploadTask> {
-  const task = await getUploadTask(c.env, c.req.param("id")!);
-  if (!task || task.user_id !== c.get("user")!.id) throw new HTTPException(404, { message: "上传任务不存在。" });
-  if (task.production_id && !(await canAccessProduction(c, task.production_id)))
-    throw new HTTPException(404, { message: "上传任务不存在。" });
-  // A completed file may since have been moved into a hidden work by an admin.
-  if (
-    task.resource_id &&
-    (await c.env.DB.prepare(`SELECT id FROM resource WHERE id=? AND NOT (${resourceVisible(c)})`)
-      .bind(task.resource_id)
-      .first())
+  // One fresh query checks ownership, the original work and any moved result.
+  // Do not cache this across requests: work visibility and account permissions can change.
+  const task = await c.env.DB.prepare(
+    `SELECT t.* FROM upload_task t WHERE t.id=? AND t.user_id=?
+     AND (t.production_id IS NULL OR EXISTS(SELECT 1 FROM production p WHERE p.id=t.production_id AND ${productionVisible(c, "p")}))
+     AND NOT EXISTS(SELECT 1 FROM resource r WHERE r.id=t.resource_id AND NOT (${resourceVisible(c, "r")}))`,
   )
-    throw new HTTPException(404, { message: "上传任务不存在。" });
+    .bind(c.req.param("id")!, c.get("user")!.id)
+    .first<UploadTask>();
+  if (!task) throw new HTTPException(404, { message: "上传任务不存在。" });
   if (writable) assertTaskWritable(task);
   return task;
 }
@@ -88,23 +86,22 @@ uploadRoutes.post("/api/uploads", async (c) => {
   )
     throw new HTTPException(400, { message: "请检查资料标题、文件名和说明长度。" });
   validateUpload(resType, mime, original, size);
-  if (
-    production !== null &&
-    (!Number.isSafeInteger(production) || production < 1 || !(await canAccessProduction(c, production)))
-  )
-    throw new HTTPException(404, { message: "作品不存在。" });
   const edition = body.editionId ? Number(body.editionId) : null;
+  let editionBelongs = false;
+  if (production !== null) {
+    if (!Number.isSafeInteger(production) || production < 1) throw new HTTPException(404, { message: "作品不存在。" });
+    const parent = await c.env.DB.prepare(
+      `SELECT EXISTS(SELECT 1 FROM production_edition e WHERE e.id=? AND e.production_id=p.id) edition_valid
+       FROM production p WHERE p.id=? AND ${productionVisible(c, "p")}`,
+    )
+      .bind(Number.isSafeInteger(edition) ? edition : null, production)
+      .first<{ edition_valid: number }>();
+    if (!parent) throw new HTTPException(404, { message: "作品不存在。" });
+    editionBelongs = Boolean(parent.edition_valid);
+  }
   if (production && edition === null) throw new HTTPException(400, { message: "请选择资料所属的演出版本。" });
   if (resType === "photo" && !production) throw new HTTPException(400, { message: "剧照请先选择作品和演出版本。" });
-  if (
-    edition !== null &&
-    (!production ||
-      !Number.isSafeInteger(edition) ||
-      !(await c.env.DB.prepare("SELECT id FROM production_edition WHERE id=? AND production_id=?")
-        .bind(edition, production)
-        .first()))
-  )
-    throw new HTTPException(400, { message: "版本不属于所选作品。" });
+  if (edition !== null && !editionBelongs) throw new HTTPException(400, { message: "版本不属于所选作品。" });
   const retry = await consumeAccountLimit(c, "upload-create", 120);
   if (retry) {
     c.header("Retry-After", String(retry));
@@ -182,7 +179,11 @@ uploadRoutes.post("/api/uploads", async (c) => {
     await unlockUploadTask(c.env, id, token).catch(() => {});
     throw new HTTPException(502, { message: "上传初始化暂时失败，稍后可重试。" });
   }
-  return c.json({ id, partSize: uploadPolicy.partSize, totalParts: expectedParts(size), mode }, 201);
+  // Initialization already knows this is a new, empty task; avoid a second status request.
+  return c.json(
+    { id, partSize: uploadPolicy.partSize, totalParts: expectedParts(size), mode, parts: [], hasPreview: false },
+    201,
+  );
 });
 uploadRoutes.get("/api/uploads/:id", async (c) => {
   const task = await ownedTask(c);
@@ -217,16 +218,19 @@ uploadRoutes.put("/api/uploads/:id/preview", async (c) => {
     throw new UploadError("预览内容不是有效的 JPEG。");
   const token = await lockUploadTask(c.env, task),
     key = previewKeyFor(task);
+  let leaseReleased = false;
   try {
     await c.env.FILES.put(key, body, { httpMetadata: { contentType: "image/jpeg" } });
-    await c.env.DB.prepare(
-      "UPDATE upload_task SET preview_filename=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND lease_token=?",
+    const saved = await c.env.DB.prepare(
+      "UPDATE upload_task SET preview_filename=?,lease_token=NULL,lease_expires_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=? AND lease_token=?",
     )
       .bind(key, task.id, token)
       .run();
+    if (saved.meta.changes !== 1) throw new UploadError("上传任务状态已变化，请重新读取进度后继续。", 409);
+    leaseReleased = true;
     return c.json({ saved: true });
   } finally {
-    await unlockUploadTask(c.env, task.id, token);
+    if (!leaseReleased) await unlockUploadTask(c.env, task.id, token);
   }
 });
 uploadRoutes.post("/api/uploads/:id/parts/:part/url", async (c) => {
@@ -259,6 +263,7 @@ uploadRoutes.put("/api/uploads/:id/parts/:part", async (c) => {
     declared = c.req.header("content-length");
   if (declared !== undefined && Number(declared) !== size) throw new UploadError("分片大小不正确。");
   const token = await lockUploadTask(c.env, task);
+  let leaseReleased = false;
   try {
     // FixedLengthStream rejects truncated/oversized bodies without buffering a 50MB part.
     const fixed = new FixedLengthStream(size),
@@ -278,14 +283,11 @@ uploadRoutes.put("/api/uploads/:id/parts/:part", async (c) => {
     if (settled[0].status === "rejected") throw new UploadError("分片没有完整上传，请重试。");
     if (settled[1].status === "rejected") throw settled[1].reason;
     const uploaded = settled[1].value;
-    await c.env.DB.prepare(
-      "INSERT INTO upload_part(task_id,part_number,etag,size_bytes) SELECT ?,?,?,? WHERE EXISTS(SELECT 1 FROM upload_task WHERE id=? AND lease_token=?) ON CONFLICT(task_id,part_number) DO UPDATE SET etag=excluded.etag,size_bytes=excluded.size_bytes",
-    )
-      .bind(task.id, part, uploaded.etag, size, task.id, token)
-      .run();
+    await saveUploadPart(c.env, task.id, token, { part_number: part, etag: uploaded.etag, size_bytes: size });
+    leaseReleased = true;
     return c.json({ etag: uploaded.etag });
   } finally {
-    await unlockUploadTask(c.env, task.id, token);
+    if (!leaseReleased) await unlockUploadTask(c.env, task.id, token);
   }
 });
 uploadRoutes.post("/api/uploads/:id/parts/:part/complete", async (c) => {
@@ -306,15 +308,13 @@ uploadRoutes.post("/api/uploads/:id/parts/:part/complete", async (c) => {
   )
     throw new UploadError("分片结果无效。");
   const token = await lockUploadTask(c.env, task);
+  let leaseReleased = false;
   try {
-    await c.env.DB.prepare(
-      "INSERT INTO upload_part(task_id,part_number,etag,size_bytes) VALUES(?,?,?,?) ON CONFLICT(task_id,part_number) DO UPDATE SET etag=excluded.etag,size_bytes=excluded.size_bytes",
-    )
-      .bind(task.id, part, etag, size)
-      .run();
+    await saveUploadPart(c.env, task.id, token, { part_number: part, etag, size_bytes: size });
+    leaseReleased = true;
     return c.json({ saved: true });
   } finally {
-    await unlockUploadTask(c.env, task.id, token);
+    if (!leaseReleased) await unlockUploadTask(c.env, task.id, token);
   }
 });
 uploadRoutes.post("/api/uploads/:id/complete", async (c) => {
