@@ -7,7 +7,7 @@
     const compact = matchMedia("(max-width: 900px)");
     const sectionOf = (url) => {
       // Homepage anchors stay within the home section, including its second scene.
-      if (/^\/(productions|resources)(\/|$)/.test(url.pathname)) return "productions";
+      if (/^\/(productions|resources|3d)(\/|$)/.test(url.pathname)) return "productions";
       if (/^\/members(\/|$)/.test(url.pathname)) return "members";
       if (/^\/(thanks|feedback)(\/|$)/.test(url.pathname)) return "thanks";
       return url.pathname === "/" ? "home" : "";

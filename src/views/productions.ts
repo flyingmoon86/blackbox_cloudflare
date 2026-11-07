@@ -83,8 +83,9 @@ export function productionListPage(
       : '<p class="card">还没有作品档案。</p>';
   return layout(
     "作品",
-    '<p class="timeline-entry"><a href="/productions?view=timeline">按年份浏览 · 演出时间轴 →</a></p>' +
-      `${archiveTabs("productions")}<section class="page-heading"><p class="eyebrow">PRODUCTIONS</p><h1>作品档案</h1><form method="get" action="/productions" class="filters" role="search"><input type="search" name="q" maxlength="80" aria-label="搜索作品" value="${escapeHtml(page?.query || "")}" placeholder="搜索作品名称、简介、版本或年份">${
+    archiveTabs("productions") +
+      '<p class="timeline-entry"><a href="/productions?view=timeline">按年份浏览 · 演出时间轴 →</a></p>' +
+      `<section class="page-heading"><p class="eyebrow">PRODUCTIONS</p><h1>作品档案</h1><form method="get" action="/productions" class="filters" role="search"><input type="search" name="q" maxlength="80" aria-label="搜索作品" value="${escapeHtml(page?.query || "")}" placeholder="搜索作品名称、简介、版本或年份">${
         admin
           ? `<label>可见性<select name="visibility">${[
               ["all", "全部"],

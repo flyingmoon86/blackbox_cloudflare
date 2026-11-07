@@ -24,7 +24,8 @@ test("recovery drill fixture preserves non-empty private records, audit history 
   assert.equal(original.counts.member_record_photo_history, 2);
   assert.equal(original.counts.member_featured_photo, 2);
   assert.equal(original.counts.member_featured_photo_history, 2);
-  assert.equal(original.references.length, 9);
+  assert.equal(original.references.length, 14);
+  assert.ok(original.references.includes("three-d-archive/03/models/fixture.ply"));
   const replayed = inspectDatabase(restoreSql(fixture.sql));
   assert.deepEqual(replayed.counts, original.counts);
   assert.deepEqual(replayed.rowHashes, original.rowHashes);
@@ -36,7 +37,7 @@ test("recovery drill fixture preserves non-empty private records, audit history 
     exportDatabase: (path) => writeFile(path, fixture.sql),
   });
   const verified = await verifySnapshot(completed.snapshot);
-  assert.equal(verified.manifest.objects.length, 9);
+  assert.equal(verified.manifest.objects.length, 14);
   assert.deepEqual(verified.manifest.database.rowHashes, original.rowHashes);
 });
 
@@ -73,7 +74,7 @@ test("photo references include both member stores and archived photos, while pre
     exportDatabase: (path) => writeFile(path, fixture.sql),
   };
   const completed = await createSnapshot(options);
-  assert.equal((await verifySnapshot(completed.snapshot)).manifest.database.references.length, 9);
+  assert.equal((await verifySnapshot(completed.snapshot)).manifest.database.references.length, 14);
 
   for (const key of keys) {
     const bytes = fixture.files.get(key);
@@ -141,13 +142,13 @@ test("archive snapshots verify DB/file references, reuse verified blobs and pres
     exportDatabase: (path) => writeFile(path, fixture.sql),
   };
   const first = await createSnapshot(options);
-  assert.equal(first.downloaded, 5);
+  assert.equal(first.downloaded, 10);
   const second = await createSnapshot(options);
   assert.equal(second.downloaded, 0);
-  assert.equal(second.reused, 5);
+  assert.equal(second.reused, 10);
   const verified = await verifySnapshot(first.snapshot);
   assert.equal(verified.manifest.database.counts.production_credit, 1);
-  assert.equal(verified.manifest.database.references.length, 5);
+  assert.equal(verified.manifest.database.references.length, 10);
   assert.ok(verified.manifest.database.rowHashes.production);
   await assert.rejects(restoreLocal(first.snapshot, directory), /恢复目录/);
   const file = verified.manifest.objects[0];

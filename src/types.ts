@@ -3,6 +3,7 @@ export type Bindings = {
   FILES: R2Bucket;
   ASSETS: Fetcher;
   SESSION_SECRET: string;
+  THREE_D_ARCHIVE_ENABLED?: string;
   ENVIRONMENT: string;
   TURNSTILE_ENABLED?: string;
   TURNSTILE_SITE_KEY?: string;

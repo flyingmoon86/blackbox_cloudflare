@@ -5,6 +5,7 @@ import { Miniflare, convertV4MiniflareOptions } from "miniflare";
 import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { createHmac } from "node:crypto";
+import { gzipSync, gunzipSync } from "node:zlib";
 import { unzipSync, zipSync, strFromU8, strToU8 } from "fflate";
 
 function statements(sql) {
@@ -232,6 +233,109 @@ test(
       const download = await request(1, "/resources/" + resource.resourceId + "/download", { method: "HEAD" });
       assert.equal(download.status, 200);
       assert.equal(download.headers.get("content-length"), String(bytes.length));
+      // Exercise the 3D upload, staged preview and publication with actual D1/R2.
+      const sceneDraft = await request(1, "/admin/three-d", {
+        method: "POST",
+        body: new URLSearchParams({ csrf: "runtime-csrf", title: "运行时三维场景" }),
+        redirect: "manual",
+      });
+      assert.equal(sceneDraft.status, 303, await sceneDraft.clone().text());
+      const sceneAdmin = sceneDraft.headers.get("location").split("?")[0];
+      const sceneId = sceneAdmin.split("/").at(-1);
+      const uploadPath = "/api/admin/3d/scenes/" + sceneId;
+      const modelPath = "/3d/scenes/" + sceneId + "/model";
+      const fields = [
+        "x",
+        "y",
+        "z",
+        "f_dc_0",
+        "f_dc_1",
+        "f_dc_2",
+        "opacity",
+        "scale_0",
+        "scale_1",
+        "scale_2",
+        "rot_0",
+        "rot_1",
+        "rot_2",
+        "rot_3",
+      ];
+      const vertex = Buffer.alloc(fields.length * 4);
+      vertex.writeFloatLE(1, fields.indexOf("rot_0") * 4);
+      const model = Buffer.concat([
+        Buffer.from(
+          [
+            "ply",
+            "format binary_little_endian 1.0",
+            "element vertex 1",
+            ...fields.map((field) => "property float " + field),
+            "end_header",
+            "",
+          ].join("\n"),
+        ),
+        vertex,
+      ]);
+      const startedModel = await request(1, uploadPath + "/uploads", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ originalName: "runtime.ply", sizeBytes: model.byteLength, fingerprint: "f".repeat(64) }),
+      });
+      assert.equal(startedModel.status, 201, await startedModel.clone().text());
+      const modelTask = await startedModel.json();
+      const taskPath = uploadPath + "/uploads/" + modelTask.id;
+      const uploaded = await request(1, taskPath + "/parts/1", {
+        method: "PUT",
+        headers: { "content-type": "application/octet-stream" },
+        body: model,
+      });
+      assert.equal(uploaded.status, 200, await uploaded.clone().text());
+      const stagedModel = await request(1, taskPath + "/complete", { method: "POST" });
+      assert.equal(stagedModel.status, 200, await stagedModel.clone().text());
+      const stagedCover = await request(1, uploadPath + "/cover", {
+        method: "PUT",
+        headers: { "content-type": "image/jpeg" },
+        body: Buffer.from(
+          "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAAEAAQDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAf/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAwT/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCOAKwv/9k=",
+          "base64",
+        ),
+      });
+      assert.equal(stagedCover.status, 200, await stagedCover.clone().text());
+      assert.equal((await mf.dispatchFetch("https://blackbox.test" + modelPath)).status, 404);
+      const preview = await request(1, sceneAdmin + "/preview/model");
+      assert.equal(preview.status, 200);
+      assert.equal(preview.headers.get("cache-control"), "private, no-store");
+      assert.deepEqual(Buffer.from(await preview.arrayBuffer()), model);
+      const revision = await db
+        .prepare("SELECT revision FROM three_d_scene WHERE id=?")
+        .bind(sceneId)
+        .first("revision");
+      const publish = await request(1, sceneAdmin + "/publish", {
+        method: "POST",
+        body: new URLSearchParams({ csrf: "runtime-csrf", revision: String(revision) }),
+        redirect: "manual",
+      });
+      assert.equal(publish.status, 303, await publish.clone().text());
+      const publicRange = await mf.dispatchFetch("https://blackbox.test" + modelPath, {
+        headers: { Range: "bytes=0-2" },
+      });
+      assert.equal(publicRange.status, 206);
+      assert.equal(publicRange.headers.get("content-range"), "bytes 0-2/" + model.byteLength);
+      assert.equal(await publicRange.text(), "ply");
+      const sceneKey = await db
+        .prepare("SELECT model_key FROM three_d_scene WHERE id=?")
+        .bind(sceneId)
+        .first("model_key");
+      const runtimeBucket = await mf.getR2Bucket("FILES");
+      const sourceObject = await runtimeBucket.head(sceneKey);
+      await runtimeBucket.put(sceneKey + ".transfer-" + sourceObject.etag + ".gz", gzipSync(model));
+      const transferred = await mf.dispatchFetch("https://blackbox.test" + modelPath + "?transfer=gzip");
+      assert.equal(transferred.status, 200);
+      assert.equal(transferred.headers.get("x-model-compression"), "gzip");
+      assert.deepEqual(gunzipSync(Buffer.from(await transferred.arrayBuffer())), model);
+      const cachedTransfer = await mf.dispatchFetch("https://blackbox.test" + modelPath + "?transfer=gzip", {
+        headers: { "If-None-Match": transferred.headers.get("etag") },
+      });
+      assert.equal(cachedTransfer.status, 304);
       // The new private workflow also runs against actual Workers D1/R2 primitives.
       await db.batch([
         db.prepare("INSERT INTO member(id,name) VALUES(999,'合成受限档案')"),

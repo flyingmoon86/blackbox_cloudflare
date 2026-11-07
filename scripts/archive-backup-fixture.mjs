@@ -32,6 +32,13 @@ export function archiveFixture({ privateRecords = false } = {}) {
         ('fixture-featured-active',1,'featured-active.jpg','合成精选照片','approved',1,0,1),
         ('fixture-featured-archived',1,'featured-archived.jpg','合成归档照片','approved',0,1,1);
     `);
+  db.exec(
+    "UPDATE three_d_scene SET pending_model_key='three-d-archive/03/models/fixture.ply',pending_model_filename='fixture.ply' WHERE id='03'",
+  );
+  const sceneFiles = db
+    .prepare("SELECT model_key,cover_key,pending_model_key,pending_cover_key FROM three_d_scene")
+    .all()
+    .flatMap((row) => Object.values(row).filter(Boolean));
   const schema = db
     .prepare(
       "SELECT type,name,sql FROM sqlite_schema WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%' ORDER BY type,name",
@@ -48,7 +55,7 @@ export function archiveFixture({ privateRecords = false } = {}) {
   }
   sql.push(...schema.filter((row) => row.type !== "table").map((row) => row.sql + ";"));
   db.close();
-  const fileKeys = ["avatar.jpg", "avatar-small.jpg", "photo.jpg", "preview.jpg", "script.pdf"];
+  const fileKeys = ["avatar.jpg", "avatar-small.jpg", "photo.jpg", "preview.jpg", "script.pdf", ...sceneFiles];
   if (privateRecords)
     fileKeys.push("private-active.jpg", "private-archived.jpg", "featured-active.jpg", "featured-archived.jpg");
   const files = new Map(fileKeys.map((key) => [key, Buffer.from("archive fixture bytes: " + key)]));
@@ -59,7 +66,13 @@ export function archiveFixture({ privateRecords = false } = {}) {
       size: bytes.length,
       etag: createHash("md5").update(bytes).digest("hex"),
       last_modified: "2026-10-04T00:00:00Z",
-      http_metadata: { contentType: key.endsWith("pdf") ? "application/pdf" : "image/jpeg" },
+      http_metadata: {
+        contentType: key.endsWith(".pdf")
+          ? "application/pdf"
+          : key.endsWith(".ply")
+            ? "application/octet-stream"
+            : "image/jpeg",
+      },
       custom_metadata: {},
     }));
   const client = {

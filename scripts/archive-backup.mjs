@@ -85,6 +85,14 @@ export function inspectDatabase(sql) {
       .filter((table) => Object.hasOwn(counts, table))
       .map((table) => `UNION SELECT object_key FROM ${quote(table)} WHERE object_key<>''`)
       .join("\n");
+    const sceneReferences = Object.hasOwn(counts, "three_d_scene")
+      ? ["model_key", "cover_key", "pending_model_key", "pending_cover_key"]
+          .map(
+            (key) =>
+              `UNION SELECT ${quote(key)} FROM three_d_scene WHERE ${quote(key)} IS NOT NULL AND ${quote(key)}<>''`,
+          )
+          .join("\n")
+      : "";
     const references = database
       .prepare(
         `
@@ -94,6 +102,7 @@ export function inspectDatabase(sql) {
       UNION SELECT avatar_preview FROM member WHERE avatar_preview IS NOT NULL AND avatar_preview<>''
         AND avatar_preview NOT LIKE 'https://%' AND avatar_preview NOT LIKE 'http://%'
       ${memberPhotoReferences}
+      ${sceneReferences}
     `,
       )
       .all()

@@ -123,6 +123,7 @@ body.design-public.layout-gallery .navigation-stage .section-tabs {
   margin-right: 20px;
   font-size: 13px;
   color: var(--ink);
+  white-space: nowrap;
 }
 body.design-public.layout-gallery .section-tabs > a.active {
   background: none;
@@ -438,6 +439,12 @@ body.design-public.layout-gallery .resource-card-link:is(:hover, :focus-visible)
   outline-offset: 3px;
 }
 @media (max-width: 900px) {
+  .layout-gallery .section-tabs > a {
+    margin-right: 0;
+    padding: 10px 8px;
+    font-size: 12px;
+    min-width: 0;
+  }
   body.design-public.layout-gallery > main {
     padding: 24px 6vw 110px;
   }

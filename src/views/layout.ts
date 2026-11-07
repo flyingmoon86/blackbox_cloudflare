@@ -7,6 +7,7 @@ import { tryGetContext } from "hono/context-storage";
 import { adminPortal } from "../services/admin-portal";
 import { publicNavigationRequest } from "../services/navigation-cache";
 import { PUBLIC_LANDING_PATHS } from "../shared/navigation";
+import { isThreeDPreviewPath, threeDArchiveEnabled } from "../shared/three-d-archive";
 import type { AppEnv } from "../types";
 export function layout(title: string, content: string, signedIn = false, admin = false, themeId?: number): string {
   const context = tryGetContext<AppEnv>();
@@ -56,13 +57,17 @@ export function layout(title: string, content: string, signedIn = false, admin =
   const bookLayout =
     !portal?.active &&
     (["/", "/thanks"].includes(context?.req.path || "") || /^\/announcements(?:\/\d+)?$/.test(context?.req.path || ""));
-  const archiveGallery = !portal?.active && ["/productions", "/resources"].includes(context?.req.path || "");
+  const archiveGallery = !portal?.active && ["/productions", "/resources", "/3d"].includes(context?.req.path || "");
   const memberGallery = !portal?.active && context?.req.path === "/members";
+  const splatArchiveEnabled = Boolean(context && !portal?.active && threeDArchiveEnabled(context.env));
+  const splatArchive =
+    (splatArchiveEnabled && context?.req.path === "/3d") || (admin && isThreeDPreviewPath(context?.req.path || ""));
+  const splatEdit = admin && /^\/admin\/three-d\/[a-z0-9-]+$/.test(context?.req.path || "");
   const workBrowse =
     !portal?.active && !workspace && !preview && /^\/productions(?:\/\d+)?$/.test(context?.req.path || "");
   const artPage =
-    !portal?.active && ["/productions", "/resources", "/members"].includes(context?.req.path || "")
-      ? context!.req.path === "/resources"
+    !portal?.active && ["/productions", "/resources", "/3d", "/members"].includes(context?.req.path || "")
+      ? ["/resources", "/3d"].includes(context!.req.path)
         ? "productions"
         : (context!.req.path.slice(1) as StageScene)
       : null;
@@ -131,7 +136,9 @@ export function layout(title: string, content: string, signedIn = false, admin =
           "留存每一幕",
           "/resources",
           "资料库",
-          child("/resources/submit", "我要补充资料") + (signedIn ? child("/my-resources", "我的提交") : ""),
+          child("/resources/submit", "我要补充资料") +
+            (splatArchiveEnabled ? child("/3d", "三维档案") : "") +
+            (signedIn ? child("/my-resources", "我的提交") : ""),
         ),
     ) +
     menu(
@@ -222,6 +229,14 @@ export function layout(title: string, content: string, signedIn = false, admin =
     '"><link rel="stylesheet" href="' +
     assetUrl("/fonts.css") +
     '">' +
+    (splatArchive
+      ? '<link rel="stylesheet" href="' +
+        assetUrl("/three-d.css") +
+        '"><script src="' +
+        assetUrl("/three-d-archive.js") +
+        '" defer></script>'
+      : "") +
+    (splatEdit ? '<script src="' + assetUrl("/three-d-upload.js") + '" defer></script>' : "") +
     (bookLayout ? '<link rel="stylesheet" href="' + assetUrl("/layout-book.css") + '">' : "") +
     (memberGallery ? '<link rel="stylesheet" href="' + assetUrl("/layout-members.css") + '">' : "") +
     (archiveGallery ? '<link rel="stylesheet" href="' + assetUrl("/layout-gallery.css") + '">' : "") +
@@ -284,7 +299,7 @@ export function layout(title: string, content: string, signedIn = false, admin =
     (archiveGallery ? " layout-gallery" : "") +
     (content.includes('class="section-tabs"') ? " archive-page" : "") +
     '" data-section="' +
-    (/^\/(productions|resources|my-resources|suggestions)(?:\/|$)/.test(context?.req.path || "")
+    (/^\/(productions|resources|my-resources|suggestions|3d)(?:\/|$)/.test(context?.req.path || "")
       ? "productions"
       : /^\/(members|profile)(?:\/|$)/.test(context?.req.path || "")
         ? "members"

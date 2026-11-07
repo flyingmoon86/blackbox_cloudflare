@@ -26,7 +26,20 @@ await build({
   target: "es2022",
   legalComments: "eof",
 });
+await build({
+  entryPoints: ["src/client/three-d-engine.js"],
+  outfile: "public/three-d-engine.js",
+  bundle: true,
+  format: "esm",
+  minify: true,
+  target: "es2022",
+  legalComments: "eof",
+});
 const files = [
+  "three-d.css",
+  "three-d-archive.js",
+  "three-d-upload.js",
+  "three-d-engine.js",
   "page-runtime.js",
   "handbook.css",
   ...["account", "profile", "photos", "graduation", "credits", "upload", "help", "admin"].map(

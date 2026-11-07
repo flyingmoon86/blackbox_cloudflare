@@ -32,3 +32,6 @@ Thumbs.db
 
 # Generated local Three.js bundle; rebuilt by assets:build
 public/system-scene.js
+public/three-d-engine.js
+public/three-d-archive.js
+public/three-d-upload.js

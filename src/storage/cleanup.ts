@@ -1,5 +1,6 @@
 import type { Bindings } from "../types";
 import { cancelUpload, completeUpload } from "../services/uploads";
+import { completeThreeDModelUpload } from "../services/three-d-uploads";
 import { drainFileCleanup } from "../services/file-cleanup";
 import { ensureStorageBudget } from "../services/upload-policy";
 
@@ -18,14 +19,16 @@ export async function cleanExpiredUploads(env: Bindings, deadline = Date.now() +
     // Snapshot a bounded oldest-first set: failed jobs rotate to the back and cannot
     // be selected repeatedly in this run or starve later jobs on the next run.
     const tasks = await env.DB.prepare(
-      "SELECT id,status FROM upload_task WHERE (status='completing' OR (status='uploading' AND expires_at<CURRENT_TIMESTAMP)) AND (lease_token IS NULL OR lease_expires_at<CURRENT_TIMESTAMP) ORDER BY updated_at,id LIMIT 100",
-    ).all<{ id: string; status: string }>();
+      "SELECT id,status,three_d_scene_id FROM upload_task WHERE (status='completing' OR (status='uploading' AND expires_at<CURRENT_TIMESTAMP)) AND (lease_token IS NULL OR lease_expires_at<CURRENT_TIMESTAMP) ORDER BY updated_at,id LIMIT 100",
+    ).all<{ id: string; status: string; three_d_scene_id: string | null }>();
     for (const task of tasks.results) {
       if (Date.now() >= deadline) break;
       processed++;
       try {
-        if (task.status === "completing") await completeUpload(env, task.id);
-        else await cancelUpload(env, task.id, true);
+        if (task.status === "completing") {
+          if (task.three_d_scene_id) await completeThreeDModelUpload(env, task.id);
+          else await completeUpload(env, task.id);
+        } else await cancelUpload(env, task.id, true);
       } catch {
         failed++;
         console.error(JSON.stringify({ event: "upload_recovery_retry" }));

@@ -14,6 +14,8 @@ export type UploadTask = {
   multipart_upload_id: string | null;
   status: string;
   resource_id: number | null;
+  three_d_scene_id: string | null;
+  three_d_file_fingerprint: string | null;
   expires_at: string;
   title: string;
   res_type: string;
@@ -71,6 +73,69 @@ export async function saveUploadPart(env: Bindings, id: string, token: string, p
     throw new UploadError("上传任务状态已变化，请重新读取进度后继续。", 409);
 }
 
+export async function streamUploadPart(env: Bindings, task: UploadTask, part: number, request: Request) {
+  const body = request.body;
+  if (
+    !body ||
+    !task.multipart_upload_id ||
+    task.upload_mode !== "local" ||
+    !Number.isSafeInteger(part) ||
+    part < 1 ||
+    part > expectedParts(task.size_bytes)
+  )
+    throw new UploadError("分片编号或任务状态无效。");
+  const size = expectedPartSize(task, part),
+    declared = request.headers.get("content-length");
+  if (declared !== null && Number(declared) !== size) throw new UploadError("分片大小不正确。");
+  const token = await lockUploadTask(env, task);
+  let leaseReleased = false;
+  try {
+    // Measure while streaming. Some Workers runtimes report length mismatches on the R2 read side only.
+    const fixed = new FixedLengthStream(size);
+    const abort = new AbortController();
+    let received = 0;
+    let invalidSize = false;
+    const rejectSize = () => {
+      invalidSize = true;
+      throw new UploadError("分片没有完整上传，请重试。");
+    };
+    const measured = body.pipeThrough(
+      new TransformStream<Uint8Array, Uint8Array>({
+        transform(chunk, controller) {
+          received += chunk.byteLength;
+          if (received > size) rejectSize();
+          controller.enqueue(chunk);
+        },
+        flush() {
+          if (received !== size) rejectSize();
+        },
+      }),
+      { signal: abort.signal },
+    );
+    const pipe = measured.pipeTo(fixed.writable, { signal: abort.signal });
+    const write = env.FILES.resumeMultipartUpload(task.object_key, task.multipart_upload_id).uploadPart(
+      part,
+      fixed.readable,
+    );
+    const settled = await Promise.allSettled([
+      pipe,
+      write.catch((error) => {
+        abort.abort();
+        throw error;
+      }),
+    ]);
+    if (invalidSize || (settled[0].status === "rejected" && settled[1].status === "fulfilled"))
+      throw new UploadError("分片没有完整上传，请重试。");
+    if (settled[1].status === "rejected") throw settled[1].reason;
+    const uploaded = settled[1].value;
+    await saveUploadPart(env, task.id, token, { part_number: part, etag: uploaded.etag, size_bytes: size });
+    leaseReleased = true;
+    return { partNumber: part, etag: uploaded.etag, sizeBytes: size };
+  } finally {
+    if (!leaseReleased) await unlockUploadTask(env, task.id, token);
+  }
+}
+
 async function checkObjectContent(env: Bindings, task: UploadTask): Promise<void> {
   const object = await env.FILES.get(task.object_key, { range: { offset: 0, length: 512 } });
   if (!object) throw new UploadError("文件尚未完整保存，可以稍后重试。", 502);
@@ -102,13 +167,57 @@ async function completedResult(env: Bindings, task: UploadTask): Promise<{ resou
   return { resourceId: resource.id, status: resource.status };
 }
 
+export async function mergeUploadedParts(env: Bindings, task: UploadTask, token: string): Promise<R2Object> {
+  let object = await env.FILES.head(task.object_key);
+  if (!object) {
+    const rows = await env.DB.prepare(
+      "SELECT part_number,etag,size_bytes FROM upload_part WHERE task_id=? ORDER BY part_number",
+    )
+      .bind(task.id)
+      .all<UploadPart>();
+    if (
+      rows.results.length !== expectedParts(task.size_bytes) ||
+      rows.results.some(
+        (part, index) => part.part_number !== index + 1 || part.size_bytes !== expectedPartSize(task, part.part_number),
+      )
+    ) {
+      // No R2 merge has happened: allow the client to send the missing parts.
+      await env.DB.prepare("UPDATE upload_task SET status='uploading' WHERE id=? AND lease_token=?")
+        .bind(task.id, token)
+        .run();
+      throw new UploadError("仍有分片未上传完成。", 409);
+    }
+    if (!task.multipart_upload_id) throw new UploadError("上传初始化未完成，请取消此任务后重新上传。", 409);
+    const parts = rows.results.map((part) => ({ partNumber: part.part_number, etag: part.etag }));
+    try {
+      if (task.upload_mode === "direct")
+        await completeDirectUpload(env, task.object_key, task.multipart_upload_id, parts);
+      else object = await env.FILES.resumeMultipartUpload(task.object_key, task.multipart_upload_id).complete(parts);
+    } catch (error) {
+      // A response may be lost after R2 has already committed the object.
+      object = await env.FILES.head(task.object_key);
+      if (!object) {
+        // No object was merged: allow repairing parts or canceling instead of
+        // leaving the user permanently stuck in the completing state.
+        await env.DB.prepare("UPDATE upload_task SET status='uploading' WHERE id=? AND lease_token=?")
+          .bind(task.id, token)
+          .run();
+        throw error;
+      }
+    }
+    object ??= await env.FILES.head(task.object_key);
+  }
+  if (!object) throw new UploadError("合并结果暂不可用，请稍后重试。", 502);
+  return object;
+}
+
 /** Recoverable state machine: an already merged R2 object skips multipart completion.
  * The resource insert, reservation transfer and final task state commit atomically in D1.
  */
 export async function completeUpload(env: Bindings, id: string): Promise<{ resourceId: number; status: string }> {
   await ensureStorageBudget(env);
   const task = await getUploadTask(env, id);
-  if (!task) throw new UploadError("上传任务不存在。", 404);
+  if (!task || task.three_d_scene_id !== null) throw new UploadError("上传任务不存在。", 404);
   if (
     task.production_id &&
     !(await env.DB.prepare(
@@ -126,47 +235,7 @@ export async function completeUpload(env: Bindings, id: string): Promise<{ resou
   const token = await lockUploadTask(env, task, true);
   let leaseReleased = false;
   try {
-    let object = await env.FILES.head(task.object_key);
-    if (!object) {
-      const rows = await env.DB.prepare(
-        "SELECT part_number,etag,size_bytes FROM upload_part WHERE task_id=? ORDER BY part_number",
-      )
-        .bind(task.id)
-        .all<UploadPart>();
-      if (
-        rows.results.length !== expectedParts(task.size_bytes) ||
-        rows.results.some(
-          (part, index) =>
-            part.part_number !== index + 1 || part.size_bytes !== expectedPartSize(task!, part.part_number),
-        )
-      ) {
-        // No R2 merge has happened: allow the client to send the missing parts.
-        await env.DB.prepare("UPDATE upload_task SET status='uploading' WHERE id=? AND lease_token=?")
-          .bind(id, token)
-          .run();
-        throw new UploadError("仍有分片未上传完成。", 409);
-      }
-      if (!task.multipart_upload_id) throw new UploadError("上传初始化未完成，请取消此任务后重新上传。", 409);
-      const parts = rows.results.map((part) => ({ partNumber: part.part_number, etag: part.etag }));
-      try {
-        if (task.upload_mode === "direct")
-          await completeDirectUpload(env, task.object_key, task.multipart_upload_id, parts);
-        else object = await env.FILES.resumeMultipartUpload(task.object_key, task.multipart_upload_id).complete(parts);
-      } catch (error) {
-        // A response may be lost after R2 has already committed the object.
-        object = await env.FILES.head(task.object_key);
-        if (!object) {
-          // No object was merged: allow repairing parts or canceling instead of
-          // leaving the user permanently stuck in the completing state.
-          await env.DB.prepare("UPDATE upload_task SET status='uploading' WHERE id=? AND lease_token=?")
-            .bind(id, token)
-            .run();
-          throw error;
-        }
-      }
-      object ??= await env.FILES.head(task.object_key);
-    }
-    if (!object) throw new UploadError("合并结果暂不可用，请稍后重试。", 502);
+    const object = await mergeUploadedParts(env, task, token);
     try {
       if (object.size !== task.size_bytes) throw new UploadError("实际文件大小与上传声明不一致，请重新上传。", 400);
       await checkObjectContent(env, task);

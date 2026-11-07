@@ -1,4 +1,5 @@
 import type { MiddlewareHandler } from "hono";
+import { isThreeDPreviewPath } from "../shared/three-d-archive";
 import type { AppEnv } from "../types";
 import { NAVIGATION_CACHE_SECONDS, publicNavigationRequest } from "../services/navigation-cache";
 
@@ -8,6 +9,8 @@ export const securityHeaders: MiddlewareHandler<AppEnv> = async (c, next) => {
     c.get("user")?.role === "admin" &&
     c.req.query("stage-preview") === "1" &&
     ["/", "/productions", "/members", "/thanks"].includes(c.req.path);
+  const threeDArchive =
+    c.res.ok && (c.req.path === "/3d" || (c.get("user")?.role === "admin" && isThreeDPreviewPath(c.req.path)));
   const visualEditor = c.get("user")?.role === "admin" && c.req.path === "/admin/site";
   c.header("X-Content-Type-Options", "nosniff");
   c.header("Referrer-Policy", "same-origin");
@@ -23,6 +26,7 @@ export const securityHeaders: MiddlewareHandler<AppEnv> = async (c, next) => {
     "Content-Security-Policy",
     "default-src 'self'; script-src 'self'" +
       (c.env.TURNSTILE_ENABLED === "true" ? " https://challenges.cloudflare.com" : "") +
+      (threeDArchive ? " 'wasm-unsafe-eval'; worker-src 'self' blob:" : "") +
       "; frame-src " +
       (visualEditor ? "'self' " : "") +
       (c.env.TURNSTILE_ENABLED === "true" ? "https://challenges.cloudflare.com" : visualEditor ? "" : "'none'") +

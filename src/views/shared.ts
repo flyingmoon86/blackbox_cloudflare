@@ -1,4 +1,8 @@
 import { escapeHtml } from "./html";
+import { tryGetContext } from "hono/context-storage";
+import { adminPortal } from "../services/admin-portal";
+import { threeDArchiveEnabled } from "../shared/three-d-archive";
+import type { AppEnv } from "../types";
 export const YEARS = Array.from({ length: 27 }, (_, index) => 2026 - index);
 export function yearSelect(name: string, value: unknown = ""): string {
   const selected = String(value ?? "");
@@ -11,8 +15,10 @@ export function yearSelect(name: string, value: unknown = ""): string {
   const label = name === "join_year" ? "入队年份" : "入学年级";
   return `<input name="${name}" type="text" inputmode="numeric" pattern="(19|20)[0-9]{2}" maxlength="4" list="${name}-years" value="${editable ? escapeHtml(selected) : ""}" placeholder="例如 2000" aria-label="${label}" aria-describedby="${name}-year-hint"><datalist id="${name}-years">${YEARS.map((year) => `<option value="${year}"></option>`).join("")}</datalist><span class="hint" id="${name}-year-hint">可直接填写四位年份${selected && !editable ? `；留空保留原记录（${escapeHtml(selected)}）` : "；留空保留原记录"}。</span>`;
 }
-export function archiveTabs(active: "productions" | "resources"): string {
-  return `<nav class="section-tabs" aria-label="作品与资料"><a href="/productions"${active === "productions" ? ' class="active" aria-current="page"' : ""}>${icon("productions")}作品档案</a><a href="/resources"${active === "resources" ? ' class="active" aria-current="page"' : ""}>${icon("resources")}资料库</a></nav>`;
+export function archiveTabs(active: "productions" | "resources" | "three-d"): string {
+  const context = tryGetContext<AppEnv>();
+  const showThreeD = Boolean(context && !adminPortal(context)?.active && threeDArchiveEnabled(context.env));
+  return `<nav class="section-tabs" aria-label="作品与资料"><a href="/productions"${active === "productions" ? ' class="active" aria-current="page"' : ""}>${icon("productions")}作品档案</a><a href="/resources"${active === "resources" ? ' class="active" aria-current="page"' : ""}>${icon("resources")}资料库</a>${showThreeD ? `<a href="/3d"${active === "three-d" ? ' class="active" aria-current="page"' : ""}>${icon("three-d")}三维档案</a>` : ""}</nav>`;
 }
 export function icon(name: string): string {
   const paths: Record<string, string> = {
@@ -21,6 +27,7 @@ export function icon(name: string): string {
       '<circle cx="12" cy="8" r="3.25"/><path d="M5.5 20v-1.5a6.5 6.5 0 0 1 13 0V20"/><circle cx="12" cy="12" r="10"/>',
     productions: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 5l3 5m3-5 3 5"/>',
     resources: '<path d="M3 7h7l2 3h9v10H3Z"/><path d="M3 7V4h7l2 3h8v3"/>',
+    "three-d": '<path d="m12 2 9 5v10l-9 5-9-5V7Zm-9 5 9 5 9-5M12 12v10"/>',
     members:
       '<circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3m1-16a3 3 0 0 1 0 6m2 3a5 5 0 0 1 3 5v2"/>',
     help: '<path d="M12 5C8 2 3 3 3 3v16s5-1 9 2c4-3 9-2 9-2V3s-5-1-9 2Zm0 0v16"/>',

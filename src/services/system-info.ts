@@ -22,6 +22,7 @@ export const tablePurposes: Record<string, string> = {
   flower: "账号献花记录",
   visitor_flower: "访客献花记录",
   site_profile: "网站展示配置",
+  three_d_scene: "三维场景、发布状态与文件引用",
   upload_task: "上传任务与文件引用",
   upload_part: "分片上传记录",
   production_join_request: "作品加入申请",

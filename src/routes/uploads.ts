@@ -25,6 +25,7 @@ import {
   lockUploadTask,
   unlockUploadTask,
   saveUploadPart,
+  streamUploadPart,
   previewKeyFor,
   type UploadTask,
   type UploadPart,
@@ -55,7 +56,7 @@ async function ownedTask(c: Context<AppEnv>, writable = false): Promise<UploadTa
   // One fresh query checks ownership, the original work and any moved result.
   // Do not cache this across requests: work visibility and account permissions can change.
   const task = await c.env.DB.prepare(
-    `SELECT t.* FROM upload_task t WHERE t.id=? AND t.user_id=?
+    `SELECT t.* FROM upload_task t WHERE t.id=? AND t.user_id=? AND t.three_d_scene_id IS NULL
      AND (t.production_id IS NULL OR EXISTS(SELECT 1 FROM production p WHERE p.id=t.production_id AND ${productionVisible(c, "p")}))
      AND NOT EXISTS(SELECT 1 FROM resource r WHERE r.id=t.resource_id AND NOT (${resourceVisible(c, "r")}))`,
   )
@@ -259,36 +260,8 @@ uploadRoutes.put("/api/uploads/:id/parts/:part", async (c) => {
     !c.req.raw.body
   )
     throw new UploadError("分片编号或任务状态无效。");
-  const size = expectedPartSize(task, part),
-    declared = c.req.header("content-length");
-  if (declared !== undefined && Number(declared) !== size) throw new UploadError("分片大小不正确。");
-  const token = await lockUploadTask(c.env, task);
-  let leaseReleased = false;
-  try {
-    // FixedLengthStream rejects truncated/oversized bodies without buffering a 50MB part.
-    const fixed = new FixedLengthStream(size),
-      abort = new AbortController();
-    const pipe = c.req.raw.body.pipeTo(fixed.writable, { signal: abort.signal });
-    const write = c.env.FILES.resumeMultipartUpload(task.object_key, task.multipart_upload_id).uploadPart(
-      part,
-      fixed.readable,
-    );
-    const settled = await Promise.allSettled([
-      pipe,
-      write.catch((error) => {
-        abort.abort();
-        throw error;
-      }),
-    ]);
-    if (settled[0].status === "rejected") throw new UploadError("分片没有完整上传，请重试。");
-    if (settled[1].status === "rejected") throw settled[1].reason;
-    const uploaded = settled[1].value;
-    await saveUploadPart(c.env, task.id, token, { part_number: part, etag: uploaded.etag, size_bytes: size });
-    leaseReleased = true;
-    return c.json({ etag: uploaded.etag });
-  } finally {
-    if (!leaseReleased) await unlockUploadTask(c.env, task.id, token);
-  }
+  const { etag } = await streamUploadPart(c.env, task, part, c.req.raw);
+  return c.json({ etag });
 });
 uploadRoutes.post("/api/uploads/:id/parts/:part/complete", async (c) => {
   csrfOk(c);
