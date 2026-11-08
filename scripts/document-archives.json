@@ -14922,6 +14922,123 @@
         }
       ],
       "off_device_copy_verified": false
+    },
+    {
+      "date": "20261108T003817154556Z",
+      "task": "2026-11-08-three-d-redundancy-screens",
+      "local_directory": "artifacts/archive/interface/2026-11-08-three-d-redundancy-screens",
+      "backup_directory": "C:\\Users\\gbg61\\Documents\\BlackboxArchives",
+      "zip": "2026-11-08-three-d-redundancy-screens-20261108T003817154556Z.zip",
+      "zip_sha256": "6933ab8c9a0ea370379a96de42975f0336c9beead302af78e6e55ffa5e6410a2",
+      "files": [
+        {
+          "path": "01-toolbar-mobile.png",
+          "bytes": 34636,
+          "sha256": "05b7b504607df07124a7caa7d5aa7c468f2e692ab979392c95aa9ed58a5f493e"
+        },
+        {
+          "path": "02-heading-mobile.png",
+          "bytes": 443350,
+          "sha256": "23f82fb1cf62f76dc7eeb989c03e8b37ce1e9ff715024240a86df280eab3b98b"
+        },
+        {
+          "path": "03-light-mobile.png",
+          "bytes": 183374,
+          "sha256": "225d19c677dfddefd2389bb13a6aaf08e69b4270359f46f55817ab5c2f4cea9a"
+        },
+        {
+          "path": "04-navigation-desktop.png",
+          "bytes": 94819,
+          "sha256": "aedc74570e847e285727d6a51ee1c7ecd57ccaa010da72c14f35e824af61716d"
+        },
+        {
+          "path": "05-style-source-extract.png",
+          "bytes": 119444,
+          "sha256": "ade0e9db5166e95dd8b9e8e8e671e0d043a36ed3ef1629ce5ac354c2a5fdcd43"
+        },
+        {
+          "path": "capture-record.json",
+          "bytes": 1265,
+          "sha256": "e92758cfd7cd8a87c9a1abebabce547b4646816a16d5b9660b4ff21267cf4ff6"
+        },
+        {
+          "path": "capture.mjs",
+          "bytes": 7144,
+          "sha256": "c73222a5f1eef2f56d7ffe79816e5177eb4a8ef7c110fdc34995b991cc2b63a3"
+        },
+        {
+          "path": "desktop-menu-full.png",
+          "bytes": 1803100,
+          "sha256": "208bba3abd1989d6ad3d87505645cadb2fec798d84fb6d831f7ffed6aabc0b3d"
+        },
+        {
+          "path": "mobile-page-full.png",
+          "bytes": 893012,
+          "sha256": "88a8c3f0dccfddf1c998abe8c4eadb090455d608151abbe41c8575bcc412d0a3"
+        },
+        {
+          "path": "mobile-viewer-full.png",
+          "bytes": 306711,
+          "sha256": "d28c28b82fef21e3c7d1929164adc17899741ccc7623dd9e36c9f4e0a06ca8b2"
+        }
+      ],
+      "off_device_copy_verified": false
+    },
+    {
+      "date": "20261108T014248969634Z",
+      "task": "2026-11-08-simplify-release",
+      "local_directory": "artifacts/archive/releases/2026-11-08-simplify-release",
+      "backup_directory": "C:\\Users\\gbg61\\Documents\\BlackboxArchives",
+      "zip": "2026-11-08-simplify-release-20261108T014248969634Z.zip",
+      "zip_sha256": "9a6909fc9a1fcc7dbbb01b7ba62e785f12e2f8119dfa264d4477321eedffc248",
+      "files": [
+        {
+          "path": "backup-final.log",
+          "bytes": 2608,
+          "sha256": "3f878a68f36e8ad2fd6abc490c4cd3ed8e6157a0875eec13a5e28924d511608a"
+        },
+        {
+          "path": "backup.log",
+          "bytes": 2959,
+          "sha256": "6b782ac85fd4e54bfe599660a0ac7c8e96b992feacaee7714bdd7fb433d5193a"
+        },
+        {
+          "path": "check-final.log",
+          "bytes": 56027,
+          "sha256": "cc1efb6b6c601fe9a3b9e701482be77307929f639b5d8270f011679660fc4562"
+        },
+        {
+          "path": "check.log",
+          "bytes": 58627,
+          "sha256": "a91e14cebbbf32b300009e8e80b1be3bf11709b80ac1ae178e719852c5e423eb"
+        },
+        {
+          "path": "deploy.log",
+          "bytes": 2689,
+          "sha256": "3710e5a15d7fd9a328328d3b391799e922a5872da519aa4a57042070755cddb7"
+        },
+        {
+          "path": "live-1366.png",
+          "bytes": 375866,
+          "sha256": "c08f2034e257bf9f02b98e4eb9559f67eabeea1cdefdf0d48539441bf2eabde8"
+        },
+        {
+          "path": "live-390.png",
+          "bytes": 171518,
+          "sha256": "fd5645122db2286efaedaa4e1e90e7ee0f0e30253af76f3045d107c97c2a16c7"
+        },
+        {
+          "path": "verify.log",
+          "bytes": 1534,
+          "sha256": "3fb9350379f3736a97c90db865256d139a84f094a6002ae16880d0d7f3082a89"
+        },
+        {
+          "path": "验收.md",
+          "bytes": 464,
+          "sha256": "5409ad41d103ae7ca2102ac8a8d9066b66d7b98cea3554c68215bce4ca3a176d"
+        }
+      ],
+      "off_device_copy_verified": false
     }
   ]
 }
