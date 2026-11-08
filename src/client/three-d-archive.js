@@ -34,6 +34,7 @@ window.blackboxPages?.register("three-d-archive", (root, scope) => {
     viewer = undefined;
     loading.hidden = true;
     viewport.setAttribute("aria-busy", "false");
+    archive.querySelectorAll(".splat-menu").forEach((menu) => (menu.open = false));
     hint.hidden = true;
     help.setAttribute("aria-expanded", "false");
     for (const button of tools) button.disabled = true;
@@ -118,7 +119,17 @@ window.blackboxPages?.register("three-d-archive", (root, scope) => {
   for (const button of archive.querySelectorAll("[data-splat-open]")) {
     scope.listen(button, "click", () => open(button));
   }
+  const menus = [...archive.querySelectorAll(".splat-menu")];
+  menus.forEach((menu) =>
+    scope.listen(menu, "toggle", () => {
+      if (menu.open) menus.filter((other) => other !== menu).forEach((other) => (other.open = false));
+    }),
+  );
+  scope.listen(dialog, "click", (event) => {
+    if (!event.target.closest(".splat-menu")) menus.forEach((menu) => (menu.open = false));
+  });
   scope.listen(help, "click", () => {
+    menus.forEach((menu) => (menu.open = false));
     hint.hidden = !hint.hidden;
     help.setAttribute("aria-expanded", String(!hint.hidden));
   });
@@ -129,6 +140,7 @@ window.blackboxPages?.register("three-d-archive", (root, scope) => {
     scope.listen(button, "click", async () => {
       if (!viewer) return;
       const action = button.dataset.splatAction;
+      if (["wide", "front", "top"].includes(action)) menus.forEach((menu) => (menu.open = false));
       if (action === "fullscreen") {
         try {
           if (document.fullscreenElement) await document.exitFullscreen();
@@ -144,6 +156,13 @@ window.blackboxPages?.register("three-d-archive", (root, scope) => {
   }
   scope.listen(dialog, "close", clear);
   scope.listen(dialog, "keydown", (event) => {
+    if (event.key === "Escape" && menus.some((menu) => menu.open)) {
+      event.preventDefault();
+      const active = menus.find((menu) => menu.open);
+      menus.forEach((menu) => (menu.open = false));
+      active.querySelector("summary").focus();
+      return;
+    }
     if (event.key.toLowerCase() === "r" && !event.altKey && !event.ctrlKey && !event.metaKey)
       tools.find((button) => button.dataset.splatAction === "reset").click();
   });

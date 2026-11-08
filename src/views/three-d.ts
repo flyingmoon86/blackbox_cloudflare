@@ -64,15 +64,7 @@ export function threeDArchivePage(
           <p class="splat-status" data-splat-status role="status" hidden></p>
         </div>
         <div class="splat-tools" role="group" aria-label="视角操作">
-          <button type="button" class="secondary" data-splat-action="wide" disabled>全景</button>
-          <button type="button" class="secondary" data-splat-action="front" disabled>正面</button>
-          <button type="button" class="secondary" data-splat-action="top" disabled>俯视</button>
-          <button type="button" class="secondary" data-splat-action="reset" disabled>复位</button>
-          <button type="button" class="secondary" data-splat-action="in" aria-label="放大" disabled>＋</button>
-          <button type="button" class="secondary" data-splat-action="out" aria-label="缩小" disabled>－</button>
-          <button type="button" class="secondary" data-splat-action="spin" aria-pressed="false" disabled>自动旋转</button>
-          <button type="button" class="secondary" data-splat-action="fullscreen" hidden disabled>全屏</button>
-          <button type="button" class="secondary" data-splat-help aria-expanded="false" aria-controls="splat-help">帮助</button>
+<button type="button" class="secondary" data-splat-action="reset" disabled>复位</button><details class="splat-menu"><summary>视角</summary><div class="splat-menu-panel"><button type="button" class="secondary" data-splat-action="wide" disabled>全景</button><button type="button" class="secondary" data-splat-action="front" disabled>正面</button><button type="button" class="secondary" data-splat-action="top" disabled>俯视</button></div></details><button type="button" class="secondary" data-splat-action="fullscreen" hidden disabled>全屏</button><details class="splat-menu"><summary>更多</summary><div class="splat-menu-panel"><button type="button" class="secondary" data-splat-action="in" aria-label="放大" disabled>＋</button><button type="button" class="secondary" data-splat-action="out" aria-label="缩小" disabled>－</button><button type="button" class="secondary" data-splat-action="spin" aria-pressed="false" disabled>自动旋转</button><button type="button" class="secondary" data-splat-help aria-expanded="false" aria-controls="splat-help">帮助</button></div></details>
         </div>
         <p class="splat-hint" id="splat-help" hidden>拖动旋转 · 滚轮缩放 · 右键拖动平移 · R 复位<br>触屏：单指旋转，双指缩放或平移</p>
       </dialog>

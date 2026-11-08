@@ -10,18 +10,16 @@
 .splat-archive :is(h2,.splat-hint,form){margin:0}
 .splat-card h2,.splat-dialog h2{font-size:1.12rem}
 .splat-archive button:focus-visible{outline:2px solid var(--amber);outline-offset:3px}
-body .splat-archive .splat-dialog{color:var(--ink);background:var(--panel);border:1px solid var(--line);padding:0;width:min(1120px,calc(100vw - 24px));max-width:none;max-height:calc(100dvh - 24px)}
+body .splat-archive .splat-dialog{border:1px solid var(--line);padding:0}
 .splat-dialog::backdrop{background:#000b}
-body .splat-archive .splat-dialog:fullscreen{width:100%;height:100%;max-height:none;max-width:none;display:grid;grid-template-rows:auto minmax(0,1fr) auto auto}
-.splat-stage{position:relative;min-height:0;height:clamp(220px,60dvh,650px);background:#171512}
-.splat-dialog:fullscreen .splat-stage{height:auto}
+.splat-stage{min-height:0;background:#171512}
 .splat-viewport{position:absolute;inset:0}
 .splat-viewport canvas{display:block;width:100%;height:100%;touch-action:none}
 .splat-status{position:absolute;inset:auto 12px 50%;margin:0;text-align:center;color:#f5e8ce;pointer-events:none}
 .splat-tools{display:flex;flex-wrap:wrap;justify-content:center;gap:5px;padding:10px}
 .splat-dialog button[aria-pressed=true]{border-color:var(--amber);color:var(--amber)}
 .splat-hint{text-align:center;padding:0 12px 12px;font-size:.75rem}
-@media(max-width:620px){.splat-grid{grid-template-columns:1fr}.splat-dialog-heading{padding:8px 12px}.splat-stage{height:46dvh}.splat-tools button{padding:5px 8px}.splat-card-copy{padding:10px 12px}}
+@media(max-width:620px){.splat-grid{grid-template-columns:1fr}.splat-card-copy{padding:10px 12px}}
 
 .splat-card-text{min-width:0;max-width:100%;overflow-wrap:anywhere}
 .splat-description,.splat-association{margin:5px 0 0;color:var(--muted)}
@@ -58,3 +56,11 @@ body .splat-archive .splat-dialog{--ink:#f5eee0;--muted:#ccc3b3;--line:#655c4d;-
 
 .layout-gallery .splat-archive{width:100%;padding:0;margin:0}
 .layout-gallery .splat-intro{max-width:none}
+
+.splat-menu{position:relative}
+.splat-menu summary{list-style:none;cursor:pointer;min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:4px;background:#211e18;color:var(--ink);display:flex;align-items:center;box-sizing:border-box}
+.splat-menu summary::-webkit-details-marker{display:none}
+.splat-menu summary:focus-visible{outline:2px solid var(--amber);outline-offset:3px}
+.splat-menu-panel{position:absolute;bottom:calc(100% + 12px);right:0;display:flex;flex-direction:column;gap:6px;min-width:120px;padding:8px;border:1px solid var(--line);border-radius:6px;background:#171512;box-shadow:0 6px 22px #0008}
+.splat-menu:not([open]) .splat-menu-panel{display:none}
+.splat-dialog .splat-tools{flex-wrap:nowrap}

@@ -161,3 +161,5 @@
   .nav-followspot { transition: none; }
   .design-public .top .nav-menu.is-open .nav-panel { animation: none; }
 }
+
+@media(min-width:901px){.design-public .top #productions-menu:has(> .nav-group:nth-child(3)){grid-template-columns:repeat(3,minmax(0,1fr));width:620px;max-width:calc(100vw - 32px)}}

@@ -19,7 +19,13 @@ window.blackboxPages?.register("stage-light", (root, scope) => {
   } catch {}
   const updateHint = () => {
     if (!hint) return;
-    hint.hidden = preview || failed || toggle.disabled || hintSeen || scene.dataset.lights === "on";
+    hint.hidden =
+      Boolean(root?.querySelector("[data-splat-archive]")) ||
+      preview ||
+      failed ||
+      toggle.disabled ||
+      hintSeen ||
+      scene.dataset.lights === "on";
     toggle.setAttribute("aria-describedby", hint.hidden ? "" : "stage-light-hint");
   };
   const savedState = () => {

@@ -136,10 +136,9 @@ export function layout(title: string, content: string, signedIn = false, admin =
           "留存每一幕",
           "/resources",
           "资料库",
-          child("/resources/submit", "我要补充资料") +
-            (splatArchiveEnabled ? child("/3d", "三维档案") : "") +
-            (signedIn ? child("/my-resources", "我的提交") : ""),
-        ),
+          child("/resources/submit", "我要补充资料") + (signedIn ? child("/my-resources", "我的提交") : ""),
+        ) +
+        (splatArchiveEnabled ? group("重访现场", "/3d", "三维档案", "") : ""),
     ) +
     menu(
       "队员与剧团",
