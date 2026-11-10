@@ -6,7 +6,7 @@ import { csrfFor } from "../../http/cookies";
 import type { AppEnv } from "../../types";
 import { memberDetailPage, memberListPage } from "../../views/members";
 import type { MemberRow } from "../../services/members/types";
-import { memberFilter } from "../../services/members/queries";
+import { memberFilter, memberContextQuery } from "../../services/members/queries";
 
 export function registerPublicMemberRoutes(memberRoutes: Hono<AppEnv>) {
   memberRoutes.get("/members", async (c) => {
@@ -78,12 +78,9 @@ export function registerPublicMemberRoutes(memberRoutes: Hono<AppEnv>) {
     )
       .bind(...params, id, id)
       .all<{ id: number; name: string; position: number }>();
-    const context = new URLSearchParams();
-    if (search) context.set("q", search);
-    if (year !== null) context.set("year", String(year));
     const current = nearby.results.find((row) => row.id === id);
     const page = c.req.query("page") ? pageNumber(c.req.query("page")) : Math.ceil((current?.position || 1) / 25);
-    context.set("page", String(page));
+    const context = memberContextQuery({ search, year }, page);
     const navigation = {
       back: `/members?${context}`,
       previous: nearby.results.find((row) => current && row.position === current.position - 1),

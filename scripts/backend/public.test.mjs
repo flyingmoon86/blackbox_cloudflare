@@ -178,6 +178,38 @@ test("guest flowers are CSRF protected, deduplicated per day and counted publicl
   assert.equal(s.db.prepare("SELECT COUNT(*) n FROM visitor_flower").get().n, 1);
   assert.match(await (await s.req(0, "/members/1")).text(), /<strong>1<\/strong> 朵花/);
 });
+test("flowers preserve validated member search context for every allowed role and repeat submission", async () => {
+  const s = await setup();
+  try {
+    for (const actor of [0, 1, 2, 3]) {
+      const path =
+        "/members/1/flowers?q=" + encodeURIComponent("测试 & 队员") + "&year=missing&page=2&next=https://evil.test";
+      for (const expected of ["sent", "already"]) {
+        const response = await s.post(actor, path);
+        assert.equal(response.status, 303);
+        const url = new URL(response.headers.get("Location"), "https://blackbox.test");
+        assert.equal(url.pathname, "/members/1");
+        assert.equal(url.searchParams.get("q"), "测试 & 队员");
+        assert.equal(url.searchParams.get("year"), "missing");
+        assert.equal(url.searchParams.get("page"), "2");
+        assert.equal(url.searchParams.get("flower"), expected);
+        assert.equal(url.searchParams.has("next"), false);
+      }
+    }
+    const bad = await s.post(0, "/members/1/flowers?q=" + "x".repeat(100) + "&year=bad&page=-3");
+    const query = new URL(bad.headers.get("Location"), "https://blackbox.test").searchParams;
+    assert.equal(query.get("q").length, 80);
+    assert.equal(query.has("year"), false);
+    assert.equal(query.get("page"), "1");
+    const html = await (await s.req(0, "/members/1?q=stage&year=2025&page=2")).text();
+    assert.match(html, /action="\/members\/1\/flowers\?q=stage&amp;year=2025&amp;page=2"/);
+    assert.equal((await s.post(0, "/members/1/flowers?q=stage", { csrf: "wrong" })).status, 400);
+    assert.equal((await s.post(0, "/members/9999/flowers?q=stage")).status, 404);
+  } finally {
+    s.db.close();
+  }
+});
+
 test("named flowers show cumulative names and retain anonymous counts", async () => {
   const s = await setup();
   await s.post(0, "/members/1/flowers");

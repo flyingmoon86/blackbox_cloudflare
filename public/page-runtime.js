@@ -2,13 +2,24 @@
 (() => {
   const features = new Map();
   let root;
+  let navigation = "initial";
+  const report = (feature, phase) => console.error("页面组件执行失败", { feature: feature.name, phase });
   const start = (feature) => {
     feature.stop?.();
     if (!root) return;
     const controller = new AbortController();
     const cleanup = [];
+    const dispose = (callback) => {
+      try {
+        callback();
+      } catch {
+        // One failing cleanup must not leave the remaining page alive.
+        report(feature, "cleanup");
+      }
+    };
     const scope = {
       signal: controller.signal,
+      navigation,
       listen(target, type, listener, options = {}) {
         target?.addEventListener(type, listener, {
           ...(typeof options === "boolean" ? { capture: options } : options),
@@ -16,23 +27,31 @@
         });
       },
       dispose(callback) {
-        cleanup.push(callback);
+        if (controller.signal.aborted) dispose(callback);
+        else cleanup.push(callback);
       },
       observe(observer, target, options) {
+        if (controller.signal.aborted) return;
         observer.observe(target, options);
         cleanup.push(() => observer.disconnect());
       },
     };
     feature.stop = () => {
+      feature.stop = undefined;
       controller.abort();
-      cleanup.splice(0).forEach((callback) => callback());
+      cleanup.splice(0).reverse().forEach(dispose);
     };
-    feature.setup(root, scope);
+    try {
+      feature.setup(root, scope);
+    } catch {
+      report(feature, "setup");
+      feature.stop?.();
+    }
   };
   window.blackboxPages = {
     register(name, setup) {
       features.get(name)?.stop?.();
-      const feature = { setup };
+      const feature = { name, setup };
       features.set(name, feature);
       start(feature);
     },
@@ -40,8 +59,9 @@
       for (const feature of features.values()) feature.stop?.();
       root = null;
     },
-    mount(next) {
+    mount(next, reason = "initial") {
       root = next;
+      navigation = reason;
       for (const feature of features.values()) start(feature);
     },
   };

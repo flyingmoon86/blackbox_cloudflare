@@ -2,6 +2,8 @@ import { visitorIdentity, publicLimit } from "../../services/visitors";
 import { Hono } from "hono";
 import { csrfValid } from "../../http/cookies";
 import type { AppEnv } from "../../types";
+import { memberFilter, memberContextQuery } from "../../services/members/queries";
+import { pageNumber } from "../../views/shared";
 
 export function registerFlowersMemberRoutes(memberRoutes: Hono<AppEnv>) {
   memberRoutes.post("/members/:id/flowers", async (c) => {
@@ -29,6 +31,11 @@ export function registerFlowersMemberRoutes(memberRoutes: Hono<AppEnv>) {
       : await c.env.DB.prepare("INSERT OR IGNORE INTO visitor_flower(visitor_key,member_id,sent_on) VALUES(?,?,?)")
           .bind(await visitorIdentity(c), id, sentOn)
           .run();
-    return c.redirect(`/members/${id}?flower=${result.meta.changes === 1 ? "sent" : "already"}`, 303);
+    const query = memberContextQuery(
+      memberFilter(c),
+      c.req.query("page") ? pageNumber(c.req.query("page")) : undefined,
+    );
+    query.set("flower", result.meta.changes === 1 ? "sent" : "already");
+    return c.redirect(`/members/${id}?${query}`, 303);
   });
 }

@@ -19,6 +19,7 @@ const shell = (title: string, body: string) =>
     `<section class="credit-import"><p><a href="${root}">导入历史</a> · <a href="/productions">作品档案</a></p>${body}</section>`,
     true,
     true,
+    { creditImport: true },
   );
 const token = (csrf: string) => `<input type="hidden" name="csrf" value="${e(csrf)}">`;
 export function importStartPage(productions: { id: number; title: string; year: number | null; is_hidden: number }[]) {

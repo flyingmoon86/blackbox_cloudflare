@@ -37,7 +37,7 @@ function harness({
   const connection = Object.assign(new Events(), { saveData, effectiveType });
   const navigator = { connection, onLine: true };
   const window = Object.assign(new Events(), { blackboxSiteOpening: { active: opening }, scrollY: 800 });
-  const document = Object.assign(new Events(), { hidden: false, body: {}, documentElement: {} });
+  const document = Object.assign(new Events(), { hidden: false, body: {}, documentElement: {}, readyState: "loading" });
   document.activeElement = document.body;
   let observer;
   const cards = Array.from({ length: 12 }, (_, index) => {
@@ -73,6 +73,9 @@ function harness({
     performance: { getEntriesByType: () => [{ type: navigation }] },
     sessionStorage: { getItem: (key) => storage.get(key), setItem: (key, value) => storage.set(key, value) },
     requestAnimationFrame: (fn) => frames.push(fn),
+    cancelAnimationFrame: (id) => {
+      if (id > 0 && id <= frames.length) frames[id - 1] = () => {};
+    },
     setTimeout: (fn) => {
       const id = Symbol();
       timers.set(id, fn);

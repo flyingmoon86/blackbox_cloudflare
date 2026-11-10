@@ -54,7 +54,7 @@ try {
         await page.waitForURL(/\/members\/1\?/);
         check(
           device + " member results position saved",
-          await page.evaluate(() => sessionStorage.getItem("member-results:page=1") !== null),
+          await page.evaluate(() => sessionStorage.getItem("blackbox-member-return:v1") !== null),
         );
       }
     }

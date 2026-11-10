@@ -193,32 +193,23 @@
   // src/client/navigation/router.js
   function installRouter(pages, assets, canonical) {
     let current = location.pathname;
-    let sequence = 0;
     let valid = true;
     let accountVersion;
     try {
       accountVersion = localStorage.getItem("blackbox-account-change");
     } catch {
     }
-    const positions = /* @__PURE__ */ new Map();
-    let key = history.state?.blackboxRoute || `route-${++sequence}`;
-    history.replaceState({ ...history.state, blackboxRoute: key }, "");
-    history.scrollRestoration = "manual";
-    const save = () => positions.set(key, { x: scrollX, y: scrollY });
+    history.scrollRestoration = "auto";
     const commit = (url, back = false) => {
       const page = pages.get(url.pathname);
       if (!valid || !page?.ready || !window.blackboxPages) return false;
       const before = performance.now();
       const previous = document.querySelector("#main-content");
       if (!previous) return false;
-      save();
       const next = page.main.cloneNode(true);
       try {
         window.blackboxPages.unmount();
-        if (!back) {
-          key = `route-${Date.now()}-${++sequence}`;
-          history.pushState({ blackboxRoute: key }, "", url);
-        } else key = history.state?.blackboxRoute;
+        if (!back) history.pushState({}, "", url);
         assets.activate(page.styles);
         for (const name of ["layout-book", "layout-members", "layout-gallery", "archive-page"])
           document.body.classList.toggle(name, page.classes.includes(name));
@@ -229,12 +220,11 @@
         document.querySelectorAll(".nav-panel").forEach((node) => node.hidden = true);
         document.querySelectorAll(".menu-toggle,.nav-menu-toggle").forEach((node) => node.setAttribute("aria-expanded", "false"));
         document.body.classList.remove("navigation-open");
-        window.blackboxPages.mount(next);
+        window.blackboxPages.mount(next, back ? "history" : "push");
         current = url.pathname;
-        const position = back && positions.get(key);
         next.focus({ preventScroll: true });
-        window.scrollTo({ left: position?.x || 0, top: position?.y || 0, behavior: "instant" });
-        if (url.hash) {
+        if (!back) window.scrollTo({ left: 0, top: 0, behavior: "instant" });
+        if (url.hash && !back) {
           window.dispatchEvent(new HashChangeEvent("hashchange"));
           const anchor = document.getElementById(decodeURIComponent(url.hash.slice(1)));
           if (anchor && !anchor.closest(".stage-scene")) anchor.scrollIntoView({ behavior: "instant" });
@@ -274,7 +264,6 @@
         pages.clear();
       }
     });
-    window.addEventListener("pagehide", save);
     window.addEventListener("pageshow", (event) => {
       if (!event.persisted) return;
       try {

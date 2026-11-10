@@ -490,7 +490,7 @@ window.blackboxPages?.register("experience", (root, scope) => {
       form.closest(".profile-detail").dispatchEvent(new Event("profile:detach"));
       form.closest(".profile-detail").replaceWith(fresh);
       document.dispatchEvent(new Event("profile:updated"));
-      const nextButton = fresh.querySelector('form[action$="/flowers"] button');
+      const nextButton = fresh.querySelector('.dossier-flower-action button,form[action$="/flowers"] button');
       nextButton?.focus({ preventScroll: true });
       if (result === "sent" && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
         const burst = document.createElement("div");

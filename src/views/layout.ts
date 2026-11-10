@@ -16,6 +16,8 @@ export type PageOptions = {
   resourcePicker?: boolean;
   memberDossier?: boolean;
   memberResults?: boolean;
+  creditForms?: boolean;
+  creditImport?: boolean;
 };
 
 export function layout(
@@ -269,8 +271,13 @@ export function layout(
     '" defer></script><script src="' +
     assetUrl("/experience.js") +
     '" defer></script>' +
-    (options.memberResults ? '<script src="' + assetUrl("/member-results.js") + '" defer></script>' : "") +
+    (options.memberResults || options.memberDossier
+      ? '<script src="' + assetUrl("/member-results.js") + '" defer></script>'
+      : "") +
     (options.memberDossier ? '<script src="' + assetUrl("/member-dossier.js") + '" defer></script>' : "") +
+    (admin ? '<script src="' + assetUrl("/admin-notifications.js") + '" defer></script>' : "") +
+    (admin && options.creditForms ? '<script src="' + assetUrl("/credit-forms.js") + '" defer></script>' : "") +
+    (admin && options.creditImport ? '<script src="' + assetUrl("/credit-import.js") + '" defer></script>' : "") +
     (workBrowse ? '<script src="' + assetUrl("/work-browse.js") + '" defer></script>' : "") +
     (!portal?.active && !workspace && !preview
       ? '<script src="' +

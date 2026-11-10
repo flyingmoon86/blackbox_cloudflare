@@ -12,7 +12,7 @@ export async function checkMemberNavigation(browser, origin) {
       window.memberPositionWrites = 0;
       const original = Storage.prototype.setItem;
       Storage.prototype.setItem = function (key, value) {
-        if (key.startsWith("member-results:")) window.memberPositionWrites++;
+        if (key === "blackbox-member-return:v1") window.memberPositionWrites++;
         return original.call(this, key, value);
       };
     });
@@ -37,31 +37,26 @@ export async function checkMemberNavigation(browser, origin) {
           .addEventListener("click", (event) => event.preventDefault(), { once: true });
         document.querySelector(".member-card-link").click();
       });
-      assert.equal(await page.evaluate(() => window.memberPositionWrites), 1);
+      assert.equal(await page.evaluate(() => window.memberPositionWrites), 0, "cancelled click leaves no return state");
       await page.locator(".member-card-link").first().click();
       await page.waitForURL(/\/members\/1\?/);
-      assert.ok(await page.evaluate(() => sessionStorage.getItem("member-results:page=1")));
+      assert.ok(await page.evaluate(() => sessionStorage.getItem("blackbox-member-return:v1")));
       await page.locator("[data-member-return]").first().click();
-      await page.waitForURL(/\/members\?page=1/);
+      await page.waitForURL(origin + "/members");
       await waitForPageReady(page);
-      // Verify a nonzero position, not merely the existence of a storage key.
-      await page.goto(origin + "/members?q=" + encodeURIComponent("示例") + "&year=2024&page=1");
+      const filtered = origin + "/members?q=" + encodeURIComponent("示例") + "&year=2024&page=1";
+      await page.goto(filtered);
       await waitForPageReady(page);
-      const key = "member-results:page=1&q=" + encodeURIComponent("示例") + "&year=2024";
-      await page.evaluate((key) => {
-        // One synthetic member fits on desktop; give the page real scroll range.
-        const spacer = document.createElement("div");
-        spacer.style.height = "2400px";
-        document.querySelector("main").append(spacer);
-        sessionStorage.setItem(key, JSON.stringify({ window: 140, main: 0 }));
-        window.dispatchEvent(new PageTransitionEvent("pageshow"));
-      }, key);
-      await page.waitForFunction(() => scrollY >= 139);
-      assert.equal(await page.evaluate(() => scrollY), 140);
+      await page.locator(".member-card-link").first().click();
+      await page.waitForURL(/\/members\/1\?/);
+      await page.locator("[data-member-return]").first().click();
+      await page.waitForURL(filtered);
+      await waitForPageReady(page);
+      await page.waitForFunction(() => document.activeElement?.classList.contains("member-card-link"));
       await page.goBack();
-      await page.waitForURL(/\/members\?page=1/);
+      await page.waitForURL(/\/members\/1\?/);
       await page.goForward();
-      await page.waitForURL(/year=2024/);
+      await page.waitForURL(filtered);
       await waitForPageReady(page);
       assert.deepEqual(errors, []);
       results.push(`${width}: cached entry, single listener, detail return, filtered position and history`);

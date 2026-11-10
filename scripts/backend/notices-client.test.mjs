@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 const app = readFileSync(new URL("../../public/app.js", import.meta.url), "utf8");
 const code = app.slice(app.indexOf("const announcementUpdate ="), app.indexOf("for (const mascot"));
-const notificationCode = app.slice(app.indexOf("const notificationHost ="), app.indexOf("for (const video"));
+const notificationCode = readFileSync(new URL("../../public/admin-notifications.js", import.meta.url), "utf8");
 class Element extends EventTarget {
   hidden = true;
 }

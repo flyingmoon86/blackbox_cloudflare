@@ -5,5 +5,9 @@ public/system-scene.js
 public/curtain-boot.js
 public/navigation-preload.js
 public/work-browse.js
+public/member-results.js
+public/admin-notifications.js
+public/credit-forms.js
+public/credit-import.js
 public/announcement-editor.js
 public/upload.js

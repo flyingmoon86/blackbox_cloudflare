@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { createDatabase, d1, fakeBucket, loadWorker, loadModule } from "./backend/harness.mjs";
 
-export async function navigationFixture(port = 0, setup) {
+export async function navigationFixture(port = 0, setup, { allowWrites = false } = {}) {
   const worker = await loadWorker();
   const { createSession } = await loadModule("src/auth/session.ts");
   const db = createDatabase();
@@ -52,6 +52,7 @@ export async function navigationFixture(port = 0, setup) {
     worker,
     env,
     port,
+    allowWrites,
     beforeRequest: async (url, incoming) => {
       requests.push({ path: url.pathname + url.search, method: incoming.method, at: Date.now() });
       if (url.pathname.startsWith("/__fixture/session/")) {

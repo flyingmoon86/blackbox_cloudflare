@@ -1,5 +1,13 @@
 import { productionVisible } from "../../services/production-visibility";
 
+export function memberContextQuery(filters: { search: string; year: number | "missing" | null }, page?: number) {
+  const query = new URLSearchParams();
+  if (filters.search) query.set("q", filters.search);
+  if (filters.year !== null) query.set("year", String(filters.year));
+  if (page !== undefined) query.set("page", String(page));
+  return query;
+}
+
 export async function memberNameTaken(db: D1Database, name: string, excludeId?: number): Promise<boolean> {
   const row = await db
     .prepare(`SELECT id FROM member WHERE lower(trim(name)) = lower(trim(?))${excludeId ? " AND id <> ?" : ""} LIMIT 1`)
