@@ -1,3 +1,4 @@
+import { imageFormat } from "./image-format";
 import { HTTPException } from "hono/http-exception";
 import type { Bindings } from "../types";
 import { reserveStorage, storageCommitStatements } from "./upload-policy";
@@ -12,18 +13,10 @@ export async function storeMemberPhoto(
 ) {
   if (!(file instanceof File) || !file.size || file.size > 8 * 1024 * 1024)
     throw new HTTPException(400, { message: "请选择 8MB 以内的 JPG、PNG 或 WebP 照片。" });
-  const bytes = new Uint8Array(await file.arrayBuffer()),
-    header = new TextDecoder("latin1").decode(bytes.slice(0, 12));
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const format = imageFormat(bytes);
   const ext =
-    file.type === "image/jpeg" && bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255
-      ? "jpg"
-      : file.type === "image/png" &&
-          bytes.length >= 8 &&
-          [137, 80, 78, 71, 13, 10, 26, 10].every((v, i) => bytes[i] === v)
-        ? "png"
-        : file.type === "image/webp" && header.startsWith("RIFF") && header.slice(8) === "WEBP"
-          ? "webp"
-          : null;
+    format && format !== "avif" && file.type === `image/${format}` ? (format === "jpeg" ? "jpg" : format) : null;
   if (!ext) throw new HTTPException(400, { message: "图片内容与格式不一致。" });
   const key = `member-photos/${crypto.randomUUID()}.${ext}`,
     reservation = "member-photo:" + crypto.randomUUID();

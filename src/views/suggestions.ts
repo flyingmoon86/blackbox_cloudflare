@@ -23,15 +23,6 @@ export function suggestionFormPage(
   );
 }
 
-export function suggestionPermissionPage(admin: boolean): string {
-  return layout(
-    "意见箱",
-    '<section class="card auth"><p class="eyebrow">SUGGESTION BOX</p><h1>认证队员意见箱</h1><p>意见箱目前向认证队员开放。你可以先在个人中心申请队员认证，或通过联系邮箱反馈。</p><p><a class="button" href="/profile/member-application">申请队员认证</a></p></section>',
-    true,
-    admin,
-  );
-}
-
 export function suggestionInboxPage(rows: SuggestionRow[], csrf: string, page: AdminPage): string {
   const items = rows.length
     ? rows

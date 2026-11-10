@@ -1,5 +1,5 @@
 import { escapeHtml } from "./html";
-import type { ResourceChoice } from "../routes/productions";
+import type { ResourceChoice } from "../services/productions/types";
 
 const labels: Record<string, string> = { photo: "剧照", video: "视频", script: "剧本", audio: "音频", other: "其他" };
 const symbols: Record<string, string> = { photo: "▧", video: "▷", script: "▤", audio: "♫", other: "▱" };

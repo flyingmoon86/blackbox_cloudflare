@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { currentAssets, recordAssetRelease } from "./assets-lifecycle.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const configPath = fileURLToPath(new URL("../wrangler.jsonc", import.meta.url));
@@ -66,8 +67,9 @@ const action = process.argv[2] || "check";
 if (action === "check") {
   npmRun("docs:check");
   npmRun("format:check");
-  npmRun("typecheck");
-  npmRun("test:backend");
+  // predeploy:check already built assets. Standalone checks retain their own hooks.
+  npmRun("typecheck:prepared");
+  npmRun("test:backend:prepared");
   wrangler("deploy", "--env", "production", "--dry-run", "--outdir", ".wrangler/production-dry-run");
   console.log("正式部署前代码与配置检查通过。此命令没有发布网站。");
 } else if (action === "migrate") {
@@ -107,7 +109,9 @@ if (action === "check") {
   );
   wrangler("r2", "bucket", "cors", "set", bucket.bucket_name, "--file", corsPath);
 } else if (action === "deploy") {
+  const assets = currentAssets(root);
   wrangler("deploy", "--env", "production");
+  console.log("Published asset manifest:", recordAssetRelease(root, assets));
 } else if (action === "smoke") {
   const origin = `https://${route.pattern}`;
   const checks = [

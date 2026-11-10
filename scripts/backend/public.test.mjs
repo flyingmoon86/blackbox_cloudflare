@@ -437,7 +437,7 @@ test("library paginates scripts with stable groups and excludes photos", async (
       .run(id, "演出图片" + id);
   const first = await (await s.req(0, "/resources?q=测试作品")).text();
   assert.match(first, /第 1 \/ 2 页/);
-  assert.equal((first.match(/class="resource-card type-script"/g) || []).length, 24);
+  assert.equal((first.match(/class="resource-file"/g) || []).length, 24);
   assert.ok(!first.includes("演出图片10"));
   const last = await (await s.req(0, "/resources?q=测试作品&page=999")).text();
   assert.match(last, /第 2 \/ 2 页/);
@@ -445,6 +445,27 @@ test("library paginates scripts with stable groups and excludes photos", async (
   assert.ok(!last.includes("待审图"));
   const all = await (await s.req(0, "/resources?page=2")).text();
   assert.ok(all.indexOf("演出图片10") < all.indexOf("其他资料"));
+  s.db.close();
+});
+
+test("legacy operating notes stay editable and visible only in the administrator workbench", async () => {
+  const s = await setup();
+  const note = "管理员导入说明 <script>alert(1)</script>";
+  s.db.prepare("UPDATE site_profile SET page_texts=? WHERE id=1").run(JSON.stringify({ test_notice: note }));
+  const home = await (await s.req(0, "/")).text();
+  assert.doesNotMatch(home, /data-test-notice|管理员导入说明/);
+  assert.match(home, /data-announcement-badge/);
+  const dashboard = await (await s.req(1, "/admin")).text();
+  assert.match(dashboard, /管理员操作提示/);
+  assert.match(dashboard, /管理员导入说明 &lt;script&gt;/);
+  assert.equal((await s.req(3, "/admin")).status, 403);
+  const editor = await (await s.req(1, "/admin/site")).text();
+  assert.match(editor, /name="test_notice"/);
+  assert.match(editor, /管理员导入说明 &lt;script&gt;/);
+  assert.equal(
+    JSON.parse(s.db.prepare("SELECT page_texts FROM site_profile WHERE id=1").get().page_texts).test_notice,
+    note,
+  );
   s.db.close();
 });
 

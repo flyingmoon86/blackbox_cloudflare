@@ -7,6 +7,7 @@ export const clientEntries = [
   "announcement-editor",
   "three-d-archive",
   "three-d-upload",
+  "upload",
 ];
 export const generatedBrowserScripts = new Set([
   "system-scene.js",

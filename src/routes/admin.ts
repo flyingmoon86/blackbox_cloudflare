@@ -1,10 +1,11 @@
 import { reviewRequest } from "../services/reviews";
-import { Hono } from "hono";
+import { Hono, type Context, type Next } from "hono";
 import { csrfFor, csrfValid } from "../http/cookies";
 import type { AppEnv } from "../types";
 import { adminDashboardPage } from "../views/admin";
 import { parseArchiveRequest, readArchiveStatistics } from "../services/archive-statistics";
 import { archiveStatisticsPage } from "../views/archive-statistics";
+import { getSiteProfile } from "../services/site-profile";
 
 export type JoinReview = {
   id: number;
@@ -64,7 +65,7 @@ type NotificationSnapshot = {
 
 export const adminRoutes = new Hono<AppEnv>();
 
-const requireAdmin = async (c: any, next: () => Promise<void>) => {
+const requireAdmin = async (c: Context<AppEnv>, next: Next) => {
   const user = c.get("user");
   const notificationRequest = c.req.path.startsWith("/admin/notifications") || c.req.path === "/admin/system/data";
   if (!user)
@@ -140,6 +141,7 @@ for (const path of ["/admin", "/admin/member-requests", "/admin/accounts"]) {
         await csrfFor(c),
         message,
         section,
+        section === "overview" ? (await getSiteProfile(c))?.page_texts : undefined,
       ),
     );
   });

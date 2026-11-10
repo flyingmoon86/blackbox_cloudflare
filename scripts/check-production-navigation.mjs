@@ -1,17 +1,10 @@
+import { launchBrowser, evidenceDirectory } from "./browser/runtime.mjs";
 // Read-only anonymous production acceptance; never submits forms or uses accounts.
-import { mkdirSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
-const { chromium } = await import(
-  pathToFileURL(
-    process.env.PLAYWRIGHT_MODULE ||
-      "C:/Users/gbg61/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-  ).href
-);
 const origin = "https://npublackbox.online";
-const output = resolve(process.argv[2] || "artifacts/working/2026-10-30-navigation-release");
-mkdirSync(output, { recursive: true });
-const browser = await chromium.launch({ channel: "msedge", headless: true });
+const output = evidenceDirectory("navigation-release", process.argv[2]);
+const browser = await launchBrowser();
 const results = [];
 try {
   for (const profile of [

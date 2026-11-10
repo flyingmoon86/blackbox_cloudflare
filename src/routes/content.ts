@@ -1,3 +1,4 @@
+import { adminOnly as adminDenied } from "../http/authorization";
 import { imageOptions } from "../services/image-picker";
 import { prepareStageUpdate } from "../services/stage-upload";
 import { stageScenes, stageSettings, type StageScene } from "../services/stage-visuals";
@@ -92,7 +93,6 @@ contentRoutes.get("/site/theme.css", async (c) => {
   await writeCachedResponse(origin, parts, response.clone(), 300, "no-cache");
   return response;
 });
-const adminDenied = (c: any) => (c.get("user")?.role === "admin" ? null : c.text("没有管理员权限。", 403));
 
 contentRoutes.get("/announcements", async (c) => {
   const result = await c.env.DB.prepare(

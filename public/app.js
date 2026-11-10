@@ -120,32 +120,6 @@ if (importConfirm instanceof HTMLFormElement) {
   });
 }
 
-const notice = document.querySelector("[data-test-notice]");
-if (notice instanceof HTMLDialogElement && !document.querySelector("[data-stage-preview]")) {
-  const key = `blackbox-test-notice-${notice.dataset.testNotice}`;
-  let understood = false;
-  try {
-    understood = localStorage.getItem(key) === "understood";
-  } catch {}
-  if (!understood) {
-    const showNotice = () => {
-      if (notice.isConnected && !notice.open) notice.showModal();
-    };
-    if (window.blackboxCurtain?.active)
-      document.addEventListener("blackbox:curtain-finished", showNotice, { once: true });
-    else if (window.blackboxSiteOpening?.active)
-      document.addEventListener("blackbox:opening-finished", showNotice, { once: true });
-    else showNotice();
-  }
-  notice.addEventListener("close", () => {
-    if (notice.returnValue === "understood") {
-      try {
-        localStorage.setItem(key, "understood");
-      } catch {}
-    }
-  });
-}
-
 const path = location.pathname;
 const section =
   path === "/"
@@ -569,29 +543,27 @@ if (resourceMedia && resourceMediaError) {
 }
 
 window.blackboxPages?.register("public-controls", (root) => {
-  const notice = root.querySelector("[data-test-notice]");
   const announcementUpdate = document.querySelector("[data-announcement-update]");
   if (announcementUpdate) {
     const key = `blackbox-announcement-${announcementUpdate.dataset.announcementUser}`;
     const revision = announcementUpdate.dataset.announcementUpdate;
+    const badge = announcementUpdate.querySelector("[data-announcement-badge]");
     let seen = false;
     try {
       seen = localStorage.getItem(key) === revision;
     } catch {}
     const show = () => {
-      if (!seen) announcementUpdate.hidden = false;
+      if (badge) badge.hidden = seen;
     };
-    if (notice instanceof HTMLDialogElement && notice.open) notice.addEventListener("close", show, { once: true });
-    else show();
+    show();
     const acknowledge = () => {
       seen = true;
-      announcementUpdate.hidden = true;
+      if (badge) badge.hidden = true;
       try {
         localStorage.setItem(key, revision);
       } catch {}
     };
-    announcementUpdate.querySelector("[data-announcement-read]").addEventListener("click", acknowledge);
-    announcementUpdate.querySelector("[data-announcement-dismiss]").addEventListener("click", acknowledge);
+    announcementUpdate.querySelector("a")?.addEventListener("click", acknowledge);
   }
 
   for (const mascot of document.querySelectorAll("[data-home-mascot]")) {

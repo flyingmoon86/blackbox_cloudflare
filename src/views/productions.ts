@@ -9,7 +9,7 @@ import type {
   ProductionResourceRow,
   ProductionRow,
   ResourceChoice,
-} from "../routes/productions";
+} from "../services/productions/types";
 import type { UserSession } from "../types";
 import { escapeHtml } from "./html";
 import { layout } from "./layout";
@@ -54,7 +54,7 @@ export function productionListPage(
       : admin
         ? `<a class="button secondary" href="/productions/${item.id}#manage-credits">管理主创</a>`
         : "";
-    return `${admin ? visibilityControl(item, csrf) : ""}<div class="production-actions">${joinLink}<a class="button" href="/resources/submit?production_id=${item.id}">我要补充资料！</a></div>`;
+    return `${admin ? visibilityControl(item, csrf) : ""}${joinLink ? `<div class="production-actions">${joinLink}</div>` : ""}`;
   };
   let groupKey = "";
   const cards = items.length
@@ -98,9 +98,10 @@ export function productionListPage(
               )
               .join("")}</select></label>`
           : ""
-      }<button>查找</button>${page?.query ? '<a href="/productions">清除搜索</a>' : ""}</form>${deleted ? '<p class="notice">作品已删除，原有资料已转入“其他资料”。</p>' : ""}<p>浏览剧团作品，进入作品可查看演职员与已经审核入库的相关资料。</p>${admin ? '<a class="button" href="/admin/productions/new">＋ 创建作品</a>' : !admin ? '<a class="button" href="/suggestions?type=production&source=productions">申请创建作品</a>' : ""}</section><section class="card-grid production-grid" data-server-paged>${cards}</section>${pagination(page)}`,
+      }<button>查找</button>${page?.query ? '<a href="/productions">清除搜索</a>' : ""}</form>${deleted ? '<p class="notice">作品已删除，原有资料已转入“其他资料”。</p>' : ""}${admin ? '<a class="button" href="/admin/productions/new">＋ 创建作品</a>' : !admin ? '<a class="button" href="/suggestions?type=production&source=productions">申请创建作品</a>' : ""}</section><section class="card-grid production-grid" data-server-paged>${cards}</section>${pagination(page)}`,
     Boolean(user),
     admin,
+    { archive: true, workCover: true },
   );
 }
 
@@ -168,7 +169,7 @@ export function productionDetailPage(
         ? title
         : `${item.title} · 剧照 ${index + 1}`;
     const gallery = photos.length
-      ? `<article class="card photo-archive"><p class="eyebrow">剧照 · ${photos.length} 张</p><h4>剧照集</h4><p class="photo-archive-hint">点开剧照可直接浏览；仍可进入详情页查看资料信息。</p><div class="photo-grid">${photos.map((photo, index) => `<a data-photo-lightbox href="/resources/${photo.id}?origin=${photo.id}&amp;page=${resourcePage?.page || 1}" data-preview="/resources/${photo.id}/preview" data-caption="${escapeHtml(photoCaption(photo.title, index))}" aria-label="打开《${escapeHtml(item.title)}》第 ${index + 1} 张剧照"><img src="/resources/${photo.id}/preview" alt="${escapeHtml(item.title)}剧照 ${index + 1}" loading="lazy" decoding="async"></a>`).join("")}</div></article>`
+      ? `<article class="card photo-archive"><p class="eyebrow">剧照 · ${photos.length} 张</p><h4>剧照集</h4><div class="photo-grid">${photos.map((photo, index) => `<a data-photo-lightbox href="/resources/${photo.id}?origin=${photo.id}&amp;page=${resourcePage?.page || 1}" data-preview="/resources/${photo.id}/preview" data-caption="${escapeHtml(photoCaption(photo.title, index))}" aria-label="打开《${escapeHtml(item.title)}》第 ${index + 1} 张剧照"><img src="/resources/${photo.id}/preview" alt="${escapeHtml(item.title)}剧照 ${index + 1}" loading="lazy" decoding="async"></a>`).join("")}</div></article>`
       : "";
     const archive = otherResources.length
       ? otherResources
@@ -232,7 +233,7 @@ export function productionDetailPage(
     ${admin ? `<section id="manage-credits" class="production-management" aria-labelledby="production-management-title"><header class="management-heading"><div><p class="eyebrow">作品管理</p><h2 id="production-management-title">编辑工作区</h2></div><p>《${escapeHtml(item.title)}》<span>作品资料统一维护，演职人员与资料按版本归档。</span></p></header><div class="management-shortcuts"><a class="management-shortcut" href="/admin/productions/${item.id}/edit"><span>作品资料<strong>编辑作品信息</strong><small>名称、简介、封面与展示设置</small></span><span aria-hidden="true">↗</span></a><a class="management-shortcut" href="/admin/productions/${item.id}/credits/import"><span>批量录入<strong>表格导入演职人员</strong><small>适合整场演出的名单，导入前可预览</small></span><span aria-hidden="true">↗</span></a></div><details class="production-management-panel"><summary><span><strong>添加演职人员</strong><small>先选演出版本，再添加队员与角色分工</small></span><span class="management-toggle" aria-hidden="true">＋</span></summary><div class="management-panel-body"><form class="batch-credit-form" method="post" action="/admin/productions/${item.id}/credits"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><div class="management-version-select">${versionSelect}</div><div data-credit-rows>${creditRow}</div><template data-credit-template>${creditRow}</template><div class="management-form-actions"><button type="button" class="secondary" data-add-credit>＋ 添加一行</button><button>保存演职人员</button></div></form></div></details><details class="production-management-panel"><summary><span><strong>添加演出版本</strong><small>为不同年份或场次建立独立档案</small></span><span class="management-toggle" aria-hidden="true">＋</span></summary><div class="management-panel-body"><p class="hint">修改已有版本，请在上方对应版本中选择“编辑当前版本”。</p><form class="management-edition-form" method="post" action="/admin/productions/${item.id}/editions"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><div class="management-edition-fields"><label>版本名称<input name="name" maxlength="80" required placeholder="如：毕业演出版"></label><label>演出年份${yearSelect("year", 2026)}</label></div><label>版本介绍<textarea name="description" maxlength="10000" rows="4"></textarea></label><div class="management-form-actions"><button>添加版本</button></div></form></div></details>${moveForm || '<p class="management-footnote">暂无可跨版本移动的资料。可在上方版本资料区补充资料。</p>'}</section>` : ""}</article>`,
     Boolean(user),
     admin,
-    item.id,
+    { themeId: item.id, workCover: true },
   );
 }
 
@@ -252,6 +253,7 @@ export function productionFormPage(
     `<section class="card auth wide production-editor"><p class="eyebrow">PRODUCTION EDITOR</p><h1>${item ? "编辑作品" : "创建作品"}</h1><form method="post" action="${action}"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>作品名称<input name="title" maxlength="100" value="${escapeHtml(item?.title)}" required></label>${item ? `<p>版本年份请在作品详情的版本区域管理，列表按最新版本排序。</p>` : `<fieldset data-edition-fields><legend>演出版本</legend><p>每个版本独立演职人员，同一年可添加多个版本。</p><div data-edition-row><label>版本名称<input name="edition_name" maxlength="80" value="首演版" required></label><label>年份${yearSelect("edition_year", 2026)}</label></div><button type="button" data-add-edition>＋ 添加一个版本</button></fieldset>`}${visibilityFields(item)}<label>首页短介绍<input name="promo" maxlength="300" value="${escapeHtml(item?.promo)}"></label><label>剧情与作品介绍<textarea name="synopsis" rows="8">${escapeHtml(item?.synopsis)}</textarea></label>${coverSelect}${resourceImport}<label>作品主题色<input name="theme_color" value="${escapeHtml(item?.theme_color || "")}" pattern="#[0-9a-fA-F]{6}" maxlength="7" placeholder="留空沿用全站"><span class="hint">仅作用于该作品详情页，留空沿用网站颜色。</span></label><label>选择作品颜色<input type="color" data-production-color value="${escapeHtml(item?.theme_color || "#536c57")}"></label><label>封面比例<select name="cover_ratio"><option value="landscape"${item?.cover_ratio !== "portrait" ? " selected" : ""}>横版</option><option value="portrait"${item?.cover_ratio === "portrait" ? " selected" : ""}>竖版</option></select></label><label>作品卡片布局<select name="feature_layout"><option value="split"${item?.feature_layout !== "overlay" ? " selected" : ""}>图文并列</option><option value="overlay"${item?.feature_layout === "overlay" ? " selected" : ""}>文字叠加</option></select><span class="hint">同时用于作品档案列表和首页精选区。图文并列保持现有排版；文字叠加使用剧照卡片，悬停展开简介和操作，手机直接显示。需要先选择展示图。</span></label><button>保存作品</button></form>${item ? `<aside class="danger-zone"><p class="eyebrow">DANGER ZONE</p><h2>删除作品</h2><p>演职员和待审核加入申请会一并移除；已上传资料不会删除，而会转入“其他资料”。</p><form method="post" action="/admin/productions/${item.id}/delete"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><label>输入作品名“${escapeHtml(item.title)}”确认<input name="confirm_title" autocomplete="off" required></label><button class="danger">删除这部作品</button></form></aside>` : ""}</section>`,
     true,
     true,
+    { resourcePicker: true },
   );
 }
 

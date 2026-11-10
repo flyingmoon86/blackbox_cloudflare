@@ -4,13 +4,12 @@ import { escapeHtml as e } from "./html";
 import { layout } from "./layout";
 import type { UserSession } from "../types";
 import type { SiteProfileRow, AnnouncementRow } from "../routes/content";
-import type { ProductionRow } from "../routes/productions";
+import type { ProductionRow } from "../services/productions/types";
 export function theatreHome(
   profile: SiteProfileRow,
   featured: ProductionRow | null,
   news: AnnouncementRow[],
   user: UserSession | null,
-  backgroundId: number | null,
   latest: (ProductionRow & { hover_photo_id?: number | null })[] = [],
   announcementRevision = "",
 ): string {
@@ -74,7 +73,6 @@ export function theatreHome(
         "</aside>"
       : "") +
     "</div></div></section>";
-  const testNotice = texts.test_notice || "网站正在测试。欢迎浏览与提交建议，测试阶段暂不支持视频上传。";
   const playbill =
     '<section class="stage-scene stage-playbill" id="playbill" aria-label="近期作品"><header class="playbill-heading"><p class="eyebrow">RECENT WORKS</p><h2>近期作品</h2></header>' +
     (featured
@@ -121,17 +119,9 @@ export function theatreHome(
       )
       .join("") +
     '</div><a class="playbill-all" href="/productions">查看全部作品 →</a></section>';
-  let version = 2166136261;
-  for (const ch of testNotice) version = Math.imul(version ^ ch.charCodeAt(0), 16777619);
-  const dialog =
-    '<dialog class="test-notice" data-test-notice="' +
-    (version >>> 0) +
-    '"><form method="dialog"><h2>测试须知</h2><p class="preline">' +
-    e(testNotice) +
-    "</p><button value=understood>我已明白</button></form></dialog>";
-  const announcementAlert =
+  const announcementState =
     news[0] && announcementRevision
-      ? `<aside class="announcement-update" data-announcement-update="${e(announcementRevision)}" data-announcement-user="${user?.id || "guest"}" hidden role="status"><div><strong>公告更新了</strong><p>${e(news[0].title)}</p></div><a href="/announcements/${news[0].id}" data-announcement-read>查看公告 →</a><button type="button" data-announcement-dismiss>知道了</button></aside>`
+      ? ` data-announcement-update="${e(announcementRevision)}" data-announcement-user="${user?.id || "guest"}"`
       : "";
   return layout(
     "首页",
@@ -139,15 +129,16 @@ export function theatreHome(
       '<script src="' +
       assetUrl("/home-recommendations.js") +
       '" defer></script>' +
-      announcementAlert +
-      dialog +
       posterDialog +
       '<div class="theatre-stage" ' +
       stageAttributes("home", profile.page_texts) +
       ">" +
       image +
       '<section class="stage-scene" id="welcome" aria-label="黑匣子首页">' +
-      '<div class="stage-news">' +
+      '<div class="stage-news"' +
+      announcementState +
+      ">" +
+      '<small class="stage-trial-note">网站试运行 · 欢迎浏览与反馈 <b data-announcement-badge hidden>有更新</b></small>' +
       notice +
       '</div><a class="stage-explore" href="#playbill">浏览近期作品 <span>↓</span></a></section>' +
       playbill +

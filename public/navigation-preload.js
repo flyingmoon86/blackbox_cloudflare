@@ -155,7 +155,7 @@
         if (signal.aborted) throw new DOMException("Aborted", "AbortError");
         for (const source of root.querySelectorAll("script[src]")) {
           const href = source.src;
-          if (!/^\/assets\/(?:home-light|home-recommendations|work-browse)\.[a-f0-9]{16}\.js$/.test(
+          if (!/^\/assets\/(?:home-light|home-recommendations|work-browse|member-results)\.[a-f0-9]{16}\.js$/.test(
             new URL(href).pathname
           ) || scripts.has(href))
             continue;

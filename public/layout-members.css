@@ -172,17 +172,25 @@ body.design-public.layout-members .member-card-art {
 body.design-public.layout-members .member-card-copy {
   position: static;
   display: grid;
-  padding: 16px 0 0;
-  gap: 6px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 12px 0 0;
+  gap: 5px 10px;
   transform: none;
   transition: none;
   text-shadow: 0 1px 3px #15130f;
+}
+.layout-members .member-card-copy > :is(.eyebrow, .contributor-tag, .member-card-details) {
+  grid-column: 1 / -1;
 }
 .layout-members .member-card-copy .eyebrow {
   font-size: 10px;
   color: var(--muted);
 }
 body.design-public.layout-members .member-card-copy > strong {
+  grid-column: 1;
+  grid-row: 2;
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-size: 23px;
   line-height: 1.4;
   letter-spacing: 0.06em;
@@ -198,7 +206,12 @@ body.design-public.layout-members .member-card-copy > strong {
   line-height: 1.7;
   -webkit-line-clamp: 2;
 }
-.layout-members .member-card-details small {
+.layout-members .member-card-flowers {
+  grid-column: 2;
+  grid-row: 2;
+  align-self: center;
+  justify-self: end;
+  white-space: nowrap;
   color: var(--muted);
   font-size: 10px;
 }

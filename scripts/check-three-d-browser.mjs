@@ -1,84 +1,28 @@
+import { launchBrowser, evidenceDirectory } from "./browser/runtime.mjs";
+import { serveWorker, staticAssets } from "./browser/worker-server.mjs";
 import assert from "node:assert/strict";
-import { createServer } from "node:http";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { extname, resolve, sep } from "node:path";
-import { pathToFileURL } from "node:url";
-import { Readable } from "node:stream";
-import { pipeline } from "node:stream/promises";
+import { readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { creditFixture } from "./backend/credit-import-fixture.mjs";
-import { context } from "./backend/harness.mjs";
 
-const { chromium } = await import(
-  process.env.PLAYWRIGHT_MODULE ? pathToFileURL(resolve(process.env.PLAYWRIGHT_MODULE)).href : "playwright"
-);
 const modelPath = resolve(
   process.env.THREE_D_MODEL_PATH || "artifacts/archive/releases/2026-11-06-three-d-archive/scene-03.compressed.ply",
 );
 const coverPath = resolve(
   process.env.THREE_D_COVER_PATH || "artifacts/archive/releases/2026-11-06-three-d-archive/scene-3.jpg",
 );
-const evidenceDir = resolve(process.env.EVIDENCE_DIR || "artifacts/working/2026-11-06-three-d-admin/browser");
-mkdirSync(evidenceDir, { recursive: true });
+const evidenceDir = evidenceDirectory("three-d-admin/browser");
 const evidence = {
   scope: "Local Worker with synthetic accounts, in-memory D1, mock R2 and a real compressed PLY",
   checks: [],
 };
 const fixture = await creditFixture();
-const assetRoot = resolve("public");
-const mimeTypes = {
-  ".js": "text/javascript",
-  ".css": "text/css",
-  ".jpg": "image/jpeg",
-  ".png": "image/png",
-  ".webp": "image/webp",
-  ".woff2": "font/woff2",
-  ".svg": "image/svg+xml",
-};
-fixture.env.ASSETS.fetch = async (request) => {
-  const pathname = decodeURIComponent(new URL(request.url).pathname);
-  const path = resolve(assetRoot, "." + pathname);
-  if (!path.startsWith(assetRoot + sep)) return new Response("", { status: 404 });
-  try {
-    return new Response(readFileSync(path), {
-      headers: { "Content-Type": mimeTypes[extname(path)] || "application/octet-stream" },
-    });
-  } catch {
-    return new Response("", { status: 404 });
-  }
-};
-
-const server = createServer(async (req, res) => {
-  try {
-    const chunks = [];
-    for await (const chunk of req) chunks.push(chunk);
-    const response = await fixture.worker.fetch(
-      new Request("http://127.0.0.1:" + server.address().port + req.url, {
-        method: req.method,
-        headers: req.headers,
-        ...(!["GET", "HEAD"].includes(req.method) ? { body: Buffer.concat(chunks) } : {}),
-      }),
-      fixture.env,
-      context(),
-    );
-    const headers = Object.fromEntries(response.headers);
-    const setCookies = response.headers.getSetCookie();
-    if (setCookies.length) headers["set-cookie"] = setCookies;
-    res.writeHead(response.status, headers);
-    if (response.body) await pipeline(Readable.fromWeb(response.body), res);
-    else res.end();
-  } catch (error) {
-    console.error(error);
-    if (res.headersSent) res.destroy(error);
-    else res.writeHead(500).end("Synthetic fixture error");
-  }
-});
-await new Promise((done) => server.listen(0, "127.0.0.1", done));
-const base = "http://127.0.0.1:" + server.address().port;
+fixture.env.ASSETS = staticAssets();
+const server = await serveWorker({ worker: fixture.worker, env: fixture.env, allowWrites: true });
+const base = server.origin;
 let browser;
 try {
-  browser = await chromium.launch({
-    channel: "msedge",
-    headless: true,
+  browser = await launchBrowser({
     args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
   });
   const admin = await browser.newContext({ viewport: { width: 1366, height: 768 }, reducedMotion: "reduce" });
@@ -139,6 +83,7 @@ try {
   const popup = page.waitForEvent("popup");
   await page.getByRole("link", { name: /预览场景/ }).click();
   const preview = await popup;
+  preview.on("pageerror", (error) => errors.push(error.message));
   await preview.getByRole("button", { name: /打开三维场景/ }).click();
   await preview.waitForFunction(() => document.querySelector('[data-splat-action="reset"]')?.disabled === false, null, {
     timeout: 90000,
@@ -146,8 +91,10 @@ try {
   await preview.waitForTimeout(1700);
   const desktopCanvas = await preview.locator(".splat-viewport").boundingBox();
   assert(desktopCanvas.width >= 1366 * 0.95 && desktopCanvas.height >= 768 * 0.95);
+  await preview.locator(".splat-menu summary").filter({ hasText: "更多" }).click();
   await preview.getByRole("button", { name: "帮助", exact: true }).click();
   assert(await preview.locator("#splat-help").isVisible());
+  await preview.locator(".splat-menu summary").filter({ hasText: "更多" }).click();
   await preview.getByRole("button", { name: "帮助", exact: true }).click();
   assert(await preview.locator("#splat-help").isHidden());
   await preview.screenshot({ path: resolve(evidenceDir, "admin-model-preview.png") });
@@ -157,6 +104,7 @@ try {
   await page.getByRole("button", { name: "发布场景", exact: true }).click();
   await page.waitForURL(/result=published/);
   const publicPage = await guest.newPage();
+  publicPage.on("pageerror", (error) => errors.push(error.message));
   const requestedModels = [];
   publicPage.on("request", (request) => {
     if (new URL(request.url()).pathname.endsWith("/model")) requestedModels.push(request.url());
@@ -170,8 +118,7 @@ try {
   assert.equal(await publicPage.locator(".splat-viewport canvas").count(), 0);
   assert.equal(
     await publicPage.evaluate(
-      () =>
-        performance.getEntriesByType("resource").filter((entry) => entry.name.includes("/three-d-engine.js")).length,
+      () => performance.getEntriesByType("resource").filter((entry) => /\/three-d-engine\./.test(entry.name)).length,
     ),
     0,
   );
@@ -225,7 +172,7 @@ try {
   console.log(evidence.checks.join("\n"));
 } finally {
   await browser?.close();
-  await new Promise((done) => server.close(done));
+  await server.close();
   fixture.db.close();
   writeFileSync(resolve(evidenceDir, "verification.json"), JSON.stringify(evidence, null, 2) + "\n");
 }

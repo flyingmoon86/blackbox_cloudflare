@@ -1,4 +1,5 @@
-import type { EditionRow } from "./productions";
+import { adminOnly as adminDenied } from "../http/authorization";
+import type { EditionRow } from "../services/productions/types";
 import { productionVisible, resourceVisible } from "../services/production-visibility";
 import { reviewRequest } from "../services/reviews";
 import { pageNumber } from "../views/shared";
@@ -15,7 +16,6 @@ import {
   resourceEditPage,
   resourceFormPage,
   resourceListPage,
-  resourcePermissionPage,
   resourceReviewsPage,
 } from "../views/resources";
 
@@ -68,7 +68,6 @@ resourceRoutes.use("*", async (c, next) => {
     return c.redirect(`/login?next=${encodeURIComponent(c.req.path)}`);
   await next();
 });
-const adminDenied = (c: any) => (c.get("user")?.role === "admin" ? null : c.text("没有管理员权限。", 403));
 
 function adminResourceFilter(raw: Record<string, string>, pending = false) {
   const params = {
@@ -183,7 +182,6 @@ resourceRoutes.get("/resources/submit", async (c) => {
   );
 });
 resourceRoutes.post("/resources/submit", async (c) => {
-  const u = c.get("user")!;
   const f = await c.req.formData();
   if (!csrfValid(c, f.get("csrf"))) return c.text("请求已失效。", 400);
   return c.text("请启用浏览器 JavaScript 后使用分片上传。", 400);

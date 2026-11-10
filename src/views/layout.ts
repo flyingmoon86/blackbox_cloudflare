@@ -9,7 +9,22 @@ import { publicNavigationRequest } from "../services/navigation-cache";
 import { PUBLIC_LANDING_PATHS } from "../shared/navigation";
 import { isThreeDPreviewPath, threeDArchiveEnabled } from "../shared/three-d-archive";
 import type { AppEnv } from "../types";
-export function layout(title: string, content: string, signedIn = false, admin = false, themeId?: number): string {
+export type PageOptions = {
+  themeId?: number;
+  archive?: boolean;
+  workCover?: boolean;
+  resourcePicker?: boolean;
+  memberDossier?: boolean;
+  memberResults?: boolean;
+};
+
+export function layout(
+  title: string,
+  content: string,
+  signedIn = false,
+  admin = false,
+  options: PageOptions = {},
+): string {
   const context = tryGetContext<AppEnv>();
   const preview = context?.get("user")?.role === "admin" && context.req.query("stage-preview") === "1";
   const portal = context && !preview ? adminPortal(context) : null;
@@ -41,11 +56,13 @@ export function layout(title: string, content: string, signedIn = false, admin =
           "/curtain.css",
           "/app.js",
           "/app.css",
+          "/ui-controls.css",
           "/experience.js",
           "/experience.css",
           "/home-light.js",
           "/home-light.css",
           "/work-browse.js",
+          "/member-results.js",
           "/work-browse.css",
         ].map(assetUrl),
         ...(["home", "productions", "members", "thanks"] as StageScene[]).flatMap((scene) => [
@@ -220,11 +237,13 @@ export function layout(title: string, content: string, signedIn = false, admin =
     '"><link rel="stylesheet" href="' +
     assetUrl("/experience.css") +
     '"><link id="site-theme" rel="stylesheet" href="/site/theme.css' +
-    (themeId ? "?production=" + themeId : "") +
+    (options.themeId ? "?production=" + options.themeId : "") +
     '"><link rel="stylesheet" href="' +
     assetUrl("/redesign.css") +
     '"><link rel="stylesheet" href="' +
     assetUrl("/archive-design.css") +
+    '"><link rel="stylesheet" href="' +
+    assetUrl("/ui-controls.css") +
     '"><link rel="stylesheet" href="' +
     assetUrl("/fonts.css") +
     '">' +
@@ -239,9 +258,7 @@ export function layout(title: string, content: string, signedIn = false, admin =
     (bookLayout ? '<link rel="stylesheet" href="' + assetUrl("/layout-book.css") + '">' : "") +
     (memberGallery ? '<link rel="stylesheet" href="' + assetUrl("/layout-members.css") + '">' : "") +
     (archiveGallery ? '<link rel="stylesheet" href="' + assetUrl("/layout-gallery.css") + '">' : "") +
-    (workBrowse || content.includes('class="production-cover work-cover-frame"')
-      ? '<link rel="stylesheet" href="' + assetUrl("/work-browse.css") + '">'
-      : "") +
+    (workBrowse || options.workCover ? '<link rel="stylesheet" href="' + assetUrl("/work-browse.css") + '">' : "") +
     (!portal?.active && !workspace && !preview
       ? '<link rel="stylesheet" href="' + assetUrl("/navigation-light.css") + '">'
       : "") +
@@ -250,10 +267,10 @@ export function layout(title: string, content: string, signedIn = false, admin =
     '"></script><script src="' +
     assetUrl("/app.js") +
     '" defer></script><script src="' +
-    assetUrl("/member-dossier.js") +
-    '" defer></script><script src="' +
     assetUrl("/experience.js") +
     '" defer></script>' +
+    (options.memberResults ? '<script src="' + assetUrl("/member-results.js") + '" defer></script>' : "") +
+    (options.memberDossier ? '<script src="' + assetUrl("/member-dossier.js") + '" defer></script>' : "") +
     (workBrowse ? '<script src="' + assetUrl("/work-browse.js") + '" defer></script>' : "") +
     (!portal?.active && !workspace && !preview
       ? '<script src="' +
@@ -263,7 +280,7 @@ export function layout(title: string, content: string, signedIn = false, admin =
         '"></script>'
       : "") +
     (admin ? '<script src="' + assetUrl("/review.js") + '" defer></script>' : "") +
-    (content.includes("data-resource-picker")
+    (options.resourcePicker
       ? '<link rel="stylesheet" href="' +
         assetUrl("/resource-picker.css") +
         '"><script src="' +
@@ -296,7 +313,7 @@ export function layout(title: string, content: string, signedIn = false, admin =
     (bookLayout ? " layout-book" : "") +
     (memberGallery ? " layout-members" : "") +
     (archiveGallery ? " layout-gallery" : "") +
-    (content.includes('class="section-tabs"') ? " archive-page" : "") +
+    (options.archive ? " archive-page" : "") +
     '" data-section="' +
     (/^\/(productions|resources|my-resources|suggestions|3d)(?:\/|$)/.test(context?.req.path || "")
       ? "productions"

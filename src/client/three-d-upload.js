@@ -1,3 +1,5 @@
+import { readUploadResponse, retryUpload } from "./shared/upload-http.js";
+
 const metadata = document.querySelector("[data-three-d-metadata]");
 if (metadata) {
   const production = metadata.elements.production_id;
@@ -64,33 +66,14 @@ if (panel && metadata) {
     if (method !== "GET") headers["x-csrf-token"] = panel.dataset.csrf;
     if (type) headers["content-type"] = type;
     const response = await fetch(endpoint + path, { method, body, headers, cache: "no-store" });
-    if (optional && response.status === 404) return null;
-    const result = await response.json().catch(() => null);
-    if (response.redirected || !response.ok || !result) {
-      const error = new Error(
-        response.redirected || response.status === 401 || response.status === 403
-          ? "登录状态已失效，请刷新页面后重试。"
-          : result?.error || `操作失败（${response.status}）。`,
-      );
-      error.status = response.status;
-      throw error;
-    }
-    return result;
+    return readUploadResponse(response, {
+      optionalNotFound: optional,
+      authMessage: "登录状态已失效，请刷新页面后重试。",
+      failureMessage: (status) => `操作失败（${status}）。`,
+    });
   }
 
-  async function retry(action) {
-    let lastError;
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      try {
-        return await action();
-      } catch (error) {
-        if (error.status && error.status < 500) throw error;
-        lastError = error;
-        if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 650 * 2 ** attempt));
-      }
-    }
-    throw lastError;
-  }
+  const retry = (action) => retryUpload(action, { delayMs: 650 });
 
   async function fileFingerprint(file) {
     if (!globalThis.crypto?.subtle) throw new Error("请通过 HTTPS 或本地开发地址上传模型。");

@@ -1,21 +1,14 @@
+import { launchBrowser, evidenceDirectory } from "./browser/runtime.mjs";
 import assert from "node:assert/strict";
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 import { navigationFixture } from "./navigation-fixture.mjs";
-const { chromium } = await import(
-  pathToFileURL(
-    process.env.PLAYWRIGHT_MODULE ||
-      "C:/Users/gbg61/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-  ).href
-);
-const output = resolve(process.env.OPENING_EVIDENCE || "artifacts/working/2026-10-30-opening-speed");
+const output = evidenceDirectory("opening-speed", process.env.OPENING_EVIDENCE);
 const baseline = resolve(process.env.OPENING_BASELINE || output);
-mkdirSync(output, { recursive: true });
 const production = process.argv.includes("--production");
 const fixture = production ? null : await navigationFixture();
 const origin = production ? "https://npublackbox.online" : fixture.origin;
-const browser = await chromium.launch({ channel: "msedge", headless: true });
+const browser = await launchBrowser();
 const results = [];
 const save = () =>
   writeFileSync(`${output}/${production ? "public-network" : "local"}-results.json`, JSON.stringify(results, null, 2));

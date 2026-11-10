@@ -87,36 +87,4 @@
   };
   attach();
   document.addEventListener("profile:updated", attach);
-  // Store only the current results page position; no member data is persisted.
-  if (location.pathname === "/members") {
-    const params = new URLSearchParams(location.search);
-    if (!params.get("page")) params.set("page", "1");
-    for (const name of ["q", "year"]) if (!params.get(name)) params.delete(name);
-    params.sort();
-    const key = "member-results:" + params;
-    const restore = () => {
-      try {
-        const saved = JSON.parse(sessionStorage.getItem(key) || "null");
-        if (!saved) return;
-        requestAnimationFrame(() => {
-          window.scrollTo(0, saved.window || 0);
-          const main = document.querySelector("main");
-          if (main) main.scrollTop = saved.main || 0;
-        });
-      } catch {
-        /* Storage may be disabled. Navigation still works. */
-      }
-    };
-    document.addEventListener("click", (event) => {
-      if (!event.target.closest(".member-card-link")) return;
-      try {
-        sessionStorage.setItem(
-          key,
-          JSON.stringify({ window: scrollY, main: document.querySelector("main")?.scrollTop || 0 }),
-        );
-      } catch {}
-    });
-    restore();
-    window.addEventListener("pageshow", restore);
-  }
 })();

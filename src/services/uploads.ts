@@ -1,3 +1,4 @@
+import { imageFormat } from "./image-format";
 import type { Bindings } from "../types";
 import { completeDirectUpload } from "../storage/r2-s3";
 import { UploadError, isVideoUpload, uploadPolicy, ensureStorageBudget } from "./upload-policy";
@@ -141,17 +142,15 @@ async function checkObjectContent(env: Bindings, task: UploadTask): Promise<void
   if (!object) throw new UploadError("文件尚未完整保存，可以稍后重试。", 502);
   const bytes = new Uint8Array(await object.arrayBuffer());
   const text = new TextDecoder("latin1").decode(bytes);
-  const jpeg = bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
-  const png = bytes.length >= 8 && [137, 80, 78, 71, 13, 10, 26, 10].every((v, i) => bytes[i] === v);
-  const webp = text.startsWith("RIFF") && text.slice(8, 12) === "WEBP";
-  const avif = text.slice(4, 8) === "ftyp" && /avif|avis/.test(text.slice(8, 40));
+  const image = imageFormat(bytes);
+  const avif = image === "avif";
   const video =
     (text.slice(4, 8) === "ftyp" && !avif && !/M4A |M4B /.test(text.slice(8, 16))) ||
     (text.startsWith("RIFF") && text.slice(8, 12) === "AVI ") ||
     (bytes[0] === 0x1a && bytes[1] === 0x45 && bytes[2] === 0xdf && bytes[3] === 0xa3) ||
     text.startsWith("FLV");
   if (video) throw new UploadError(uploadPolicy.videoNotice, 403);
-  if (task.res_type === "photo" && !jpeg && !png && !webp && !avif)
+  if (task.res_type === "photo" && !image)
     throw new UploadError("剧照内容不是支持的 JPEG、PNG、WebP 或 AVIF 图片。", 400);
   if (/\.pdf$/i.test(task.original_name) && !text.startsWith("%PDF-"))
     throw new UploadError("文件内容不是有效的 PDF。", 400);
@@ -255,9 +254,7 @@ export async function completeUpload(env: Bindings, id: string): Promise<{ resou
           "UPDATE upload_task SET status='aborted',updated_at=CURRENT_TIMESTAMP WHERE id=? AND lease_token=?",
         ).bind(id, token),
       ]);
-      await drainFileCleanup(env).catch((reason) =>
-        console.error(JSON.stringify({ event: "rejected_file_cleanup_retry" })),
-      );
+      await drainFileCleanup(env).catch(() => console.error(JSON.stringify({ event: "rejected_file_cleanup_retry" })));
       throw error;
     }
     const preview = await env.FILES.head(previewKeyFor(task));
@@ -331,7 +328,5 @@ export async function cancelUpload(env: Bindings, id: string, expired = false): 
   } finally {
     await unlockUploadTask(env, id, token);
   }
-  await drainFileCleanup(env).catch((error) =>
-    console.error(JSON.stringify({ event: "cancel_cleanup_retry", taskId: id })),
-  );
+  await drainFileCleanup(env).catch(() => console.error(JSON.stringify({ event: "cancel_cleanup_retry", taskId: id })));
 }

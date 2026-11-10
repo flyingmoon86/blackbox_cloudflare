@@ -150,7 +150,7 @@ export function createNavigationAssets(signal) {
         const href = source.src;
         // Only audited, lifecycle-aware enhancements may execute from a page.
         if (
-          !/^\/assets\/(?:home-light|home-recommendations|work-browse)\.[a-f0-9]{16}\.js$/.test(
+          !/^\/assets\/(?:home-light|home-recommendations|work-browse|member-results)\.[a-f0-9]{16}\.js$/.test(
             new URL(href).pathname,
           ) ||
           scripts.has(href)

@@ -1,9 +1,9 @@
 import { reviewQueue, reviewAttributes } from "./review-queue";
 import { adminPageUrl, type AdminPage } from "../http/pagination";
 import { adminPagination, filterSelect, listReturnInput } from "./admin-pagination";
-import type { EditionRow } from "../routes/productions";
+import type { EditionRow } from "../services/productions/types";
 import { editionChoice } from "./edition-choice";
-import { archiveTabs, pagination, type PageInfo, yearSelect } from "./shared";
+import { archiveTabs, pagination, type PageInfo } from "./shared";
 import { assetUrl } from "./assets";
 import type { PhotoNavigation, ResourceRow } from "../routes/resources";
 import type { UserSession } from "../types";
@@ -28,6 +28,11 @@ export function resourceListPage(
 ): string {
   const card = (r: ResourceRow) =>
     `<article class="resource-card type-${escapeHtml(r.res_type)}"><a class="resource-card-link" href="/resources/${r.id}">${resourceCardArtwork(r)}<span class="resource-card-shade"></span><span class="resource-card-copy"><span class="eyebrow">${escapeHtml(labels[r.res_type] || r.res_type)} · ${escapeHtml(statuses[r.status] || r.status)}</span><strong>${escapeHtml(r.title)}</strong><span>${escapeHtml(r.description || r.original_name || "点击查看资料")}</span></span></a>${mine && r.admin_note ? `<p class="alert">审核说明：${escapeHtml(r.admin_note)}</p>` : ""}</article>`;
+  const fileRow = (r: ResourceRow) => {
+    const extension = r.original_name?.match(/\.([a-z0-9]{1,8})$/i)?.[1].toUpperCase();
+    const description = r.description || r.original_name;
+    return `<article class="resource-file"><a class="resource-file-link" href="/resources/${r.id}"><span class="resource-file-format" aria-hidden="true">${escapeHtml(extension || "FILE")}</span><span class="resource-file-copy"><strong>${escapeHtml(r.title)}</strong>${description ? `<span class="resource-file-description">${escapeHtml(description)}</span>` : ""}<span class="resource-file-meta">${escapeHtml(labels[r.res_type] || r.res_type)} · ${escapeHtml(r.edition_name || "未关联作品版本")}</span></span><span class="resource-file-arrow" aria-hidden="true">↗</span></a></article>`;
+  };
   const flatCards = rows.length
     ? rows
         .map(
@@ -62,17 +67,18 @@ export function resourceListPage(
             : "";
           const entries = [
             ...(gallery ? [{ createdAt: photos[0].created_at, html: gallery }] : []),
-            ...others.map((row) => ({ createdAt: row.created_at, html: card(row) })),
+            ...others.map((row) => ({ createdAt: row.created_at, html: fileRow(row) })),
           ].sort((left, right) => right.createdAt.localeCompare(left.createdAt));
-          return `<section class="archive-group"><h2>${group.productionId ? `<a href="/productions/${group.productionId}">${escapeHtml(group.title)}</a>` : "其他资料"}</h2><p class="muted">按提交时间排列，最新资料在前。</p><div class="card-grid">${entries.map((entry) => entry.html).join("")}</div></section>`;
+          return `<section class="archive-group"><h2>${group.productionId ? `<a href="/productions/${group.productionId}">${escapeHtml(group.title)}</a>` : "其他资料"}</h2><div class="resource-file-list">${entries.map((entry) => entry.html).join("")}</div></section>`;
         })
         .join("")
     : `<p class="card">${query ? `没有找到与“${escapeHtml(query)}”相关的资料或作品。` : "暂无资料。"}</p><p class="empty-actions">${query ? '<a class="button secondary" href="/resources">清除搜索</a> · ' : ""}<a href="/productions">浏览作品档案</a> · <a href="/resources/submit">补充资料</a></p>`;
   return layout(
     mine ? "我的资料" : "资料库",
-    `${archiveTabs("resources")}<section class="page-heading"><p class="eyebrow">ARCHIVE</p><h1>${mine ? "我的资料与审核结果" : "资料库"}</h1><p>${mine ? '<a href="/resources">已入库资料</a> · ' : ""}<a href="/my-resources">我的提交</a> · <a href="/resources/submit">提交资料</a></p>${mine ? "" : `<p class="hint">剧本、台本与其他文件在这里查找；剧照在作品档案中查看。</p><form class="filters resource-search" method="get" action="/resources" role="search"><label>搜索资料或作品<input type="search" name="q" value="${escapeHtml(query)}" maxlength="100" placeholder="输入资料标题、文件名或作品名称"></label><button>搜索</button>${query ? '<a class="button secondary" href="/resources">清除</a>' : ""}</form>${query ? `<p class="search-summary">找到 ${page?.total ?? rows.length} 项与“${escapeHtml(query)}”相关的资料。</p>` : ""}`}</section><section class="review-grid" data-server-paged>${mine ? flatCards : groupedCards}</section>${pagination(page)}`,
+    `${archiveTabs("resources")}<section class="page-heading"><p class="eyebrow">ARCHIVE</p><h1>${mine ? "我的资料与审核结果" : "资料库"}</h1><p>${mine ? '<a href="/resources">已入库资料</a> · ' : ""}<a href="/my-resources">我的提交</a> · <a href="/resources/submit">提交资料</a></p>${mine ? "" : `<p class="hint">按作品整理，组内最新资料在前。剧照可在作品档案中查看。</p><form class="filters resource-search" method="get" action="/resources" role="search"><label>搜索资料或作品<input type="search" name="q" value="${escapeHtml(query)}" maxlength="100" placeholder="输入资料标题、文件名或作品名称"></label><button>搜索</button>${query ? '<a class="button secondary" href="/resources">清除</a>' : ""}</form>${query ? `<p class="search-summary">找到 ${page?.total ?? rows.length} 项与“${escapeHtml(query)}”相关的资料。</p>` : ""}`}</section><section class="review-grid" data-server-paged>${mine ? flatCards : groupedCards}</section>${pagination(page)}`,
     Boolean(user),
     user?.role === "admin",
+    { archive: true },
   );
 }
 export function resourceDetailPage(
@@ -123,9 +129,10 @@ export function resourceDetailPage(
       : "";
   return layout(
     displayTitle,
-    `${archiveTabs("resources")}<nav class="back-links resource-back-links" aria-label="资料详情导航"><a href="${escapeHtml(returnHref)}">${returnLabel}</a></nav><article class="card production-detail resource-detail"><p class="eyebrow">${escapeHtml(labels[row.res_type] || row.res_type)} · ${escapeHtml(statuses[row.status] || row.status)}</p><h1>${escapeHtml(displayTitle)}</h1>${edit}${resourceDetailPreview({ ...row, title: displayTitle }, Boolean(user))}${mediaError}${photoNavigation}<div class="resource-metadata"><p>${escapeHtml(row.description || "暂无说明")}</p><p>所属作品：${row.production_id ? `<a href="/productions/${row.production_id}">${escapeHtml(row.production_title)}</a>` : "其他资料"}</p><p>演出版本：${escapeHtml(row.edition_name || "未关联作品版本")}</p>${technicalPhotoTitle ? `<p>资料标题：<code>${escapeHtml(row.title)}</code></p>` : ""}<p>原文件名：${escapeHtml(row.original_name)}</p><p>提交人：${escapeHtml(row.uploader_name || "未知")}</p>${user && (user.id === row.uploader_id || user.role === "admin") && row.admin_note ? `<p class="alert">审核说明：${escapeHtml(row.admin_note)}</p>` : ""}${download}</div></article>`,
+    `${archiveTabs("resources")}<nav class="back-links resource-back-links" aria-label="资料详情导航"><a href="${escapeHtml(returnHref)}">${returnLabel}</a></nav><article class="card production-detail resource-detail"><p class="eyebrow">${escapeHtml(labels[row.res_type] || row.res_type)} · ${escapeHtml(statuses[row.status] || row.status)}</p><h1>${escapeHtml(displayTitle)}</h1>${edit}${resourceDetailPreview({ ...row, title: displayTitle }, Boolean(user))}${mediaError}${photoNavigation}<div class="resource-metadata">${row.description?.trim() ? `<p>${escapeHtml(row.description)}</p>` : ""}<p>所属作品：${row.production_id ? `<a href="/productions/${row.production_id}">${escapeHtml(row.production_title)}</a>` : "其他资料"}</p><p>演出版本：${escapeHtml(row.edition_name || "未关联作品版本")}</p>${technicalPhotoTitle ? `<p>资料标题：<code>${escapeHtml(row.title)}</code></p>` : ""}<p>原文件名：${escapeHtml(row.original_name)}</p><p>提交人：${escapeHtml(row.uploader_name || "未知")}</p>${user && (user.id === row.uploader_id || user.role === "admin") && row.admin_note ? `<p class="alert">审核说明：${escapeHtml(row.admin_note)}</p>` : ""}${download}</div></article>`,
     Boolean(user),
     user?.role === "admin",
+    { archive: true },
   );
 }
 export function resourceFormPage(
@@ -142,13 +149,7 @@ export function resourceFormPage(
     `${archiveTabs("resources")}<p class="back-links"><a href="/resources">← 返回资料库</a><a href="/productions">返回作品档案</a></p><section class="card auth wide"><h1>上传资料</h1><p class="notice">测试阶段暂不支持视频。剧照 20MB、剧本 50MB、音频与其他资料 100MB；同类型文件可以一次选择多份，每份独立保存。管理员上传直接发布，其他账号提交后由管理员审核。</p><form id="resource-upload" method="post" data-csrf="${escapeHtml(csrf)}" data-upload-owner="${ownerId}"><label>资料标题<input name="title" maxlength="100"><span class="hint">单个文件请填写标题；批量文件默认使用各自文件名。</span></label><label>类型<select name="res_type"><option value="video">视频</option><option value="script">剧本</option><option value="photo" selected>剧照</option><option value="audio">音频</option><option value="other">其他</option></select></label><label>所属作品<select name="production_id"><option value="">其他资料</option>${productions.map((p) => `<option value="${p.id}"${selectedProductionId === p.id ? " selected" : ""}>${escapeHtml(p.title)}</option>`).join("")}</select></label>${editionChoice(editions, editions.some((v) => v.id === selectedEditionId && v.production_id === selectedProductionId) ? selectedEditionId : null)}<p class="missing-production"><strong>资料对应的戏还没新建？</strong> <a href="/suggestions?type=production&amp;source=upload">申请管理员新建作品档案</a></p><label>选择文件<input name="file" type="file" required><span class="hint" id="file-hint">可以一次选择多个同类型文件。</span></label><label>说明<textarea name="description" maxlength="2000" rows="5"></textarea></label><div class="upload-feedback"><progress id="upload-progress" value="0"></progress><output id="upload-percent" for="upload-progress">0%</output><p id="upload-status" class="muted" role="status" aria-live="polite">尚未开始上传。</p></div><div class="upload-actions"><button type="submit">开始上传</button><button type="button" id="upload-pause" class="secondary" hidden>完成当前文件后暂停</button><button type="button" id="upload-cancel" class="secondary" hidden>取消当前文件</button></div><section id="upload-batch" hidden aria-label="本批上传"><p id="upload-batch-summary" role="status"></p><p>刷新后重新选择原文件可继续；成功项会保留。批次进度仅保存在当前浏览器。</p><ol id="upload-batch-list"></ol><button type="button" id="upload-new-batch" class="secondary">结束本批，准备下一批</button> <a href="/my-resources">查看已提交资料</a></section></form><script src="${assetUrl("/upload.js")}" defer></script></section>`,
     true,
     admin,
-  );
-}
-export function resourcePermissionPage(): string {
-  return layout(
-    "提交资料",
-    '<section class="card auth"><p class="eyebrow">ARCHIVE CONTRIBUTION</p><h1>提交资料需要队员认证</h1><p>完成队员认证后，你可以上传剧本、剧照和音频（测试阶段暂不支持视频）；管理员审核通过后才会进入资料库。</p><p><a class="button" href="/profile/member-application">申请队员认证</a></p><p><a href="/resources">先浏览资料库</a></p></section>',
-    true,
+    { archive: true },
   );
 }
 function adminResourceFilters(page: AdminPage, pending = false): string {

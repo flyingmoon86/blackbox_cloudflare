@@ -11,7 +11,13 @@ export function adminDashboardPage(
   csrf: string,
   message: string,
   section: "overview" | "members" | "accounts" = "overview",
+  pageTexts = "{}",
 ): string {
+  let operationNote = "";
+  try {
+    const text = JSON.parse(pageTexts).test_notice;
+    if (typeof text === "string") operationNote = text.trim();
+  } catch {}
   const notices: Record<string, string> = {
     approved: "申请已通过。",
     rejected: "申请已驳回。",
@@ -77,6 +83,7 @@ export function adminDashboardPage(
     <p class="wb-empty" data-workbench-empty${pendingTotal ? " hidden" : ""}>当前待办已清空。</p>
     <nav class="wb-task-list" aria-label="待处理事项">${taskCards}</nav>
     <p class="wb-sync" data-workbench-sync role="status">当前为页面加载时快照；刷新可查看新申请。</p></section>
+    ${operationNote ? `<details class="wb-panel admin-operation-note"><summary>管理员操作提示</summary><p class="preline">${escapeHtml(operationNote)}</p><a href="/admin/site#test_notice">编辑提示 →</a></details>` : ""}
     `
         : ""
     }${

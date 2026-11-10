@@ -1,19 +1,12 @@
+import { launchBrowser, evidenceDirectory } from "./browser/runtime.mjs";
 import assert from "node:assert/strict";
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 import { navigationFixture } from "./navigation-fixture.mjs";
-const { chromium } = await import(
-  pathToFileURL(
-    process.env.PLAYWRIGHT_MODULE ||
-      "C:/Users/gbg61/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-  ).href
-);
-const output = resolve(process.env.CURTAIN_EVIDENCE || "artifacts/working/2026-11-03-curtain-opening/browser");
+const output = evidenceDirectory("curtain-opening/browser", process.env.CURTAIN_EVIDENCE);
 const baseline = resolve(output, "../before");
-mkdirSync(output, { recursive: true });
 const fixture = await navigationFixture();
-const browser = await chromium.launch({ channel: "msedge", headless: true });
+const browser = await launchBrowser();
 const results = [];
 try {
   if (process.argv.includes("--smooth")) {

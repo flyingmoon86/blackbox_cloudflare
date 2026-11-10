@@ -13,6 +13,7 @@ function fixture({
   firstVisit = false,
   seen = false,
   storageBlocked = false,
+  sceneName = "home",
 } = {}) {
   const handlers = {};
   const element = (props = {}) => ({
@@ -64,7 +65,7 @@ function fixture({
     ".stage-image-plane": plane,
   };
   const scene = element({
-    dataset: { theatreScene: "productions", stageConfig: JSON.stringify(config) },
+    dataset: { theatreScene: sceneName, stageConfig: JSON.stringify(config) },
     querySelector: (s) => nodes[s],
     hasAttribute: () => preview,
   });
@@ -130,7 +131,7 @@ test("image failure and mismatched dimensions keep light off and disable control
   }
 });
 test("admin preview is isolated from visitor preference and ignores foreign messages", () => {
-  const f = fixture({ preview: true });
+  const f = fixture({ preview: true, sceneName: "productions" });
   assert.equal(f.scene.dataset.lights, "off");
   f.toggle.events.click();
   f.toggle.events.click();
@@ -174,6 +175,7 @@ test("story text and poster have independent flowing columns with uncropped post
 test("first-visit light hint follows readiness and disappears permanently after lighting", () => {
   const f = fixture({ firstVisit: true });
   assert.equal(f.hint.hidden, false);
+  assert.equal(f.storage.get("blackbox-stage-light-hint"), "seen");
   assert.equal(f.toggle.attrs["aria-describedby"], "stage-light-hint");
   f.toggle.events.click();
   assert.equal(f.hint.hidden, true);
@@ -191,4 +193,15 @@ test("first-visit light hint follows readiness and disappears permanently after 
   tab.storage.set("blackbox-stage-light-hint", "seen");
   tab.handlers.storage({ key: "blackbox-stage-light-hint" });
   assert.equal(tab.hint.hidden, true);
+});
+
+test("other pages keep the light switch without repeating the homepage hint", () => {
+  for (const sceneName of ["productions", "members", "thanks"]) {
+    const f = fixture({ firstVisit: true, sceneName });
+    assert.equal(f.hint.hidden, true);
+    assert.equal(f.toggle.disabled, false);
+    f.toggle.events.click();
+    assert.equal(f.scene.dataset.lights, "on");
+    assert.equal(f.hint.hidden, true);
+  }
 });

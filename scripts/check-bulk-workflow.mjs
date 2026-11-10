@@ -176,6 +176,7 @@ try {
   await page.screenshot({ path: out + "/upload-results-desktop.png" });
   // Lost completion responses must reuse the server task after retry/reload.
   await page.locator("#upload-new-batch").click();
+  await page.waitForFunction(() => document.querySelector("#upload-batch").hidden);
   await chooseFiles(["lost-response.png"]);
   await page.locator("[name=title]").fill("合成响应丢失");
   loseComplete = true;
@@ -195,6 +196,7 @@ try {
   evidence.checks.push({ case: "完成写入后响应丢失，刷新再确认", records: 1 });
   // Hold task creation to exercise pause and simultaneous submissions deterministically.
   await page.locator("#upload-new-batch").click();
+  await page.waitForFunction(() => document.querySelector("#upload-batch").hidden);
   await chooseFiles(["lock-a.png", "lock-b.png"]);
   let releaseCreation;
   const heldCreation = new Promise((r) => {
@@ -238,6 +240,7 @@ try {
   evidence.checks.push({ case: "同账号两标签页互斥、旧页防重及当前文件完成后暂停", records: 2 });
   // A rate limit stops the batch before any later files are sent.
   await page.locator("#upload-new-batch").click();
+  await page.waitForFunction(() => document.querySelector("#upload-batch").hidden);
   await chooseFiles(["limit-a.png", "limit-b.png"]);
   let limitedRequests = 0;
   await page.route("**/api/uploads", (route) => {
@@ -443,6 +446,36 @@ try {
   writeFileSync(out + "/results.json", JSON.stringify(evidence, null, 2));
   console.log(JSON.stringify(evidence, null, 2));
   await ctx.close();
+} catch (error) {
+  writeFileSync(
+    out + "/failure.json",
+    JSON.stringify(
+      {
+        message: error.message,
+        pages: await Promise.all(
+          browser
+            .contexts()
+            .flatMap((c) => c.pages())
+            .map(async (p) => ({
+              url: p.url(),
+              text: await p.locator("body").innerText(),
+              controls: await p.locator("#resource-upload").evaluate((f) =>
+                [...f.elements].map((e) => ({
+                  name: e.name,
+                  value: e.value,
+                  disabled: e.disabled,
+                  valid: e.validity.valid,
+                  message: e.validationMessage,
+                })),
+              ),
+            })),
+        ),
+      },
+      null,
+      2,
+    ),
+  );
+  throw error;
 } finally {
   await browser.close();
   await new Promise((r) => server.close(r));

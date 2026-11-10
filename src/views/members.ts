@@ -2,10 +2,9 @@ import { memberPhotoGallery } from "./member-photos";
 import { escapeHtml, message } from "./html";
 import { layout } from "./layout";
 import { YEARS, yearSelect, pagination, type PageInfo } from "./shared";
-import type { MemberRow } from "../routes/members";
+import type { MemberRow } from "../services/members/types";
 export function memberListPage(
   members: MemberRow[],
-  years: number[],
   search: string,
   selectedYear: number | "missing" | null,
   admin: boolean,
@@ -21,7 +20,7 @@ export function memberListPage(
           const portrait = member.photo
             ? `<img class="member-card-media" src="/members/${member.id}/avatar" alt="${escapeHtml(member.name)}的头像">`
             : `<span class="member-card-art" aria-hidden="true">${escapeHtml(member.name.slice(0, 1) || "剧")}</span>`;
-          return `<article class="member-card${member.photo ? "" : " member-card-empty"}"><a class="member-card-link" href="/members/${member.id}?${escapeHtml(memberContext.toString())}">${portrait}<span class="member-card-shade"></span><span class="member-card-copy"><span class="eyebrow">${escapeHtml(cohortLabel(member.cohort) || (member.join_year ? member.join_year + " 年入队" : "剧团成员"))}</span><strong>${escapeHtml(member.name)}</strong>${member.contributor ? '<span class="contributor-tag">网站贡献者</span>' : ""}<span class="member-card-details"><span>${escapeHtml(member.bio || "点击查看队员档案与舞台经历")}</span><small>🌸 ${member.flower_count} · 查看档案 →</small></span></span></a></article>`;
+          return `<article class="member-card${member.photo ? "" : " member-card-empty"}"><a class="member-card-link" href="/members/${member.id}?${escapeHtml(memberContext.toString())}">${portrait}<span class="member-card-shade"></span><span class="member-card-copy"><span class="eyebrow">${escapeHtml(cohortLabel(member.cohort) || (member.join_year ? member.join_year + " 年入队" : "剧团成员"))}</span><strong>${escapeHtml(member.name)}</strong><small class="member-card-flowers">🌸 ${member.flower_count}</small>${member.contributor ? '<span class="contributor-tag">网站贡献者</span>' : ""}${member.bio?.trim() ? `<span class="member-card-details"><span>${escapeHtml(member.bio)}</span></span>` : ""}</span></a></article>`;
         })
         .join("")
     : '<p class="card">没有找到符合条件的队员。</p>';
@@ -37,6 +36,7 @@ export function memberListPage(
     `<section class="page-heading"><div class="member-heading-title"><p class="eyebrow">HALL OF FAME</p><h1>队员名录</h1></div>${admin ? '<p><a class="button" href="/admin/members/new">＋ 新建队员档案</a></p>' : ""}<form method="get" class="filters"><input name="q" value="${escapeHtml(search)}" aria-label="搜索队员" placeholder="搜索姓名、入学年级或作品"><select name="year" aria-label="入队年份"><option value="">全部入队年份</option><option value="missing"${selectedYear === "missing" ? " selected" : ""}>未填写入队年份</option>${olderYear}${options}</select><span class="filter-actions"><button>查找</button>${search || selectedYear !== null ? '<a href="/members">清除筛选</a>' : ""}</span></form></section><section class="card-grid member-grid" data-server-paged>${cards}</section>${pagination(page)}`,
     signedIn,
     admin,
+    { memberResults: true },
   );
 }
 
@@ -89,7 +89,7 @@ export function memberDetailPage(
     <div class="dossier-toolbar"><a data-member-return href="${back}">← 返回查找结果</a>${edit}</div>
     ${notice}<div class="dossier-grid">
     <header class="dossier-heading"><p class="eyebrow">队员档案</p><h1${member.name.length > 10 ? ' class="dossier-long-name"' : ""}>${escapeHtml(member.name)}</h1><div class="dossier-identity"><p>${escapeHtml(cohortLabel(member.cohort) || "剧团成员")}${member.join_year ? ` · ${member.join_year} 年入队` : ""}</p>${member.contributor ? '<span class="contributor-tag">网站贡献者</span>' : ""}</div>${member.bio ? `<p class="dossier-intro">${escapeHtml(member.bio.replace(/\s+/g, " ").slice(0, 72))}${member.bio.replace(/\s+/g, " ").length > 72 ? "…" : ""}</p>` : ""}</header>
-    <figure class="dossier-portrait">${member.photo ? `<a href="/members/${member.id}/avatar?size=original" data-dossier-photo aria-label="放大查看${escapeHtml(member.name)}的头像"><img src="/members/${member.id}/avatar?size=original" alt="${escapeHtml(member.name)}的头像" fetchpriority="high"><span>放大查看 ↗</span></a>` : `<div class="dossier-placeholder"><span aria-hidden="true">${escapeHtml(member.name.slice(0, 1))}</span><p>照片待补充</p></div>`}</figure>
+    <figure class="dossier-portrait">${member.photo ? `<a href="/members/${member.id}/avatar?size=original" data-dossier-photo aria-label="放大查看${escapeHtml(member.name)}的头像"><img src="/members/${member.id}/avatar?size=original" alt="${escapeHtml(member.name)}的头像" fetchpriority="high"><span class="dossier-zoom-mark" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" focusable="false"><circle cx="10" cy="10" r="6.5"/><path d="m15 15 5 5M10 7v6M7 10h6"/></svg></span></a>` : `<div class="dossier-placeholder"><span aria-hidden="true">${escapeHtml(member.name.slice(0, 1))}</span><p>照片待补充</p></div>`}</figure>
     <div class="dossier-content"><nav class="dossier-tabs" aria-label="队员资料栏目"><a id="tab-about" href="#member-about">关于 TA</a><a id="tab-stage" href="#member-stage">舞台经历</a><a id="tab-photos" href="#member-photos">精选照片</a><a id="tab-flowers" href="#member-flowers">送来的心意</a></nav>
     <div class="dossier-panels"><section id="member-about" class="dossier-panel" aria-labelledby="tab-about"><h2>关于 TA</h2><p class="preline">${escapeHtml(member.bio || "这位队员的故事，等待慢慢补充。")}</p></section>
     <section id="member-stage" class="dossier-panel" aria-labelledby="tab-stage"><h2>舞台经历</h2>${experience}</section>
@@ -99,6 +99,7 @@ export function memberDetailPage(
     <nav class="dossier-neighbors" aria-label="切换队员">${neighbor(navigation?.previous, true)}<a data-member-return href="${back}">返回查找结果</a>${neighbor(navigation?.next, false)}</nav></article>`,
     signedIn,
     admin,
+    { memberDossier: true },
   );
 }
 

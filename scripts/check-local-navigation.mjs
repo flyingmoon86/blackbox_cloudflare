@@ -1,18 +1,11 @@
+import { launchBrowser, evidenceDirectory } from "./browser/runtime.mjs";
 import assert from "node:assert/strict";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 import { navigationFixture } from "./navigation-fixture.mjs";
-const { chromium } = await import(
-  pathToFileURL(
-    process.env.PLAYWRIGHT_MODULE ||
-      "C:/Users/gbg61/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-  ).href
-);
-const output = resolve(process.env.NAVIGATION_EVIDENCE || "artifacts/working/2026-10-29-local-navigation");
-mkdirSync(output, { recursive: true });
+const output = evidenceDirectory("local-navigation", process.env.NAVIGATION_EVIDENCE);
 const fixture = await navigationFixture();
-const browser = await chromium.launch({ channel: "msedge", headless: true });
+const browser = await launchBrowser();
 const evidence = [];
 const paths = ["/", "/productions", "/members", "/resources", "/thanks", "/help", "/announcements"];
 try {

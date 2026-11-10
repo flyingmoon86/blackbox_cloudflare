@@ -1,5 +1,5 @@
 import { escapeHtml as e } from "./html";
-import type { EditionRow } from "../routes/productions";
+import type { EditionRow } from "../services/productions/types";
 
 export function backstageCard(v: EditionRow): string {
   if (!v.rehearsal_place && !v.duration_minutes && !v.backstage_story) return "";

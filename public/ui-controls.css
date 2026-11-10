@@ -1,0 +1,102 @@
+/* Shared header and button appearance. Page geometry stays in page stylesheets. */
+body.design-public .top,
+body.design-public:has(.theatre-stage) .top {
+  --nav-surface: #15120f;
+  --nav-text: #f3ead8;
+  --nav-muted: #b6ad9e;
+  color: var(--ink);
+  background: #15130ff5;
+  border-color: var(--line);
+}
+.design-public .top .brand,
+.design-public .top nav a,
+.design-public .top .nav-menu > summary {
+  color: var(--ink);
+}
+.design-public .brand span {
+  color: var(--muted);
+}
+.design-public .top nav a:hover,
+.design-public .account-link {
+  color: var(--brand-light, #ffb547);
+}
+.design-public .top .menu-toggle,
+.design-public .top .menu-toggle:hover,
+.design-public .top .menu-toggle:focus,
+.design-public .top .menu-toggle:focus-visible,
+.design-public .top .menu-toggle:active {
+  background: transparent;
+  color: var(--brand-light, #ffb547);
+  box-shadow: none;
+  filter: none;
+  transform: none;
+}
+.design-public .top .nav-menu-toggle {
+  color: var(--ink);
+  filter: none;
+  transform: none;
+}
+.design-public .top .nav-menu-toggle:is(:hover, :focus-visible) {
+  color: var(--brand-light, #ffb547);
+  filter: none;
+  transform: none;
+}
+.design-public .top .nav-panel,
+.design-public .top .desktop-nav.is-open {
+  background: #15120ff7;
+}
+.design-public .top .nav-panel {
+  border-color: var(--line);
+}
+.design-public :is(button, .button):hover {
+  background: var(--brand-light, #ffb547);
+  filter: brightness(1.12);
+  transform: translateY(-1px);
+}
+.design-public :is(.secondary, .link-button) {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+.design-public .danger {
+  background: #a83129;
+  color: white;
+}
+body:is(.design-public, .design-admin) :is(button, .button) {
+  border-radius: var(--archive-radius);
+  font-family: inherit;
+  box-shadow: none;
+  transition:
+    background-color 0.16s,
+    color 0.16s,
+    border-color 0.16s;
+}
+body.design-public :is(button, .button):not(.secondary):not(.danger) {
+  background: var(--brand-light);
+  color: #201b13;
+  border-color: var(--brand-light);
+}
+body.design-admin :is(button, .button):not(.secondary):not(.danger) {
+  background: var(--brand);
+  color: #fffdf8;
+  border-color: var(--brand);
+}
+body:is(.design-public, .design-admin) :is(button, .button).secondary {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+body:is(.design-public, .design-admin) :is(button, .button).secondary:hover {
+  border-color: var(--brand-light);
+  color: var(--brand-light);
+}
+body:is(.design-public, .design-admin) :is(button, .button):disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+@media (max-width: 900px) {
+  .design-public .top .desktop-nav > a,
+  .design-public .top .nav-menu > summary {
+    color: #f3ead8 !important;
+  }
+}

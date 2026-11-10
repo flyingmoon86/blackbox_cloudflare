@@ -5,7 +5,7 @@ import type { Context } from "hono";
 import type { AppEnv } from "../types";
 import { theatreHome } from "../views/home";
 import type { AnnouncementRow } from "./content";
-import type { ProductionRow } from "./productions";
+import type { ProductionRow } from "../services/productions/types";
 type Photo = { id: number; filename: string; original_name: string; preview_filename: string };
 export async function selectHero(c: Context<AppEnv>): Promise<Photo | null> {
   return c.env.DB.prepare(
@@ -13,12 +13,11 @@ export async function selectHero(c: Context<AppEnv>): Promise<Photo | null> {
   ).first<Photo>();
 }
 export async function homePage(c: Context<AppEnv>) {
-  const [profile, announcements, hero, latest] = await Promise.all([
+  const [profile, announcements, latest] = await Promise.all([
     getSiteProfile(c),
     c.env.DB.prepare(
       "SELECT id,title,content,created_at FROM announcement ORDER BY created_at DESC,id DESC LIMIT 1",
     ).all<AnnouncementRow>(),
-    selectHero(c),
     c.env.DB.prepare(
       `SELECT p.id,p.title,p.promo,p.synopsis,p.year,p.cover_id,p.is_hidden,
        (SELECT r.id FROM resource r WHERE r.production_id=p.id AND r.status='approved'
@@ -70,9 +69,7 @@ export async function homePage(c: Context<AppEnv>) {
         (byte) => byte.toString(16).padStart(2, "0"),
       ).join("")
     : "";
-  return c.html(
-    theatreHome(profile, featured, announcements.results, c.get("user"), hero?.id ?? null, latest.results, revision),
-  );
+  return c.html(theatreHome(profile, featured, announcements.results, c.get("user"), latest.results, revision));
 }
 async function photoResponse(c: Context<AppEnv>, photo: Photo | null) {
   if (!photo?.filename) return c.text("展示图正在准备。", 404);

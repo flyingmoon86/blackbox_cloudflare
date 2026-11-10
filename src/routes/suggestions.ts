@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import { csrfFor, csrfValid } from "../http/cookies";
 import { adminPage, filterChoice, likeTerm, safeListReturn, searchTerm } from "../http/pagination";
 import type { AppEnv } from "../types";
-import { suggestionFormPage, suggestionInboxPage, suggestionPermissionPage } from "../views/suggestions";
+import { suggestionFormPage, suggestionInboxPage } from "../views/suggestions";
 
 export type SuggestionRow = {
   id: number;

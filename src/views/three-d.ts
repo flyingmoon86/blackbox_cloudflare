@@ -42,7 +42,7 @@ export function threeDArchivePage(
       <header class="${preview ? "splat-intro" : "page-heading splat-intro"}">
         ${preview ? '<a href="/admin/three-d">返回三维档案管理</a>' : '<p class="eyebrow">3D ARCHIVE</p>'}
         <h1>${preview ? "场景预览" : "三维档案"}</h1>
-        <p>从自己的视角重访场景。选择一份档案，即可旋转、缩放，查看空间中的细节。</p>
+        <p>从自己的视角重访场景。</p>
       </header>
       <div class="splat-grid">${cards || "<p>暂无公开场景。</p>"}</div>
       <dialog class="splat-dialog" aria-labelledby="splat-title">
@@ -72,5 +72,6 @@ export function threeDArchivePage(
     </section>`,
     signedIn,
     admin,
+    { archive: !preview },
   );
 }

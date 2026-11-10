@@ -44,6 +44,6 @@ export function siteEditor(
  ${section("contact_intro", "联系信息编辑", `${input("troupe_name", "剧团名称", p.troupe_name)}${input("contact_email", "联系邮箱", p.contact_email, "email")}${input("qq_group", "招新QQ群", p.qq_group)}`)}
  </div><div id="site-panel-messages" class="site-editor-panel" data-site-panel aria-labelledby="site-tab-messages">
  ${section("special_thanks", "致谢编辑", `<p>显示在鸣谢页第一幕。支持分段文字；留空时只展示标题与剧团落款。</p>${area("special_thanks", "想对大家说的话", t.special_thanks || "")}`)}
- ${section("test_notice", "测试须知编辑", area("test_notice", "确认后不再重复；内容修改后重新提示", t.test_notice || "网站正在测试，暂不支持视频上传。欢迎提交建议。"))}
+ ${section("test_notice", "管理员操作提示", area("test_notice", "仅在管理员工作台显示；面向访客的更新请发布公告。原测试须知保留在此，可继续编辑。", t.test_notice || ""))}
  </div><div class="site-editor-save"><span>统一保存全部分区的修改</span><button type="submit">保存页面内容</button></div></form></section>`;
 }

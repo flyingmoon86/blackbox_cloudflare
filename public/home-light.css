@@ -29,6 +29,9 @@ body.design-public:has(.theatre-stage)>main{height:auto;overflow:visible;padding
 .design-public #welcome .welcome-copy h1{font-size:clamp(56px,10vh,112px);margin:12px 0;color:var(--ink)}
 .design-public .theatre-stage .eyebrow,.design-public #welcome .stage-news span,.design-public #welcome .stage-explore{color:var(--muted)}
 .design-public #welcome .stage-news,.design-public #welcome .stage-explore{background:#fff4ddeb;padding:10px 14px;border-radius:3px}
+.design-public #welcome .stage-trial-note{display:block;margin-bottom:5px;font-size:12px;font-weight:400;line-height:1.6;color:var(--muted)}
+.stage-trial-note [data-announcement-badge]{display:inline-block;margin-left:6px;padding:0 5px;border:1px solid currentColor;border-radius:2px;font-size:10px;font-weight:400}
+.stage-trial-note [data-announcement-badge][hidden]{display:none}
 .design-public .theatre-stage .stage-playbill{background:linear-gradient(180deg,#f4e6cb00,#f4e6cbe8 140px,#f4e6cbee);padding:150px max(9vw,24px) 72px 5vw}
 .design-public .theatre-stage .stage-about{background:linear-gradient(#f4e6cbee,#f4e6cbf7);padding:64px max(9vw,24px) 100px 5vw}
 .design-public .theatre-stage :is(.stage-playbill,.stage-about){--ink:var(--text-dark);--muted:var(--text-dark-muted);--line:#79684655;--panel:#fff5e4;--amber:#66451f}
@@ -76,7 +79,7 @@ body.design-public:has(.theatre-stage)>main{height:auto;overflow:visible;padding
 .theatre-light-hint small{display:block;margin-top:2px;font-size:11px;letter-spacing:.1em;color:#867556;line-height:1.4}
 .theatre-light-hint svg{flex:none;color:#a18a5c}
 @media(max-width:900px){.design-public .theatre-stage:has(.theatre-light-hint:not([hidden])) #welcome .stage-news{max-width:calc(93% - 106px)}.theatre-light-hint{top:auto;right:10px;bottom:calc(158px + env(safe-area-inset-bottom));width:84px;justify-content:center;padding:8px 10px;gap:0}.theatre-light-hint small{display:none}.theatre-light-hint svg{position:absolute;right:7px;bottom:-13px;width:20px;height:16px;transform:rotate(65deg)}.theatre-light-hint strong{font-size:13px;white-space:nowrap}}
-.stage-preview-page .announcement-update,.stage-preview-page .test-notice,.stage-preview-page .curtain-boot{display:none!important}
+.stage-preview-page .curtain-boot{display:none!important}
 @media(max-width:900px){
  .navigation-stage-content{padding-right:0}
  .navigation-stage-content :is(.page-heading,.filters,.section-tabs,.thanks-person,.special-thanks){padding:16px}

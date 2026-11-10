@@ -8,38 +8,36 @@ const notificationCode = app.slice(app.indexOf("const notificationHost ="), app.
 class Element extends EventTarget {
   hidden = true;
 }
-class Dialog extends EventTarget {
-  open = true;
-}
-function mount(storage, revision = "r1", user = "guest", dialog = null) {
+function mount(storage, revision = "r1", user = "guest") {
   const alert = new Element(),
     read = new Element(),
-    dismiss = new Element();
+    badge = new Element();
+  alert.hidden = false;
   alert.dataset = { announcementUpdate: revision, announcementUser: user };
-  alert.querySelector = (selector) => (selector.includes("-read") ? read : dismiss);
+  alert.querySelector = (selector) => (selector === "a" ? read : badge);
   runInNewContext(code, {
     document: { querySelector: () => alert },
-    notice: dialog,
-    HTMLDialogElement: Dialog,
     localStorage: storage,
   });
-  return { alert, read, dismiss };
+  return { alert, read, badge };
 }
 test("announcement acknowledgment persists per user and returns for changed content", () => {
   const data = new Map();
   const storage = { getItem: (k) => data.get(k), setItem: (k, v) => data.set(k, v) };
   const first = mount(storage);
   assert.equal(first.alert.hidden, false);
-  first.dismiss.dispatchEvent(new Event("click"));
-  assert.equal(first.alert.hidden, true);
-  assert.equal(mount(storage).alert.hidden, true);
+  assert.equal(first.badge.hidden, false);
+  first.read.dispatchEvent(new Event("click"));
+  assert.equal(first.badge.hidden, true);
+  assert.equal(first.alert.hidden, false);
+  assert.equal(mount(storage).badge.hidden, true);
   const updated = mount(storage, "r2");
-  assert.equal(updated.alert.hidden, false);
+  assert.equal(updated.badge.hidden, false);
   updated.read.dispatchEvent(new Event("click"));
-  assert.equal(mount(storage, "r2").alert.hidden, true);
-  assert.equal(mount(storage, "r2", "2").alert.hidden, false);
+  assert.equal(mount(storage, "r2").badge.hidden, true);
+  assert.equal(mount(storage, "r2", "2").badge.hidden, false);
 });
-test("announcement waits for test notice and tolerates unavailable storage", () => {
+test("inline announcement stays readable when storage is unavailable", () => {
   const storage = {
     getItem() {
       throw Error("denied");
@@ -48,14 +46,12 @@ test("announcement waits for test notice and tolerates unavailable storage", () 
       throw Error("denied");
     },
   };
-  const dialog = new Dialog();
-  const page = mount(storage, "r1", "guest", dialog);
-  assert.equal(page.alert.hidden, true);
-  dialog.open = false;
-  dialog.dispatchEvent(new Event("close"));
+  const page = mount(storage);
   assert.equal(page.alert.hidden, false);
-  page.dismiss.dispatchEvent(new Event("click"));
-  assert.equal(page.alert.hidden, true);
+  assert.equal(page.badge.hidden, false);
+  page.read.dispatchEvent(new Event("click"));
+  assert.equal(page.badge.hidden, true);
+  assert.equal(page.alert.hidden, false);
 });
 
 class NotificationElement extends EventTarget {

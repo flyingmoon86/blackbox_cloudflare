@@ -3,15 +3,8 @@
 body.design-public,body.design-admin{--serif:"Blackbox Display","Noto Serif SC","Songti SC","SimSun",serif;--sans:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;--text-dark:#211d17;--text-dark-muted:#514737;--text-light:#fff9ed;--text-light-muted:#e4dccd;--archive-radius:3px;--archive-focus:#c7a66c;font-family:var(--sans)}
 body.design-public{--paper:#15130f;--panel:#1d1a15;--surface:#252119;--ink:var(--text-light);--muted:var(--text-light-muted);--line:#f1e9da30;--brand-light:#c7a66c;--brand:#aa874e;--amber:#c7a66c;--amber-dark:#b5935d;--wine:#c7a66c;background:var(--paper);color:var(--ink)}
 body.design-admin{--paper:#f4f1e9;--panel:#fffdf8;--surface:#ede8df;--ink:var(--text-dark);--muted:var(--text-dark-muted);--line:#d9d1c3;--brand-light:#805f2e;--brand:#805f2e;--amber:#805f2e;--amber-dark:#624822;--wine:#805f2e;--archive-focus:#805f2e;background:var(--paper);color:var(--ink)}
-body.design-public .top,body.design-public:has(.theatre-stage) .top{background:#15130ff5;border-color:var(--line)}
 body.design-public::after{background:linear-gradient(180deg,#15130ff0,#15130fdb)}
 body:is(.design-public,.design-admin) :is(h1,h2,h3){font-family:var(--serif)}
-body:is(.design-public,.design-admin) :is(button,.button){border-radius:var(--archive-radius);font-family:inherit;box-shadow:none;transition:background-color .16s,color .16s,border-color .16s}
-body.design-public :is(button,.button):not(.secondary):not(.danger){background:var(--brand-light);color:#201b13;border-color:var(--brand-light)}
-body.design-admin :is(button,.button):not(.secondary):not(.danger){background:var(--brand);color:#fffdf8;border-color:var(--brand)}
-body:is(.design-public,.design-admin) :is(button,.button).secondary{background:transparent;color:var(--ink);border:1px solid var(--line)}
-body:is(.design-public,.design-admin) :is(button,.button).secondary:hover{border-color:var(--brand-light);color:var(--brand-light)}
-body:is(.design-public,.design-admin) :is(button,.button):disabled{opacity:.5;cursor:not-allowed}
 body:is(.design-public,.design-admin) :is(input:not([type=checkbox]):not([type=radio]),select,textarea){border-radius:var(--archive-radius);border-color:var(--line);background:var(--panel);color:var(--ink);font-family:inherit}
 body:is(.design-public,.design-admin) :is(input,textarea)::placeholder{color:var(--muted);opacity:1}
 body:is(.design-public,.design-admin) :is(a,button,summary,input,select,textarea,[tabindex]):focus-visible{outline:2px solid var(--archive-focus);outline-offset:4px}
@@ -37,10 +30,10 @@ body.design-public .dossier-heading h1.dossier-long-name{font-size:clamp(30px,3.
 body .dossier-identity .contributor-tag{font-size:11px;line-height:1.6;font-weight:400;border-color:#c7a66c70;padding:3px 8px}
 .dossier-intro{margin:12px 0 0;color:var(--muted);font-size:14px;line-height:1.8;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
 .dossier-portrait{grid-column:1;grid-row:1 / 3;align-self:start;position:relative;isolation:isolate;height:var(--dossier-height);min-height:0;width:100%;margin:0;overflow:hidden;border:1px solid #f1e9da40;background:#1c1914}
-.dossier-portrait>a{display:block;position:absolute;inset:0;color:var(--ink)}
+.dossier-portrait>a{display:block;position:absolute;inset:0;color:var(--ink);cursor:zoom-in}
 .dossier-portrait img{position:absolute;inset:0;display:block;width:100%;height:100%;max-height:none;object-fit:cover;object-position:50% 12%}
 .dossier-portrait>a:after{content:"";position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 50px #0002}
-.dossier-portrait>a>span{position:absolute;bottom:0;right:0;left:0;padding:34px 18px 14px;background:linear-gradient(transparent,#0b0909b8);font-size:12px;letter-spacing:.08em;text-align:right;color:#f1e9da}
+.dossier-zoom-mark{position:absolute;bottom:12px;right:12px;width:36px;height:36px;display:grid;place-items:center;border:1px solid #fff9ed66;border-radius:3px;background:#15130fb3;color:#fff9ed;pointer-events:none}
 .dossier-portrait>a:focus-visible{outline-offset:-6px!important}
 .dossier-placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);background:radial-gradient(ellipse at 45% 20%,#c7a66c15,transparent 65%)}
 .dossier-placeholder:before{content:"";position:absolute;inset:24px;border:1px solid #f1e9da12}

@@ -51,6 +51,8 @@ export function d1(db) {
         },
         async run() {
           calls++;
+          if (/^\s*SELECT\b/i.test(sql))
+            return { success: true, results: db.prepare(sql).all(...args), meta: { changes: 0 } };
           const result = db.prepare(sql).run(...args);
           return {
             success: true,
