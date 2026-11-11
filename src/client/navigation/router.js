@@ -1,38 +1,50 @@
+import { createHistoryDrafts } from "./history-drafts.js";
+
 // Route commits are synchronous: no fetch, timer, animation or prefetch await.
 export function installRouter(pages, assets, canonical) {
   let current = location.pathname;
   let valid = true;
   let accountVersion;
+  const drafts = createHistoryDrafts();
   try {
     accountVersion = localStorage.getItem("blackbox-account-change");
   } catch {}
   // Native history also spans uncached details and BFCache misses. Let the
   // browser restore those entries instead of keeping a document-local map.
   history.scrollRestoration = "auto";
+  const closeMenus = () => {
+    document
+      .querySelectorAll(".nav-menu.is-open,#main-navigation.is-open")
+      .forEach((node) => node.classList.remove("is-open"));
+    document.querySelectorAll(".nav-panel").forEach((node) => (node.hidden = true));
+    document
+      .querySelectorAll(".menu-toggle,.nav-menu-toggle")
+      .forEach((node) => node.setAttribute("aria-expanded", "false"));
+    document.body.classList.remove("navigation-open");
+  };
   const commit = (url, back = false) => {
     const page = pages.get(url.pathname);
     if (!valid || !page?.ready || !window.blackboxPages) return false;
+    if (!back && url.href === location.href) {
+      closeMenus();
+      return true;
+    }
     const before = performance.now();
     const previous = document.querySelector("#main-content");
     if (!previous) return false;
     const next = page.main.cloneNode(true);
     try {
+      drafts.capture(previous, current);
       window.blackboxPages.unmount();
-      if (!back) history.pushState({}, "", url);
+      if (!back) drafts.push(url);
+      else drafts.restore(next, url.pathname);
       assets.activate(page.styles);
       for (const name of ["layout-book", "layout-members", "layout-gallery", "archive-page"])
         document.body.classList.toggle(name, page.classes.includes(name));
       document.body.dataset.section = page.section;
       document.title = page.title;
       previous.replaceWith(next);
-      document
-        .querySelectorAll(".nav-menu.is-open,#main-navigation.is-open")
-        .forEach((node) => node.classList.remove("is-open"));
-      document.querySelectorAll(".nav-panel").forEach((node) => (node.hidden = true));
-      document
-        .querySelectorAll(".menu-toggle,.nav-menu-toggle")
-        .forEach((node) => node.setAttribute("aria-expanded", "false"));
-      document.body.classList.remove("navigation-open");
+      closeMenus();
       window.blackboxPages.mount(next, back ? "history" : "push");
       current = url.pathname;
       next.focus({ preventScroll: true });
@@ -75,7 +87,7 @@ export function installRouter(pages, assets, canonical) {
     if (commit(url)) event.preventDefault();
   });
   window.addEventListener("popstate", () => {
-    if (location.pathname === current) return;
+    if (location.pathname === current && drafts.isCurrent()) return;
     if (!canonical(location.href) || !commit(new URL(location.href), true)) location.reload();
   });
   // Another tab logging in/out invalidates the live public-page controller too.
@@ -83,6 +95,7 @@ export function installRouter(pages, assets, canonical) {
     if (event.key === "blackbox-account-change") {
       valid = false;
       pages.clear();
+      drafts.clear();
     }
   });
   window.addEventListener("pageshow", (event) => {
@@ -91,6 +104,7 @@ export function installRouter(pages, assets, canonical) {
       if (localStorage.getItem("blackbox-account-change") !== accountVersion) {
         valid = false;
         pages.clear();
+        drafts.clear();
       }
     } catch {}
   });
@@ -99,6 +113,7 @@ export function installRouter(pages, assets, canonical) {
     invalidate() {
       valid = false;
       pages.clear();
+      drafts.clear();
     },
   };
 }

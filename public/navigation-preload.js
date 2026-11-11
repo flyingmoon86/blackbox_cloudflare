@@ -190,36 +190,94 @@
     });
   }
 
+  // src/client/navigation/history-drafts.js
+  function createHistoryDrafts() {
+    const key = "blackboxNavigationEntry";
+    const prefix = String(performance.timeOrigin);
+    const entries = /* @__PURE__ */ new Map();
+    let sequence = 0;
+    let active;
+    const nextKey = () => `${prefix}:${++sequence}`;
+    const identify = () => {
+      const id = nextKey();
+      try {
+        history.replaceState({ ...history.state, [key]: id }, "");
+      } catch {
+      }
+      return id;
+    };
+    const controls = (root) => [...root.querySelectorAll("form[data-navigation-draft]")].filter((form) => form.method === "get").flatMap(
+      (form) => [...form.elements].filter(
+        (field) => field.name && !field.disabled && ["text", "search", "number", "select-one"].includes(field.type)
+      ).map((field) => ({ form: form.dataset.navigationDraft, field }))
+    );
+    active = identify();
+    return {
+      isCurrent: () => history.state?.[key] === active,
+      capture(root, path) {
+        const values = controls(root).filter(({ field }) => field.value.length <= 4096).map(({ form, field }) => ({ form, name: field.name, value: field.value }));
+        entries.delete(active);
+        entries.set(active, { path, values });
+        if (entries.size > 50) entries.delete(entries.keys().next().value);
+      },
+      push(url) {
+        const id = nextKey();
+        history.pushState({ [key]: id }, "", url);
+        active = id;
+      },
+      restore(root, path) {
+        active = history.state?.[key] || identify();
+        const saved = entries.get(active);
+        if (saved?.path !== path) return;
+        for (const { form, field } of controls(root)) {
+          const value = saved.values.find((value2) => value2.form === form && value2.name === field.name);
+          if (value) field.value = value.value;
+        }
+      },
+      clear: () => entries.clear()
+    };
+  }
+
   // src/client/navigation/router.js
   function installRouter(pages, assets, canonical) {
     let current = location.pathname;
     let valid = true;
     let accountVersion;
+    const drafts = createHistoryDrafts();
     try {
       accountVersion = localStorage.getItem("blackbox-account-change");
     } catch {
     }
     history.scrollRestoration = "auto";
+    const closeMenus = () => {
+      document.querySelectorAll(".nav-menu.is-open,#main-navigation.is-open").forEach((node) => node.classList.remove("is-open"));
+      document.querySelectorAll(".nav-panel").forEach((node) => node.hidden = true);
+      document.querySelectorAll(".menu-toggle,.nav-menu-toggle").forEach((node) => node.setAttribute("aria-expanded", "false"));
+      document.body.classList.remove("navigation-open");
+    };
     const commit = (url, back = false) => {
       const page = pages.get(url.pathname);
       if (!valid || !page?.ready || !window.blackboxPages) return false;
+      if (!back && url.href === location.href) {
+        closeMenus();
+        return true;
+      }
       const before = performance.now();
       const previous = document.querySelector("#main-content");
       if (!previous) return false;
       const next = page.main.cloneNode(true);
       try {
+        drafts.capture(previous, current);
         window.blackboxPages.unmount();
-        if (!back) history.pushState({}, "", url);
+        if (!back) drafts.push(url);
+        else drafts.restore(next, url.pathname);
         assets.activate(page.styles);
         for (const name of ["layout-book", "layout-members", "layout-gallery", "archive-page"])
           document.body.classList.toggle(name, page.classes.includes(name));
         document.body.dataset.section = page.section;
         document.title = page.title;
         previous.replaceWith(next);
-        document.querySelectorAll(".nav-menu.is-open,#main-navigation.is-open").forEach((node) => node.classList.remove("is-open"));
-        document.querySelectorAll(".nav-panel").forEach((node) => node.hidden = true);
-        document.querySelectorAll(".menu-toggle,.nav-menu-toggle").forEach((node) => node.setAttribute("aria-expanded", "false"));
-        document.body.classList.remove("navigation-open");
+        closeMenus();
         window.blackboxPages.mount(next, back ? "history" : "push");
         current = url.pathname;
         next.focus({ preventScroll: true });
@@ -255,13 +313,14 @@
       if (commit(url)) event.preventDefault();
     });
     window.addEventListener("popstate", () => {
-      if (location.pathname === current) return;
+      if (location.pathname === current && drafts.isCurrent()) return;
       if (!canonical(location.href) || !commit(new URL(location.href), true)) location.reload();
     });
     window.addEventListener("storage", (event) => {
       if (event.key === "blackbox-account-change") {
         valid = false;
         pages.clear();
+        drafts.clear();
       }
     });
     window.addEventListener("pageshow", (event) => {
@@ -270,6 +329,7 @@
         if (localStorage.getItem("blackbox-account-change") !== accountVersion) {
           valid = false;
           pages.clear();
+          drafts.clear();
         }
       } catch {
       }
@@ -279,6 +339,7 @@
       invalidate() {
         valid = false;
         pages.clear();
+        drafts.clear();
       }
     };
   }

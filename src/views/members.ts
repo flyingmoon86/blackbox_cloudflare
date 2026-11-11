@@ -33,7 +33,7 @@ export function memberListPage(
       : "";
   return layout(
     "队员名录",
-    `<section class="page-heading"><div class="member-heading-title"><p class="eyebrow">HALL OF FAME</p><h1>队员名录</h1></div>${admin ? '<p><a class="button" href="/admin/members/new">＋ 新建队员档案</a></p>' : ""}<form method="get" class="filters"><input name="q" value="${escapeHtml(search)}" aria-label="搜索队员" placeholder="搜索姓名、入学年级或作品"><select name="year" aria-label="入队年份"><option value="">全部入队年份</option><option value="missing"${selectedYear === "missing" ? " selected" : ""}>未填写入队年份</option>${olderYear}${options}</select><span class="filter-actions"><button>查找</button>${search || selectedYear !== null ? '<a href="/members">清除筛选</a>' : ""}</span></form></section><section class="card-grid member-grid" data-server-paged>${cards}</section>${pagination(page)}`,
+    `<section class="page-heading"><div class="member-heading-title"><p class="eyebrow">HALL OF FAME</p><h1>队员名录</h1></div>${admin ? '<p><a class="button" href="/admin/members/new">＋ 新建队员档案</a></p>' : ""}<form method="get" class="filters" data-navigation-draft="members"><input name="q" value="${escapeHtml(search)}" aria-label="搜索队员" placeholder="搜索姓名、入学年级或作品"><select name="year" aria-label="入队年份"><option value="">全部入队年份</option><option value="missing"${selectedYear === "missing" ? " selected" : ""}>未填写入队年份</option>${olderYear}${options}</select><span class="filter-actions"><button>查找</button>${search || selectedYear !== null ? '<a href="/members">清除筛选</a>' : ""}</span></form></section><section class="card-grid member-grid" data-server-paged>${cards}</section>${pagination(page)}`,
     signedIn,
     admin,
     { memberResults: true },
