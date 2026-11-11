@@ -17900,6 +17900,72 @@
         }
       ],
       "off_device_copy_verified": false
+    },
+    {
+      "date": "20261111T024532534071Z",
+      "task": "2026-11-11-final-release",
+      "local_directory": "artifacts/archive/releases/2026-11-11-final-release",
+      "backup_directory": "C:\\Users\\gbg61\\Documents\\BlackboxArchives",
+      "zip": "2026-11-11-final-release-20261111T024532534071Z.zip",
+      "zip_sha256": "e0e644ebbe4e8f1fdfddc5e45348f8d96d23cabbaa12b04c139c804a7886fdd6",
+      "files": [
+        {
+          "path": "asset-release-manifest.json",
+          "bytes": 15967,
+          "sha256": "65e3552e04b6e3ff20094787d816514471a50b6eb12111ded43b55ca103f5884"
+        },
+        {
+          "path": "backup-summary.json",
+          "bytes": 245,
+          "sha256": "7b1c2b580bb4191ac64790d494abe730d02636d36d3e0add458c77c31ae05519"
+        },
+        {
+          "path": "browser.log",
+          "bytes": 40,
+          "sha256": "ac9fcc7355b8dcc7232f9a2bb5c3923cd499ea3c9daacce6230ed19dcb24f945"
+        },
+        {
+          "path": "deploy-check.log",
+          "bytes": 58455,
+          "sha256": "c03a4076e2db18d70b954c0c8b08b05d9bb0ef20c226e06e8d81da1a51b2d890"
+        },
+        {
+          "path": "deploy.log",
+          "bytes": 2611,
+          "sha256": "c05c22a0047cc8e0335acbbd3d682a2c244392b837eee205867f31b388ddc14a"
+        },
+        {
+          "path": "production-results.json",
+          "bytes": 1252,
+          "sha256": "95b6cd8e6b3e6228849503dd706bcb6c61e43160cfdf9ea347d45737baa35dc0"
+        },
+        {
+          "path": "production-return-1366.png",
+          "bytes": 1375836,
+          "sha256": "53f4f6a2249b565a26b820663be46dab5e327e17b55fc6ef4db44ed159257b47"
+        },
+        {
+          "path": "production-return-390.png",
+          "bytes": 410850,
+          "sha256": "ebca4ba5ca731247a7e1e2a0fcbd3d816c6ed622d7cb18c125a210570521e6aa"
+        },
+        {
+          "path": "smoke.log",
+          "bytes": 305,
+          "sha256": "d516f0806a444f5249a8cba829421cd60fa3e01826cad0193e05aa1006f5f130"
+        },
+        {
+          "path": "verify-production.mjs",
+          "bytes": 4970,
+          "sha256": "1898db81aa5667e738a401875f6da9b05698b02710d2f9fc52ac7fc0a6d4516c"
+        },
+        {
+          "path": "验收.md",
+          "bytes": 3586,
+          "sha256": "2753dac708db7e27b735c25578cfe594fc9dd2f186123043c4e62d6b78cfde8d"
+        }
+      ],
+      "off_device_copy_verified": false
     }
   ]
 }
