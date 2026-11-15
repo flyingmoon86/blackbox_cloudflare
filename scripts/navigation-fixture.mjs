@@ -5,8 +5,8 @@ import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { createDatabase, d1, fakeBucket, loadWorker, loadModule } from "./backend/harness.mjs";
 
-export async function navigationFixture(port = 0, setup, { allowWrites = false } = {}) {
-  const worker = await loadWorker();
+export async function navigationFixture(port = 0, setup, { allowWrites = false, worker: suppliedWorker, assets } = {}) {
+  const worker = suppliedWorker || (await loadWorker());
   const { createSession } = await loadModule("src/auth/session.ts");
   const db = createDatabase();
   db.exec(
@@ -34,7 +34,7 @@ export async function navigationFixture(port = 0, setup, { allowWrites = false }
     FILES: files,
     ENVIRONMENT: "development",
     SESSION_SECRET: "disposable-navigation-only-fixture",
-    ASSETS: staticAssets(),
+    ASSETS: assets || staticAssets(),
   };
   const sessions = {};
   for (const [role, uid] of [

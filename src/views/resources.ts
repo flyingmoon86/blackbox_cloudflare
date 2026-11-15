@@ -92,9 +92,7 @@ export function resourceDetailPage(
     row.production_title &&
     row.title.length >= 28 &&
     /^[A-Za-z0-9+/_=!.-]+$/.test(row.title);
-  const displayTitle = technicalPhotoTitle
-    ? `${row.production_title} · 剧照${navigation?.position ? ` ${navigation.position}` : ""}`
-    : row.title;
+  const displayTitle = technicalPhotoTitle ? `${row.production_title} · 剧照` : row.title;
   const returnQuery = new URLSearchParams();
   if (row.edition_id) returnQuery.set("edition", String(row.edition_id));
   if (context) {
@@ -121,7 +119,7 @@ export function resourceDetailPage(
       : "";
   const navigationQuery = context ? `?origin=${context.origin}&amp;page=${context.page}` : "";
   const photoNavigation = navigation
-    ? `<nav class="photo-detail-navigation" data-photo-navigation aria-label="剧照浏览">${navigation.previous_id ? `<a rel="prev" data-photo-previous href="/resources/${navigation.previous_id}${navigationQuery}">← 上一张</a>` : '<span aria-disabled="true">← 已是第一张</span>'}<span class="photo-position"><strong>${navigation.position}</strong> / ${navigation.total}</span>${navigation.next_id ? `<a rel="next" data-photo-next href="/resources/${navigation.next_id}${navigationQuery}">下一张 →</a>` : '<span aria-disabled="true">已是最后一张 →</span>'}</nav>`
+    ? `<nav class="photo-detail-navigation" data-photo-navigation aria-label="剧照浏览">${navigation.previous_id ? `<a rel="prev" data-photo-previous href="/resources/${navigation.previous_id}${navigationQuery}">← 上一张</a>` : '<span aria-disabled="true">← 已是第一张</span>'}${navigation.next_id ? `<a rel="next" data-photo-next href="/resources/${navigation.next_id}${navigationQuery}">下一张 →</a>` : '<span aria-disabled="true">已是最后一张 →</span>'}</nav>`
     : "";
   const mediaError =
     row.res_type === "photo"

@@ -5,6 +5,7 @@ import { reviewRequest } from "../services/reviews";
 import { pageNumber } from "../views/shared";
 import { adminPage, filterChoice, likeTerm, safeListReturn, searchTerm } from "../http/pagination";
 import { canViewResource, serveResourceFile } from "../services/resource-files";
+import { PHOTO_NEIGHBORS_SQL } from "../services/resource-queries";
 import { fileCleanupStatements, drainFileCleanup } from "../services/file-cleanup";
 import { invalidateSiteProfile } from "../services/site-profile";
 import { Hono } from "hono";
@@ -39,8 +40,6 @@ export type ResourceRow = {
 export type PhotoNavigation = {
   previous_id: number | null;
   next_id: number | null;
-  position: number;
-  total: number;
 };
 export const resourceRoutes = new Hono<AppEnv>();
 resourceRoutes.use("*", async (c, next) => {
@@ -196,19 +195,9 @@ resourceRoutes.get("/resources/:id", async (c) => {
   if (!row) return c.text("资料不存在。", 404);
   if (!canViewResource(row, u)) return c.text("没有权限查看这份资料。", 403);
   const navigation =
-    row.res_type === "photo" && row.production_id && row.edition_id
-      ? await c.env.DB.prepare(
-          `WITH photos AS (
-            SELECT id,
-              LAG(id) OVER (ORDER BY created_at DESC,id DESC) previous_id,
-              LEAD(id) OVER (ORDER BY created_at DESC,id DESC) next_id,
-              ROW_NUMBER() OVER (ORDER BY created_at DESC,id DESC) position,
-              COUNT(*) OVER () total
-            FROM resource
-            WHERE production_id=? AND edition_id=? AND status='approved' AND res_type='photo'
-          ) SELECT previous_id,next_id,position,total FROM photos WHERE id=?`,
-        )
-          .bind(row.production_id, row.edition_id, row.id)
+    row.res_type === "photo" && row.status === "approved" && row.production_id && row.edition_id
+      ? await c.env.DB.prepare(PHOTO_NEIGHBORS_SQL)
+          .bind(row.id, row.production_id, row.edition_id)
           .first<PhotoNavigation>()
       : null;
   const origin = Number(c.req.query("origin"));

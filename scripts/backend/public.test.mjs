@@ -122,10 +122,10 @@ test("photo detail keeps gallery context and offers adjacent navigation", async 
   }
 
   const detail = await (await s.req(0, "/resources/9?origin=9&page=2")).text();
-  assert.match(detail, /<h1>测试作品 · 剧照 2<\/h1>/);
+  assert.match(detail, /<h1>测试作品 · 剧照<\/h1>/);
   assert.match(detail, /data-photo-previous href="\/resources\/10\?origin=9&amp;page=2"/);
   assert.match(detail, /data-photo-next href="\/resources\/8\?origin=9&amp;page=2"/);
-  assert.match(detail, /<strong>2<\/strong> \/ 8/);
+  assert.doesNotMatch(detail, /class="photo-position"/);
   assert.match(detail, /href="\/productions\/1\?edition=\d+&amp;page=2&amp;photo=9#edition-\d+-resources"/);
   assert.match(detail, /资料标题：<code>fba8aaea93f64e67b08f05639314dc49\.jpg<\/code>/);
   assert.match(detail, /data-resource-media-error hidden/);
