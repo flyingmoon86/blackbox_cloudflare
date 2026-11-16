@@ -66,6 +66,11 @@ try {
     else await page.locator("[data-photo-next]").click();
     await page.waitForURL(origin + next);
     await waitForPageReady(page);
+    record.focusBeforeArrow = await page.evaluate(() => document.activeElement?.tagName);
+    // Global arrow navigation intentionally ignores focused controls. Click the
+    // heading to exercise page-level keyboard navigation after touch/click.
+    await page.locator(".resource-detail h1").click();
+    record.focusForArrow = await page.evaluate(() => document.activeElement?.tagName);
     await page.keyboard.press("ArrowLeft");
     await page.waitForURL(photoUrl);
     await waitForPageReady(page);
@@ -95,6 +100,9 @@ try {
     await context.close();
   }
   result.passed = true;
+} catch (error) {
+  result.error = error.message;
+  throw error;
 } finally {
   writeFileSync(resolve(output, `${version}-results.json`), JSON.stringify(result, null, 2) + "\n");
   await browser.close();
