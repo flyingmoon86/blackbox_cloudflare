@@ -18537,7 +18537,7 @@
     {
       "date": "20261116T100525504329Z",
       "task": "2026-11-16-photo-navigation-release",
-      "local_directory": "artifacts/working/2026-11-16-photo-navigation-release",
+      "local_directory": "artifacts/archive/releases/2026-11-16-photo-navigation-release",
       "backup_directory": "C:\\Users\\gbg61\\Documents\\BlackboxArchives",
       "zip": "2026-11-16-photo-navigation-release-20261116T100525504329Z.zip",
       "zip_sha256": "0acec5482a7552f444d2c6b44d4552a0155a79b3fe32853b086bc7143a50d0e7",
